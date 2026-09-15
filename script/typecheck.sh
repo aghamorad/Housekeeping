@@ -33,6 +33,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR"/Scrub99/Sources/Core/*.swift \
   "$ROOT_DIR/Scrub99/Sources/Scanner/ScanModels.swift" \
   "$ROOT_DIR/Scrub99/Sources/Scanner/BoundedScanner.swift" \
+  "$ROOT_DIR/Scrub99/Sources/Scanner/OfficeAddInAudit.swift" \
   "$ROOT_DIR"/Scrub99/Sources/Classifier/*.swift \
   "$ROOT_DIR/Scrub99/Sources/Cleanup/CleanupModels.swift" \
   "$ROOT_DIR/Scrub99/Sources/Cleanup/SafetyPolicy.swift" \

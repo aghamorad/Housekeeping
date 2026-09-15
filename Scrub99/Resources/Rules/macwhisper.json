@@ -1,0 +1,55 @@
+{
+  "name": "MacWhisper",
+  "bundleIdentifier": "com.goodsnooze.MacWhisper",
+  "executableName": "MacWhisper",
+  "knownPaths": [
+    {
+      "relativePath": "Library/Application Support/MacWhisper",
+      "category": "downloadedModels",
+      "description": "MacWhisper's application support folder. Most of it is the speech-recognition models it downloads, which are large; the rest is a transcript database and logs. MacWhisper is installed on this Mac, so this folder is live working data rather than residue — removing it discards your model downloads, and removing the database discards your transcripts."
+    },
+    {
+      "relativePath": "Library/Application Support/com.goodsnooze.MacWhisper",
+      "category": "applicationData",
+      "description": "MacWhisper application support, kept under its bundle identifier rather than its name."
+    },
+    {
+      "relativePath": "Library/Caches/com.goodsnooze.MacWhisper",
+      "category": "cache",
+      "description": "MacWhisper cache. Rebuilt when it is next needed."
+    },
+    {
+      "relativePath": "Library/Preferences/com.goodsnooze.MacWhisper.plist",
+      "category": "preferences",
+      "description": "MacWhisper preferences and settings."
+    },
+    {
+      "relativePath": "Library/Logs/MacWhisper",
+      "category": "logs",
+      "description": "MacWhisper log files."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "*",
+      "directory": "Library/Application Support/MacWhisper/models",
+      "category": "downloadedModels",
+      "description": "MacWhisper speech-recognition model files"
+    }
+  ],
+  "keywords": [
+    "macwhisper",
+    "goodsnooze",
+    "whisper"
+  ],
+  "confidenceBoosters": [
+    "bundleIdMatch",
+    "appNameMatch",
+    "executableMatch"
+  ],
+  "installMethod": "directDownload",
+  "documentationURL": "https://goodsnooze.gumroad.com/l/macwhisper",
+  "homepageURL": "https://goodsnooze.gumroad.com/l/macwhisper",
+  "category": "productivity",
+  "description": "MacWhisper — transcribes audio to text on the Mac using Whisper models."
+}

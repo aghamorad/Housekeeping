@@ -1,0 +1,66 @@
+{
+  "name": "ComfyUI",
+  "bundleIdentifier": null,
+  "executableName": null,
+  "knownPaths": [
+    {
+      "relativePath": "ComfyUI/models",
+      "category": "downloadedModels",
+      "description": "The models ComfyUI generates images and video with. Every file here was downloaded — checkpoints, LoRAs, video models — and they are large. Removing them means downloading them again."
+    },
+    {
+      "relativePath": "ComfyUI/output",
+      "category": "projectData",
+      "description": "ComfyUI's generated images and videos. These are your own work, not something that can be downloaded again."
+    },
+    {
+      "relativePath": "ComfyUI/input",
+      "category": "projectData",
+      "description": "Files you fed into ComfyUI as source images."
+    },
+    {
+      "relativePath": "ComfyUI/temp",
+      "category": "cache",
+      "description": "ComfyUI's temporary working files. Rebuilt as needed."
+    },
+    {
+      "relativePath": "Documents/ComfyUI/models",
+      "category": "downloadedModels",
+      "description": "The models ComfyUI generates images with, kept in a ComfyUI folder inside Documents. Every file here was downloaded and is large. Removing them means downloading them again."
+    },
+    {
+      "relativePath": "Documents/ComfyUI/output",
+      "category": "projectData",
+      "description": "Images and videos you generated with ComfyUI, kept in a ComfyUI folder inside Documents. These are your own work."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "*.safetensors",
+      "directory": "ComfyUI/models",
+      "category": "downloadedModels",
+      "description": "Model weights in safetensors format"
+    },
+    {
+      "pattern": "*.ckpt",
+      "directory": "ComfyUI/models",
+      "category": "downloadedModels",
+      "description": "Model checkpoint"
+    }
+  ],
+  "keywords": [
+    "comfyui",
+    "comfy",
+    "stable-diffusion",
+    "lora",
+    "safetensors"
+  ],
+  "confidenceBoosters": [
+    "appNameMatch"
+  ],
+  "installMethod": "gitClone",
+  "documentationURL": "https://github.com/comfyanonymous/ComfyUI",
+  "homepageURL": "https://www.comfy.org/",
+  "category": "creative",
+  "description": "ComfyUI — an image and video generation tool that runs its models on the Mac."
+}

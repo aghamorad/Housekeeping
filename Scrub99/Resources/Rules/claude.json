@@ -9,6 +9,11 @@
       "description": "Main app support. Contains databases, models, persistent data."
     },
     {
+      "relativePath": "Library/Application Support/Claude-3p",
+      "category": "applicationData",
+      "description": "Claude Desktop's data folder under the second name it uses on this Mac. It has the shape of a browser profile: its own caches, cookies, local storage, and saved session, plus a folder of Claude Extensions. The caches regenerate on their own; the cookies, local storage, and session do not, so removing the folder as a whole signs the application out and discards local state. The Cache and Code Cache subfolders are the parts worth removing on their own."
+    },
+    {
       "relativePath": "Library/Caches/com.anthropic.claude",
       "category": "cache",
       "description": "Cache directory. Temporary data that can be safely recreated."

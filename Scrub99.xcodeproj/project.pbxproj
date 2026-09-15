@@ -40,6 +40,7 @@
 		A1000030 /* QuarantineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030; };
 		A1000035 /* ProtectionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000035; };
 		A1000036 /* ProtectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000036; };
+		A1000037 /* OfficeAddInAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000037; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +77,7 @@
 		A2000030 /* QuarantineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/QuarantineView.swift; sourceTree = "<group>"; };
 		A2000035 /* ProtectionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleanup/ProtectionList.swift; sourceTree = "<group>"; };
 		A2000036 /* ProtectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/ProtectionView.swift; sourceTree = "<group>"; };
+		A2000037 /* OfficeAddInAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Scanner/OfficeAddInAudit.swift; sourceTree = "<group>"; };
 		A3000001 /* Scrub99.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Scrub99.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -133,6 +135,7 @@
 				A2000026,
 				A2000035,
 				A2000036,
+				A2000037,
 				A2000027,
 				A2000028,
 				A2000030,
@@ -214,6 +217,7 @@
 				A1000030,
 				A1000035,
 				A1000036,
+				A1000037,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

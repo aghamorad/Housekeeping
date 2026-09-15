@@ -1,0 +1,48 @@
+{
+  "name": "Jan",
+  "bundleIdentifier": null,
+  "executableName": "Jan",
+  "knownPaths": [
+    {
+      "relativePath": "Library/Application Support/Jan",
+      "category": "downloadedModels",
+      "description": "Jan's data folder. Most of the space here is the models it downloaded — the multi-gigabyte files behind each assistant — together with your conversations and settings. Deleting a model means downloading it again; deleting the conversations is not recoverable."
+    },
+    {
+      "relativePath": "jan/models",
+      "category": "downloadedModels",
+      "description": "Jan's model folder, for older installations that keep models in the home directory rather than in Application Support. Every file here is a downloaded model."
+    },
+    {
+      "relativePath": "jan",
+      "category": "applicationData",
+      "description": "Jan's older home-directory data folder, holding conversations and settings as well as anything under jan/models."
+    },
+    {
+      "relativePath": "Library/Logs/Jan",
+      "category": "logs",
+      "description": "Jan log files."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "*.gguf",
+      "category": "downloadedModels",
+      "description": "Model weights in GGUF format"
+    }
+  ],
+  "keywords": [
+    "jan",
+    "janai",
+    "gguf"
+  ],
+  "confidenceBoosters": [
+    "appNameMatch",
+    "executableMatch"
+  ],
+  "installMethod": "directDownload",
+  "documentationURL": "https://github.com/menloresearch/jan",
+  "homepageURL": "https://jan.ai/",
+  "category": "ai",
+  "description": "Jan — an offline chat application that runs models on the Mac and keeps your conversations on disk."
+}

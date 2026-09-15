@@ -2,13 +2,13 @@
 
 I made Scrub99 because I kept having the same slightly ridiculous problem on my Mac: tens of gigabytes would disappear into Claude projects, local AI models, Hugging Face caches, Python environments, logs, and application folders, and I could never quite tell what was genuinely needed, what could be recreated, and what would be a terrible idea to delete. One of my own Claude folders was tens of gigabytes. The usual storage tools could tell me that a folder was large, of course, but “large” is not the same thing as unnecessary.
 
-Scrub99 is my attempt to make that whole business legible. It scans a defined set of places used by Claude, ChatGPT, Goose, Ollama, Hugging Face, LM Studio, pip, and uv, measures what is actually there, and then shows each result as something you can click and inspect. You can sort by size, category, item, or safety status. For each item, the app tries to answer the questions I wanted answered myself: what is this, why is it here, is it normally necessary, and what is the actual risk if I move it?
+Scrub99 is my attempt to make that whole business legible. It scans a defined set of places used by Claude, ChatGPT, Goose, Ollama, Hugging Face, LM Studio, MLX, Whisper.cpp, MacWhisper, GPT4All, Jan, Draw Things, ComfyUI, pip, and uv, measures what is actually there, and then shows each result as something you can click and inspect. You can sort by size, category, item, or safety status. For each item, the app tries to answer the questions I wanted answered myself: what is this, why is it here, is it normally necessary, and what is the actual risk if I move it?
 
 I also did not want to make one of those cleaners that announces that it has found “47 GB OF JUNK” in alarming red letters and then expects you to trust a single enormous Clean button. Scrub99 deliberately slows the process down. Nothing is selected automatically. Most personal data is inspection-only. When something genuinely low-risk is eligible for cleanup, you still review it one item at a time, read the explanation again, and decide whether to keep it or move it into Scrub99's reversible quarantine. The app does not permanently delete it.
 
 The interface looks like an old Mac utility because I miss the peculiar honesty of those applications: they showed you files, paths, sizes, and consequences. They did not pretend the computer possessed mystical knowledge. The retro icon is original too, with a platinum storage drawer, blue inspection lens, broom, and caution badge.
 
-[Download Scrub99 0.4.0](https://github.com/aghamorad/Scrub99/releases/tag/v0.4.0)
+[Download Scrub99 0.5.0](https://github.com/aghamorad/Scrub99/releases/tag/v0.5.0)
 
 ## What you actually do with it
 
@@ -22,7 +22,7 @@ The interface looks like an old Mac utility because I miss the peculiar honesty 
 
 ## What this version can and cannot claim
 
-Scrub99 0.4.0 is an early safety milestone. It performs a local, rule-backed audit of known application locations and now reports likely remnants of applications that are no longer installed. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions.
+Scrub99 0.5.0 is an early safety milestone. It performs a local, rule-backed audit of known application locations and reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Scrub99 says so in its results rather than reporting a clean Mac.
 
 There is no connected AI model in this release. That part comes later, if it can be added without handing an LLM the authority to quietly expand what counts as safe or move files by itself. The scanner, path-safety rules, quarantine records, explanations, and restore tests came first because, honestly, a cleanup app has to earn trust at the boring filesystem level before its “AI” opinions mean very much.
 
@@ -232,8 +232,10 @@ The Mac OS 9 interface is a deliberate choice. Utilities such as Norton Utilitie
 
 ## Version
 
+**Scrub99 0.5.0:** Sandbox-container scanning with a note saying what was measured and left out, the seven local-AI applications that install without an application bundle, a corrected description for folders belonging to macOS or to a large vendor, and a Microsoft Office add-in audit that explains what each application will do on its next launch — on top of bounded scanning, protected workspace inventory, reversible quarantine, visible quarantine management, item explanations, full-row inspection, sortable results, last-used dates on every finding, the left-alone list, a working-copy guard over Git repositories and deployment keys, help text on every control, a universal Apple-silicon and Intel build, and reliable Dock reopening
+
 **Scrub99 0.4.0:** Safety milestone with bounded scanning, protected workspace inventory, reversible quarantine, visible quarantine management, item explanations, full-row inspection, sortable results, last-used dates on every finding, the left-alone list, a working-copy guard over Git repositories and deployment keys, help text on every control, a universal Apple-silicon and Intel build, and reliable Dock reopening
 
-Supported AI applications: Claude, ChatGPT, Codex, Gemini, Goose, Ollama, HuggingFace, LM Studio
+Supported AI applications: Claude, ChatGPT, Codex, Gemini, Goose, Ollama, HuggingFace, LM Studio, MLX, Whisper.cpp, MacWhisper, GPT4All, Jan, Draw Things, ComfyUI
 
 Extensible via JSON rule files.

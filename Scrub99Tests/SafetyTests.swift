@@ -656,7 +656,216 @@ struct SafetyTests {
         )
         try expect(credentialsAssessment.decision == .blocked, "A folder holding a credential file must not be offerable.")
 
-        print("Scrub99 safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, and path-display tests passed: 128 assertions")
+        // The Office add-in audit. Office's residue cannot be found by size or by
+        // ownership: the orphaned pieces are a few hundred bytes each, and they
+        // sit inside folders belonging to an application that is still very much
+        // installed. It has to be looked for directly. A fixture is the only way
+        // to exercise it, because the real folders are outside what this process
+        // is allowed to read.
+        let officeHome = testRoot.appendingPathComponent("OfficeHome", isDirectory: true)
+        let officeStartup = officeHome
+            .appendingPathComponent(OfficeAddInAudit.sharedFolderRelativePath, isDirectory: true)
+            .appendingPathComponent("User Content.localized", isDirectory: true)
+            .appendingPathComponent("Startup.localized", isDirectory: true)
+
+        // Word's startup folder as it actually looks on this Mac: an add-in the
+        // reader installed on purpose, beside companion files left behind by
+        // sessions that ended badly.
+        let wordFolder = officeStartup.appendingPathComponent("Word", isDirectory: true)
+        try fileManager.createDirectory(at: wordFolder, withIntermediateDirectories: true)
+        try Data(repeating: 0x41, count: 37_208).write(to: wordFolder.appendingPathComponent("Zotero.dotm"))
+        try Data(repeating: 0x42, count: 162).write(to: wordFolder.appendingPathComponent("~$nkCreation.dotm"))
+        for name in ["Excel", "PowerPoint"] {
+            try fileManager.createDirectory(
+                at: officeStartup.appendingPathComponent(name, isDirectory: true),
+                withIntermediateDirectories: true
+            )
+        }
+
+        let existingAddIn = officeHome.appendingPathComponent("Add-Ins/Real.dotm")
+        try fileManager.createDirectory(at: existingAddIn.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(repeating: 0x43, count: 128).write(to: existingAddIn)
+
+        // The half of the problem that survives removing the file: the
+        // application's own list of add-ins, still naming one that is gone.
+        let excelSettings = officeHome.appendingPathComponent(
+            "Library/Containers/com.microsoft.Excel/Data/Library/Preferences/com.microsoft.Excel.plist"
+        )
+        try fileManager.createDirectory(at: excelSettings.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let excelSettingsBody: [String: Any] = [
+            "AddIns": [
+                "AcrobatExcelAddin": [
+                    "Path": "/Library/Application Support/Adobe/MACPDFM/AcrobatExcelAddin.xlam",
+                    "installed": true
+                ],
+                "SaveAsAdobePDF": [
+                    "Path": "/Library/Application Support/Adobe/MACPDFM/SaveAsAdobePDF.xlam",
+                    "installed": false
+                ],
+                "Zotero": [
+                    "Path": existingAddIn.path
+                ],
+                // A relative add-in path, and an absolute path to something that
+                // is not an add-in at all. Neither may become a finding.
+                "Relative": ["Path": "Add-Ins/SaveAsAdobePDF.ppam"],
+                "RecentDocument": ["Path": "/Users/someone/Documents/missing.docx"]
+            ]
+        ]
+        try PropertyListSerialization
+            .data(fromPropertyList: excelSettingsBody, format: .xml, options: 0)
+            .write(to: excelSettings)
+
+        // A second settings file in the same folder, under a name nobody would
+        // guess. It must be read too: which file an application keeps its add-in
+        // list in is not documented, and reading only the expected filename
+        // reports nothing while looking like a clean Mac.
+        let secondaryExcelSettings = excelSettings.deletingLastPathComponent()
+            .appendingPathComponent("com.microsoft.Excel.officeaddins.plist")
+        let secondaryBody: [String: Any] = [
+            "RegisteredAddIns": [
+                "Path": "/Library/Application Support/Adobe/MACPDFM/AcrobatPPTAddin.ppam",
+                "registered": true
+            ]
+        ]
+        try PropertyListSerialization
+            .data(fromPropertyList: secondaryBody, format: .xml, options: 0)
+            .write(to: secondaryExcelSettings)
+
+        // A shortcut inside the same folder, pointing at a settings file that
+        // belongs to nobody here and names an add-in that is gone. Reading
+        // through it would attribute somebody else's contents to Excel.
+        let decoyTarget = officeHome.appendingPathComponent("Elsewhere/decoy.plist")
+        try fileManager.createDirectory(at: decoyTarget.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try PropertyListSerialization
+            .data(fromPropertyList: ["AddIns": ["Path": "/Library/Application Support/Adobe/MACPDFM/Decoy.dotm"]] as [String: Any],
+                  format: .xml,
+                  options: 0)
+            .write(to: decoyTarget)
+        try fileManager.createSymbolicLink(
+            at: excelSettings.deletingLastPathComponent().appendingPathComponent("com.microsoft.Excel.linked.plist"),
+            withDestinationURL: decoyTarget
+        )
+
+        // A settings file that exists and cannot be read is the one case where an
+        // empty answer means "not looked at" rather than "nothing wrong".
+        let powerpointSettings = officeHome.appendingPathComponent(
+            "Library/Containers/com.microsoft.Powerpoint/Data/Library/Preferences/com.microsoft.Powerpoint.plist"
+        )
+        try fileManager.createDirectory(at: powerpointSettings.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("unreadable".utf8).write(to: powerpointSettings)
+        try fileManager.setAttributes([.posixPermissions: 0o000], ofItemAtPath: powerpointSettings.path)
+
+        let officeOutcome = OfficeAddInAudit(homeDirectory: officeHome, fileManager: fileManager).run()
+
+        try expect(officeOutcome.sharedFolderPresent, "A home with Office's shared folder in it must be audited rather than skipped.")
+        try expect(officeOutcome.startupFoldersRead == 3, "Every Office startup folder present must be located and read.")
+        try expect(!officeOutcome.startupFoldersUnreadable, "Readable startup folders must not be reported as unreadable.")
+
+        // A companion file is judged only when its application is closed, so this
+        // holds either way, and that is the point: beside a running application a
+        // ~$ file is a live lock and not residue, and must not be called leftover.
+        let wordRunning = officeOutcome.applicationsRunning.contains("Microsoft Word")
+        let wordCompanions = officeOutcome.findings.filter {
+            $0.kind == .staleCompanionFile && $0.applicationName == "Microsoft Word"
+        }
+        try expect(
+            wordCompanions.count + (wordRunning ? 1 : 0) == 1,
+            "A ~$ file in a closed application's startup folder must be reported exactly once, and left unjudged while that application runs."
+        )
+        try expect(
+            officeOutcome.findings.filter { $0.kind == .staleCompanionFile }.count == wordCompanions.count,
+            "Only ~$ companion files are residue: an add-in the reader installed on purpose is not, however small it is."
+        )
+        try expect(
+            wordCompanions.allSatisfy { $0.url.lastPathComponent.hasPrefix("~$") },
+            "The file reported must be the ~$ companion, counted rather than assumed from how many files the folder holds."
+        )
+        try expect(
+            !officeOutcome.findings.contains { $0.kind == .staleCompanionFile && $0.applicationName == "Microsoft Excel" },
+            "An empty startup folder must produce nothing at all."
+        )
+
+        let registrationFindings = officeOutcome.findings.filter { $0.kind == .danglingRegistration }
+        try expect(
+            registrationFindings.count == 2,
+            "Each settings file holding a missing add-in must be reported, and a file holding none must not."
+        )
+        let excelRegistration = registrationFindings.first { $0.url.lastPathComponent == "com.microsoft.Excel.plist" }
+        try expect(
+            excelRegistration?.applicationName == "Microsoft Excel",
+            "The entry must be attributed to the application whose settings file holds it."
+        )
+        try expect(
+            excelRegistration != nil,
+            "The finding must point at the settings file the entry was read out of, not at the add-in that is missing."
+        )
+
+        // The same folder, a name nobody would have guessed, and the add-in list
+        // inside it: found because the folder is read rather than a filename
+        // assumed.
+        let secondaryRegistration = registrationFindings.first {
+            $0.url.lastPathComponent == "com.microsoft.Excel.officeaddins.plist"
+        }
+        try expect(
+            secondaryRegistration?.registrations.contains {
+                $0.namedPath.hasSuffix("AcrobatPPTAddin.ppam") && $0.switchName == "registered" && $0.isSwitchedOn == true
+            } == true,
+            "A settings file under an unexpected name must be read, and PowerPoint's switch name must be recognised as well as Excel's."
+        )
+        try expect(
+            !registrationFindings.contains {
+                $0.url.lastPathComponent.contains("linked") || $0.url.lastPathComponent == "decoy.plist"
+            },
+            "A shortcut in a settings folder must not be followed into a settings file that belongs to nobody here."
+        )
+
+        let registrations = excelRegistration?.registrations ?? []
+        try expect(registrations.count == 2, "Both missing add-ins must be reported, and one whose file is still on the disk must not be.")
+        try expect(
+            registrations.contains {
+                $0.namedPath.hasSuffix("AcrobatExcelAddin.xlam") && $0.isSwitchedOn == true && $0.switchName == "installed"
+            },
+            "A switched-on entry must be reported as switched on, naming the setting that switches it."
+        )
+        try expect(
+            registrations.contains { $0.namedPath.hasSuffix("SaveAsAdobePDF.xlam") && $0.isSwitchedOn == false },
+            "A switched-off entry is dormant and must be reported as switched off rather than warned about."
+        )
+        try expect(
+            registrations.allSatisfy { $0.namedPath.hasPrefix("/") },
+            "A relative add-in path must never be resolved against a folder of Scrub 99's choosing."
+        )
+        try expect(
+            !registrations.contains { $0.namedPath.hasSuffix(".docx") },
+            "A settings file also names recent documents; a missing document is not a missing add-in."
+        )
+
+        let registrationExplanation = excelRegistration?.explanation ?? ""
+        try expect(
+            registrationExplanation.contains("not something Scrub 99 can do for you"),
+            "The explanation must say plainly that clearing a switched-on entry is a step inside the application itself."
+        )
+        try expect(
+            registrationExplanation.contains("switched off"),
+            "The explanation must keep the dormant entry separate from the one that will complain on every launch."
+        )
+
+        try expect(
+            officeOutcome.unreadableSettings == ["Microsoft PowerPoint"],
+            "A settings file that exists and cannot be read must be reported as unread, never passed over as clean."
+        )
+
+        let bareHome = testRoot.appendingPathComponent("BareHome", isDirectory: true)
+        try fileManager.createDirectory(at: bareHome, withIntermediateDirectories: true)
+        let bareOutcome = OfficeAddInAudit(homeDirectory: bareHome, fileManager: fileManager).run()
+        try expect(!bareOutcome.sharedFolderPresent, "Office absent must be distinguishable from Office present and clean.")
+        try expect(bareOutcome.findings.isEmpty, "A Mac without Office has no add-in residue to report.")
+        try expect(
+            bareOutcome.unreadableSettings.isEmpty && bareOutcome.applicationsRunning.isEmpty,
+            "A Mac without Office must produce no caveats at all."
+        )
+
+        print("Scrub99 safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, and office-add-in-audit tests passed: 151 assertions")
     }
 
     private static func item(

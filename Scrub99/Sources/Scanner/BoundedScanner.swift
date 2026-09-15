@@ -23,6 +23,16 @@ final class Scanner {
     private var unreadableLocationCount = 0
     private var unmeasuredFileCount = 0
 
+    /// How many entries the sandbox-container root holds, counted before the
+    /// ownership test discards the ones that belong to installed applications.
+    /// The summary needs the total to explain what is missing from the list.
+    private var containerEntryCount = 0
+
+    /// Notes produced while building targets rather than while scanning them.
+    /// Held here so they can be appended in the order the results screen shows,
+    /// which is not the order the targets are built in.
+    private var officeAddInNotes: [ScanResults.ScanNote] = []
+
     private let applications: [ApplicationRule]
     private let fileManager: FileManager
     private let homeDirectory: URL
@@ -46,6 +56,8 @@ final class Scanner {
         scannedPaths = []
         unreadableLocationCount = 0
         unmeasuredFileCount = 0
+        containerEntryCount = 0
+        officeAddInNotes = []
         let startDate = Date()
 
         guard !applications.isEmpty else {
@@ -64,6 +76,8 @@ final class Scanner {
         var undeclaredSize: Int64 = 0
         var suppressedCount = 0
         var suppressedSize: Int64 = 0
+        var flooredCount = 0
+        var flooredSize: Int64 = 0
 
         for (index, target) in targets.enumerated() {
             try Task.checkCancellation()
@@ -77,9 +91,17 @@ final class Scanner {
             guard fileManager.fileExists(atPath: target.url.path) else { continue }
             guard let item = try await inspect(target) else { continue }
 
-            if target.isUndeclared && item.size < Self.minimumUndeclaredSize {
-                suppressedCount += 1
-                suppressedSize += item.size
+            if (target.isUndeclared || target.isSizeFloored) && item.size < Self.minimumUndeclaredSize {
+                // Only swept paths are counted as swept paths. A floored
+                // container is a finding that did not clear the bar, not an
+                // undeclared folder, and the note below says which it is.
+                if target.isUndeclared {
+                    suppressedCount += 1
+                    suppressedSize += item.size
+                } else {
+                    flooredCount += 1
+                    flooredSize += item.size
+                }
                 continue
             }
             if target.isUndeclared {
@@ -104,6 +126,20 @@ final class Scanner {
             }
         }
 
+        // The container audit runs on every scan, not only the deep one, so
+        // this note sits outside the sweep block. Without it the list would
+        // show one container and silently omit the thousand beside it.
+        if containerEntryCount > 0 {
+            scanNotes.append(.init(
+                phase: "Containers",
+                message: "\(containerEntryCount) sandbox containers were found. macOS gives each application its own container, and most belong to an application that is still installed, or to macOS itself, so they are not residue. \(flooredCount) belong to nothing installed but are under \(Self.minimumUndeclaredSize.humanReadable) each (\(flooredSize.humanReadable) combined), so they were measured and left out of the list."
+            ))
+        }
+
+        // Built while the targets were, because the add-in folders are read
+        // before the scan loop runs. Appended here so the results screen still
+        // shows them in the order the scan happened.
+        scanNotes.append(contentsOf: officeAddInNotes)
 
         if unreadableLocationCount > 0 {
             scanNotes.append(.cautionPhase(
@@ -156,6 +192,21 @@ final class Scanner {
         /// True only for paths discovered by the undeclared-path sweep, which are
         /// subject to the size floor and are described differently in the UI.
         let isUndeclared: Bool
+        /// True for children of a root whose small entries are noise rather than
+        /// findings, so the same size floor applies to them without their being
+        /// undeclared. A Mac carries well over a thousand sandbox containers and
+        /// almost every one is a few kilobytes of widget or extension state;
+        /// without the floor the audit would bury one real finding under a
+        /// thousand empty rows.
+        var isSizeFloored: Bool = false
+        /// Set by audits that have already worked out what to say. The Office
+        /// add-in audit knows the difference between a companion file left
+        /// behind and a registration still pointing at a file that is gone, and
+        /// that difference is the entire finding — the generic wording below
+        /// would throw it away.
+        var customReason: String? = nil
+        var customExplanation: String? = nil
+        var customTags: [Tag]? = nil
     }
 
     private func buildTargets(installedApplicationNames: Set<String>) -> [ScanTarget] {
@@ -195,6 +246,12 @@ final class Scanner {
             seenPaths: &seenPaths,
             installed: installedEvidence
         ))
+        // Runs before the sweep so the add-in folders have already been claimed
+        // by name when the sweep reaches the shared container they sit in. The
+        // sweep would otherwise describe the whole Office container as one
+        // undeclared folder and lose the individual files inside it, which are
+        // the only part worth reading.
+        targets.append(contentsOf: buildOfficeAddInTargets(seenPaths: &seenPaths))
         if deepSweep {
             targets.append(contentsOf: buildUndeclaredTargets(
                 seenPaths: &seenPaths,
@@ -246,24 +303,34 @@ final class Scanner {
         )
         var targets: [ScanTarget] = []
 
-        let roots: [(String, ItemCategory, String)] = [
-            ("Library/Application Support", .applicationData, "Persistent application data found under Application Support."),
-            ("Library/HTTPStorages", .applicationData, "HTTP cookies and web storage left by an application. This may contain sign-in state and requires review."),
-            ("Library/Saved Application State", .applicationData, "Saved window and application state left by an application."),
-            ("Library/Preferences", .preferences, "Application preference left after the apparent owner was removed."),
-            ("Library/Caches", .cache, "Regenerable cache left by an application."),
-            ("Library/Logs", .logs, "Diagnostic logs left by an application."),
-            ("Library/Group Containers", .applicationData, "Sandbox group container left by an application."),
-            ("Library/LaunchAgents", .applicationData, "Per-user launch agent whose apparent owning application is not installed.")
+        // Root, category, description, and whether small children are noise.
+        let roots: [(String, ItemCategory, String, Bool)] = [
+            ("Library/Application Support", .applicationData, "Persistent application data found under Application Support.", false),
+            ("Library/HTTPStorages", .applicationData, "HTTP cookies and web storage left by an application. This may contain sign-in state and requires review.", false),
+            ("Library/Saved Application State", .applicationData, "Saved window and application state left by an application.", false),
+            ("Library/Preferences", .preferences, "Application preference left after the apparent owner was removed.", false),
+            ("Library/Caches", .cache, "Regenerable cache left by an application.", false),
+            ("Library/Logs", .logs, "Diagnostic logs left by an application.", false),
+            ("Library/Group Containers", .applicationData, "Sandbox group container left by an application.", false),
+            ("Library/LaunchAgents", .applicationData, "Per-user launch agent whose apparent owning application is not installed.", false),
+            // A sandbox container is the private storage area macOS gives an
+            // application: its documents, its settings, and anything it
+            // downloaded. Deleting an application does not delete its container,
+            // so this is where a removed app most often leaves the most behind.
+            // It is also the one root where the small entries outnumber the real
+            // ones by a thousand to one, which is what the floor is for.
+            ("Library/Containers", .applicationData, "A sandbox container: the private storage area macOS gives one application, holding its documents, settings, and downloaded files. Deleting an application does not delete its container.", true)
         ]
 
-        for (relativeRoot, category, description) in roots {
+        for (relativeRoot, category, description, floorsChildren) in roots {
             let root = homeDirectory.appendingPathComponent(relativeRoot, isDirectory: true)
             guard let children = try? fileManager.contentsOfDirectory(
                 at: root,
                 includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey, .contentModificationDateKey],
                 options: []
             ) else { continue }
+
+            if floorsChildren { containerEntryCount = children.count }
 
             for child in children {
                 let normalized = child.standardizedFileURL
@@ -287,12 +354,123 @@ final class Scanner {
                     app: app,
                     association: .veryLikely,
                     isInventoryChild: true,
-                    isUndeclared: false
+                    isUndeclared: false,
+                    isSizeFloored: floorsChildren
                 ))
             }
         }
 
         return targets
+    }
+
+    // MARK: - Office add-in audit
+
+    /// Reports what Microsoft Office leaves behind when one of its add-ins is
+    /// taken off the disk without Office being told. The rest of the scanner
+    /// cannot see this by construction: the files are a few hundred bytes, so no
+    /// size floor surfaces them, and the folders they sit in belong to an
+    /// application that is still very much installed, so the residue rule passes
+    /// over them. It is looked for by name instead.
+    private func buildOfficeAddInTargets(seenPaths: inout Set<String>) -> [ScanTarget] {
+        let rule = ApplicationRule(
+            name: "Office Add-in Audit",
+            knownPaths: [],
+            category: .system,
+            description: "Residue in Microsoft Office's add-in folders and settings."
+        )
+
+        let outcome = OfficeAddInAudit(homeDirectory: homeDirectory, fileManager: fileManager).run()
+        officeAddInNotes = Self.notes(for: outcome)
+
+        return outcome.findings.compactMap { finding in
+            guard fileManager.fileExists(atPath: finding.url.path) else { return nil }
+            let normalized = finding.url.standardizedFileURL
+            guard seenPaths.insert(normalized.path).inserted else { return nil }
+
+            return ScanTarget(
+                url: normalized,
+                knownPath: KnownPath(
+                    relativePath: Self.relativePath(of: normalized, under: homeDirectory),
+                    category: .applicationData,
+                    description: finding.reason
+                ),
+                rule: rule,
+                app: ApplicationRef(
+                    name: finding.applicationName,
+                    bundleIdentifier: finding.bundleIdentifier,
+                    isInstalled: NSWorkspace.shared.urlForApplication(
+                        withBundleIdentifier: finding.bundleIdentifier
+                    ) != nil
+                ),
+                // The audit read this out of Office's own folder or settings
+                // file, so there is nothing left to be uncertain about.
+                association: .confirmed,
+                isInventoryChild: false,
+                isUndeclared: false,
+                customReason: finding.reason,
+                customExplanation: finding.explanation,
+                customTags: finding.kind == .staleCompanionFile ? [.old, .unused] : [.unused]
+            )
+        }
+    }
+
+    /// The notes that go with the audit, including the ones that report the
+    /// audit's own blind spots. An audit that cannot read the folder it is
+    /// supposed to be auditing has to say so: an empty list and an unread
+    /// folder look identical on screen, and only one of them means the Mac is
+    /// clean.
+    private static func notes(for outcome: OfficeAddInAudit.Outcome) -> [ScanResults.ScanNote] {
+        var notes: [ScanResults.ScanNote] = []
+
+        let dangling = outcome.findings.filter { $0.kind == .danglingRegistration }
+        let companions = outcome.findings.filter { $0.kind == .staleCompanionFile }
+
+        if !dangling.isEmpty {
+            notes.append(.cautionPhase(
+                dangling.count == 1
+                    ? "One Microsoft Office application still lists an add-in whose file is gone. Removing the file was not the whole fix — the entry itself is what makes the application complain, and the note beside that settings file says what is left to do."
+                    : "\(dangling.count) Microsoft Office applications still list add-ins whose files are gone. Removing the files was not the whole fix — the entries themselves are what make the applications complain, and each settings file says what is left to do."
+            ))
+        }
+
+        if !companions.isEmpty {
+            notes.append(.init(
+                phase: "Office add-ins",
+                message: companions.count == 1
+                    ? "One companion file was left behind in a Microsoft Office startup folder by a session that ended without tidying up."
+                    : "\(companions.count) companion files were left behind in Microsoft Office startup folders by sessions that ended without tidying up."
+            ))
+        }
+
+        if outcome.startupFoldersUnreadable {
+            notes.append(.cautionPhase(
+                "Microsoft Office's shared folder could not be read, so anything left inside its add-in folders is missing from this list. macOS protects it from Scrub 99."
+            ))
+        } else if outcome.sharedFolderPresent && outcome.startupFoldersRead == 0 {
+            notes.append(.cautionPhase(
+                "Microsoft Office's shared folder was found, but none of its three add-in folders could be located inside it, so Scrub 99 could not report on them."
+            ))
+        }
+
+        for name in Set(outcome.unreadableSettings).sorted() {
+            notes.append(.cautionPhase(
+                "\(name)'s settings file could not be read, so Scrub 99 cannot say whether it still lists an add-in whose file is gone."
+            ))
+        }
+
+        for name in Set(outcome.applicationsRunning).sorted() {
+            notes.append(.init(
+                phase: "Office add-ins",
+                message: "\(name) was running during the scan, so the companion files in its add-in folder were left alone rather than judged. Quitting it and scanning again reports them."
+            ))
+        }
+
+        return notes
+    }
+
+    private static func relativePath(of url: URL, under home: URL) -> String {
+        let prefix = home.path.hasSuffix("/") ? home.path : home.path + "/"
+        return url.path.hasPrefix(prefix) ? String(url.path.dropFirst(prefix.count)) : url.path
     }
 
     // MARK: - Undeclared path sweep
@@ -402,7 +580,9 @@ final class Scanner {
         )
 
         let description: String
-        if evidence.isInstalled {
+        if evidence.isSystemOwned {
+            description = "No rule in Scrub 99's database describes this folder. Its name marks it as belonging to macOS or to a large vendor's own naming rather than to one application you installed, so it is not treated as residue from something you removed. It is \(role) inside \(container); check the path and contents before trusting it."
+        } else if evidence.isInstalled {
             description = "No rule in Scrub 99's database describes this folder. It appears to belong to \(evidence.ownerName), which is installed on this Mac. Scrub 99 cannot say what is inside it or whether it is safe to remove, so it is reported for inspection only."
         } else {
             description = "No rule in Scrub 99's database describes this folder. Its name suggests \(evidence.ownerName), but Scrub 99 found no matching installed application. That makes it a candidate for residue left behind by something you removed. It is \(role) inside \(container); check the path and contents before trusting it."
@@ -430,6 +610,48 @@ final class Scanner {
         var ownerName: String
         var bundleIdentifier: String?
         var isInstalled: Bool
+        /// True when the name belongs to a system or vendor namespace rather
+        /// than to one removable application, so the folder must not be
+        /// described as residue from something the user removed.
+        var isSystemOwned: Bool = false
+    }
+
+    /// Vendor and system namespaces that belong to a platform or to a large
+    /// vendor rather than to a single removable application. Declared once so
+    /// the phantom audit and the undeclared sweep agree on what they refuse to
+    /// call residue: the sweep alone used to report Apple's own folders, and
+    /// folders of installed applications such as Telegram Desktop, as leftover
+    /// data from something the user had removed.
+    private static let protectedNamespacePrefixes = [
+        "com.apple.", "com.openai.", "com.anthropic.", "com.google.",
+        "com.microsoft.", "com.adobe.", "com.dropbox.", "com.raycast.",
+        "com.macpaw.cleanmymac5", "com.logi.", "com.logitech.",
+        "com.malwarebytes.", "com.tdesktop.", "net.whatsapp.",
+        "org.mozilla.", "org.videolan.", "org.openemu.", "org.swift.",
+        "io.dictionaries.", "io.sentry.", "familycircled", "contactsd",
+        "identityservicesd", "privatecloudcomputed", "networkserviceproxy",
+        "software update utilities", "proapps", "cef", "crashreporter"
+    ]
+
+    private func isProtectedNamespace(_ rawName: String) -> Bool {
+        let normalized = normalize(rawName.replacingOccurrences(of: ".plist", with: ""))
+        return Self.protectedNamespacePrefixes.contains { normalized.hasPrefix(normalize($0)) }
+    }
+
+    /// True when an installed application plausibly owns a folder of this name,
+    /// either because the folder name is its bundle identifier or because the
+    /// two names overlap closely enough that a separate owner is implausible.
+    private func ownedByInstalledApplication(
+        _ rawName: String,
+        installed: InstalledApplicationEvidence
+    ) -> Bool {
+        let normalized = normalize(rawName.replacingOccurrences(of: ".plist", with: ""))
+        if let identifier = probableBundleIdentifier(for: rawName),
+           installed.identifiers.contains(normalize(identifier)) { return true }
+        if installed.names.contains(normalized) { return true }
+        return installed.names.contains { name in
+            name.count >= 4 && (normalized.contains(name) || name.contains(normalized))
+        }
     }
 
     /// Identifies a likely owner for an undeclared folder using only local
@@ -443,8 +665,7 @@ final class Scanner {
         let bundleIdentifier = probableBundleIdentifier(for: trimmed)
         let ownerName = phantomApplicationName(for: trimmed)
 
-        if let identifier = bundleIdentifier,
-           installed.identifiers.contains(normalize(identifier)) {
+        if ownedByInstalledApplication(rawName, installed: installed) {
             return UndeclaredOwnerEvidence(
                 ownerName: ownerName,
                 bundleIdentifier: bundleIdentifier,
@@ -452,14 +673,11 @@ final class Scanner {
             )
         }
 
-        if installed.names.contains(normalize(trimmed)) {
-            return UndeclaredOwnerEvidence(ownerName: ownerName, bundleIdentifier: bundleIdentifier, isInstalled: true)
-        }
-
         return UndeclaredOwnerEvidence(
             ownerName: ownerName,
             bundleIdentifier: bundleIdentifier,
-            isInstalled: false
+            isInstalled: false,
+            isSystemOwned: isProtectedNamespace(rawName)
         )
     }
 
@@ -501,33 +719,16 @@ final class Scanner {
         installed: InstalledApplicationEvidence
     ) -> Bool {
         let rawName = url.lastPathComponent
-        let normalizedName = normalize(rawName.replacingOccurrences(of: ".plist", with: ""))
         guard !rawName.isEmpty, rawName != ".DS_Store" else { return false }
 
-        // These are OS-owned or intentionally shared namespaces, even when
-        // they do not correspond to a visible third-party application.
-        let protectedPrefixes = [
-            "com.apple.", "com.openai.", "com.anthropic.", "com.google.",
-            "com.microsoft.", "com.adobe.", "com.dropbox.", "com.raycast.",
-            "com.macpaw.cleanmymac5", "com.logi.", "com.logitech.",
-            "com.malwarebytes.", "com.tdesktop.", "net.whatsapp.",
-            "org.mozilla.", "org.videolan.", "org.openemu.", "org.swift.",
-            "io.dictionaries.", "io.sentry.", "familycircled", "contactsd",
-            "identityservicesd", "privatecloudcomputed", "networkserviceproxy",
-            "software update utilities", "proapps", "cef", "crashreporter"
-        ]
-        if protectedPrefixes.contains(where: { normalizedName.hasPrefix(normalize($0)) }) { return false }
-
-        if let identifier = probableBundleIdentifier(for: rawName),
-           installed.identifiers.contains(normalize(identifier)) { return false }
+        // OS-owned and intentionally shared namespaces are never phantom
+        // residue, even when they do not correspond to a visible application.
+        if isProtectedNamespace(rawName) { return false }
 
         // A generic support folder may be owned by an app whose bundle ID is
         // not in the folder name. A normalized app-name match is sufficient
         // to keep it out of the phantom list.
-        if installed.names.contains(normalizedName) { return false }
-        if installed.names.contains(where: { name in
-            name.count >= 4 && (normalizedName.contains(name) || name.contains(normalizedName))
-        }) { return false }
+        if ownedByInstalledApplication(rawName, installed: installed) { return false }
 
         // Cache and log roots contain many harmless empty namespaces. They are
         // still useful to show when they have actual content.
@@ -707,17 +908,19 @@ final class Scanner {
             safetyLevel: safety,
             association: target.association,
             primaryApplication: target.app,
-            reason: target.isUndeclared
+            reason: target.customReason ?? (target.isUndeclared
                 ? "Found by sweeping \(target.url.deletingLastPathComponent().abbreviatingWithTilde(homeDirectory: homeDirectory)) — no rule describes this path"
                 : (target.isInventoryChild
                     ? "Immediate child of an expanded inventory root in the \(target.rule.name) rule"
-                    : "Exact path from the \(target.rule.name) rule"),
-            explanation: target.rule.name == "Phantom Application Audit"
+                    : "Exact path from the \(target.rule.name) rule")),
+            explanation: target.customExplanation ?? (target.rule.name == "Phantom Application Audit"
                 ? "\(target.knownPath.description) No installed application matching this namespace was found in the current application inventory. Reported separately so its exact path, size, and contents can be reviewed before reversible quarantine."
                 : (target.isInventoryChild
                     ? "\(target.knownPath.description) Reported separately so its size and path can be reviewed."
-                    : target.knownPath.description),
-            tags: isSymlink ? [.symlink] : (target.rule.name == "Phantom Application Audit" ? [.old, .unused] : []),
+                    : target.knownPath.description)),
+            tags: isSymlink
+                ? [.symlink]
+                : (target.customTags ?? (target.rule.name == "Phantom Application Audit" ? [.old, .unused] : [])),
             isUndeclared: target.isUndeclared,
             isSelected: false
         )

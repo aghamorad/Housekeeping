@@ -1,3 +1,47 @@
+# Scrub99 0.5.0
+
+Two things this release is about. One is that Scrub99 was blind to a whole shelf of leftovers, and
+the other is that it was wrong about a class of folder it did report.
+
+- Scans sandbox containers for the first time. A sandbox container is the private storage area
+  macOS gives an application — its documents, its settings, and anything it downloaded — and
+  deleting the application does not delete the container. That is where a removed application most
+  often leaves the most behind, and Scrub99 had never looked inside it. A Mac carries well over a
+  thousand of them, though, and almost every one is a few kilobytes of widget or extension state
+  belonging to an application that is still installed. Those are measured and then left off the
+  list, and the note above the results says how many there were, what they came to together, and
+  that they were left out rather than missed.
+- Fixes a mislabelling that mattered. The sweep that looks for folders no rule describes was
+  calling Apple's own folders, and folders belonging to applications that are installed, residue
+  from something you had removed — Telegram Desktop's data folder among them, because its name
+  does not look like a bundle identifier. Vendor and system namespaces are now declared in one
+  place and used by both audits, and a folder whose name marks it as belonging to macOS or to a
+  large vendor is described as that, instead of as something you deleted.
+- Adds the applications that never install as an application bundle, so had nothing for Scrub99 to
+  find them by: MLX, Whisper.cpp, MacWhisper, GPT4All, Jan, Draw Things, and ComfyUI. Between them
+  these hold the multi-gigabyte model files that prompted this whole application. Claude also picks
+  up the second data folder it keeps on this Mac.
+- Finds the residue Microsoft Office leaves behind when an add-in is taken off the disk without
+  Office being told — the state that left Word, Excel, and PowerPoint complaining on every launch
+  after Acrobat was uninstalled. Two things are looked for: a `~$` companion file sitting in a
+  startup folder while its application is closed, and an add-in path an application still holds in
+  its own settings while the file it names is gone.
+- Says what each application will do on its next launch, because the two halves of that problem
+  are not the same. An entry switched on makes the application go looking for a file that is not
+  there and report it missing; an entry switched off is dormant and needs nothing done to it; and
+  when the switch cannot be found in the settings file, Scrub99 says so rather than guessing,
+  because a switched-off entry and an entry with no visible switch look identical from outside.
+- Says plainly when removing the settings file is not the whole fix. It does clear the entry, and
+  it takes every other setting for that application with it. Clearing one entry is a step inside
+  the application's own add-in list, which Scrub99 cannot take for you.
+- Reports its own blind spots. If a startup folder or a settings file cannot be read, the results
+  say which one and what is therefore missing. An empty list and a folder nobody could open look
+  the same on screen, and only one of them means the Mac is clean.
+- Never matches an add-in to its companion file by name. Word's naming is not consistent enough to
+  build a rule on, and one built on it would report files that are perfectly fine.
+
+The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized.
+
 # Scrub99 0.4.1
 
 Found by opening the shipped 0.4.0 build and reading it, rather than by running the tests — every
