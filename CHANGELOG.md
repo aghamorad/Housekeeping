@@ -1,12 +1,12 @@
-# Scrub99 0.5.0
+# Housekeeping 0.5.0
 
-Two things this release is about. One is that Scrub99 was blind to a whole shelf of leftovers, and
+Two things this release is about. One is that Housekeeping was blind to a whole shelf of leftovers, and
 the other is that it was wrong about a class of folder it did report.
 
 - Scans sandbox containers for the first time. A sandbox container is the private storage area
   macOS gives an application — its documents, its settings, and anything it downloaded — and
   deleting the application does not delete the container. That is where a removed application most
-  often leaves the most behind, and Scrub99 had never looked inside it. A Mac carries well over a
+  often leaves the most behind, and Housekeeping had never looked inside it. A Mac carries well over a
   thousand of them, though, and almost every one is a few kilobytes of widget or extension state
   belonging to an application that is still installed. Those are measured and then left off the
   list, and the note above the results says how many there were, what they came to together, and
@@ -17,7 +17,7 @@ the other is that it was wrong about a class of folder it did report.
   does not look like a bundle identifier. Vendor and system namespaces are now declared in one
   place and used by both audits, and a folder whose name marks it as belonging to macOS or to a
   large vendor is described as that, instead of as something you deleted.
-- Adds the applications that never install as an application bundle, so had nothing for Scrub99 to
+- Adds the applications that never install as an application bundle, so had nothing for Housekeeping to
   find them by: MLX, Whisper.cpp, MacWhisper, GPT4All, Jan, Draw Things, and ComfyUI. Between them
   these hold the multi-gigabyte model files that prompted this whole application. Claude also picks
   up the second data folder it keeps on this Mac.
@@ -29,11 +29,11 @@ the other is that it was wrong about a class of folder it did report.
 - Says what each application will do on its next launch, because the two halves of that problem
   are not the same. An entry switched on makes the application go looking for a file that is not
   there and report it missing; an entry switched off is dormant and needs nothing done to it; and
-  when the switch cannot be found in the settings file, Scrub99 says so rather than guessing,
+  when the switch cannot be found in the settings file, Housekeeping says so rather than guessing,
   because a switched-off entry and an entry with no visible switch look identical from outside.
 - Says plainly when removing the settings file is not the whole fix. It does clear the entry, and
   it takes every other setting for that application with it. Clearing one entry is a step inside
-  the application's own add-in list, which Scrub99 cannot take for you.
+  the application's own add-in list, which Housekeeping cannot take for you.
 - Reports its own blind spots. If a startup folder or a settings file cannot be read, the results
   say which one and what is therefore missing. An empty list and a folder nobody could open look
   the same on screen, and only one of them means the Mac is clean.
@@ -42,7 +42,7 @@ the other is that it was wrong about a class of folder it did report.
 
 The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized.
 
-# Scrub99 0.4.1
+# Housekeeping 0.4.1
 
 Found by opening the shipped 0.4.0 build and reading it, rather than by running the tests — every
 item below is a thing the tests could not have caught, because each one is about how the app
@@ -52,10 +52,10 @@ reads rather than what it computes.
   height it is offered, so a one-item quarantine review and a one-line hidden-detail note each left
   an empty block under their content. Both now grow to their content and stop at a cap.
 - Fixes the count in the quarantine review, which read “1 path(s)”.
-- Writes the app's name as **Scrub 99** everywhere in its own prose, matching the title bar and the
-  Info.plist display name. Earlier builds called themselves Scrub99 in about two dozen sentences
-  while the window above them said Scrub 99. The `~/Scrub99 Quarantine` folder and the
-  `Library/Application Support/Scrub99` directory deliberately keep their existing names — renaming
+- Writes the app's name as **Housekeeping** everywhere in its own prose, matching the title bar and the
+  Info.plist display name. Earlier builds called themselves Housekeeping in about two dozen sentences
+  while the window above them said Housekeeping. The `~/Housekeeping Quarantine` folder and the
+  `Library/Application Support/Housekeeping` directory deliberately keep their existing names — renaming
   either would orphan everything already quarantined and the records that sit beside it.
 - Fixes the printed version number, which was written out by hand in the results footer, in
   Settings, and in `Info.plist` as three separate strings. The two the app draws now read
@@ -63,12 +63,12 @@ reads rather than what it computes.
 
 The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized.
 
-# Scrub99 0.4.0
+# Housekeeping 0.4.0
 
-This release is about being able to tell Scrub99 what to leave alone, and about it refusing the things it should refuse without being told.
+This release is about being able to tell Housekeeping what to leave alone, and about it refusing the things it should refuse without being told.
 
-- Adds the left-alone list. Press **Leave It Alone** on any finding and that path stops being offered, on this scan and every later one, until it is taken off again. The list is a plain JSON file at `~/Library/Application Support/Scrub99/Protection.json`, readable in any text editor. Protecting a folder protects everything inside it. The list can only ever make Scrub99 more careful: nothing on it can make an unproven path eligible.
-- Adds a working-copy guard, taken from [Mole](https://github.com/tw93/mole)'s purge step. Before any folder is offered, Scrub99 looks three levels inside it for a Git repository — including the `.git` file a worktree uses — a deployment key named or extended like one, or a credential file. A match refuses the folder whatever its name suggests, and the refusal names the file and where inside the folder it was found. The answer is memoised per path and re-read when a scan begins.
+- Adds the left-alone list. Press **Leave It Alone** on any finding and that path stops being offered, on this scan and every later one, until it is taken off again. The list is a plain JSON file at `~/Library/Application Support/Housekeeping/Protection.json`, readable in any text editor. Protecting a folder protects everything inside it. The list can only ever make Housekeeping more careful: nothing on it can make an unproven path eligible.
+- Adds a working-copy guard, taken from [Mole](https://github.com/tw93/mole)'s purge step. Before any folder is offered, Housekeeping looks three levels inside it for a Git repository — including the `.git` file a worktree uses — a deployment key named or extended like one, or a credential file. A match refuses the folder whatever its name suggests, and the refusal names the file and where inside the folder it was found. The answer is memoised per path and re-read when a scan begins.
 - Adds help text to every control that needed it, and gives the primary **Scan My Mac** button an explanation for the first time. Because `ThemeButton` routes help to the accessibility hint as well, these were VoiceOver gaps too.
 - Ships a universal binary for Apple silicon and Intel, with separate downloads for each architecture alongside it.
 - Documents four rule files that had been shipping undocumented (`chrome.json`, `codex.json`, `gapcode.json`, `gemini.json`), and corrects the architecture listing, which named a source file that never existed.
@@ -76,13 +76,13 @@ This release is about being able to tell Scrub99 what to leave alone, and about 
 
 The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized.
 
-# Scrub99 0.3.0
+# Housekeeping 0.3.0
 
 This release adds a phantom application audit for residue left behind after an application is removed.
 
 - Checks user Application Support, Preferences, HTTP storage, Saved Application State, Group Containers, Caches, Logs, and LaunchAgents.
 - Compares candidate namespaces with installed application bundles and bundle identifiers.
-- Excludes Apple-owned, Scrub99, and known shared/system namespaces.
+- Excludes Apple-owned, Housekeeping, and known shared/system namespaces.
 - Labels likely remnants with their exact path, measured size, reason, and review warning.
 - Keeps persistent data, preferences, web storage, and launch agents review-only.
 - Keeps low-risk orphan caches and logs compatible with the existing reversible quarantine workflow.

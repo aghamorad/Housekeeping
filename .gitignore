@@ -10,7 +10,7 @@ build/
 DerivedData/
 *.xcworkspace/
 *.xcodeproj/
-!Scrub99.xcodeproj/
+!Housekeeping.xcodeproj/
 
 # Swift Package Manager
 .build/
@@ -31,7 +31,7 @@ DerivedData/
 dist/
 
 # Preserved local prototypes and superseded rule copies
-Scrub99/Sources/Scanner/Scanner.swift
-Scrub99/Sources/Cleanup/CleanupEngine.swift
-Scrub99/Sources/main.swift
-Scrub99/Resources/*.json
+Housekeeping/Sources/Scanner/Scanner.swift
+Housekeeping/Sources/Cleanup/CleanupEngine.swift
+Housekeeping/Sources/main.swift
+Housekeeping/Resources/*.json

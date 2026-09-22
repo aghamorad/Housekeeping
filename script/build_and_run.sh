@@ -2,8 +2,8 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="Scrub99"
-BUNDLE_ID="com.scrub99.app"
+APP_NAME="Housekeeping"
+BUNDLE_ID="com.housekeeping.app"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 XCODE_DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 XCODEBUILD="$XCODE_DEVELOPER_DIR/usr/bin/xcodebuild"
@@ -12,14 +12,14 @@ APP_BUNDLE="$DERIVED_DATA/Build/Products/Debug/$APP_NAME.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
 if [[ ! -x "$XCODEBUILD" ]]; then
-  echo "Scrub99 requires Xcode at /Applications/Xcode.app." >&2
+  echo "Housekeeping requires Xcode at /Applications/Xcode.app." >&2
   exit 1
 fi
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
 DEVELOPER_DIR="$XCODE_DEVELOPER_DIR" "$XCODEBUILD" \
-  -project "$ROOT_DIR/Scrub99.xcodeproj" \
+  -project "$ROOT_DIR/Housekeeping.xcodeproj" \
   -scheme "$APP_NAME" \
   -configuration Debug \
   -derivedDataPath "$DERIVED_DATA" \

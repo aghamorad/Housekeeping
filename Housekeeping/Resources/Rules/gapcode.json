@@ -1,0 +1,47 @@
+{
+  "name": "GapCode",
+  "bundleIdentifier": null,
+  "executableName": "gapcode",
+  "knownPaths": [
+    {
+      "relativePath": ".gapcode",
+      "category": "applicationData",
+      "description": "GapCode home. Holds the CLI binary, chat history, skills, rules, packages, and config.toml. Persistent tool state, not disposable cache.",
+      "inventoryDepth": 1
+    },
+    {
+      "relativePath": ".config/gapcode",
+      "category": "preferences",
+      "description": "GapCode configuration."
+    },
+    {
+      "relativePath": ".cache/gapcode",
+      "category": "cache",
+      "description": "GapCode cache. Rebuilt on demand."
+    },
+    {
+      "relativePath": "Library/Caches/gapgpt-updater",
+      "category": "cache",
+      "description": "Update payloads staged by the GapGPT updater. Safe to delete: the updater re-fetches the current release the next time it runs. The same folder can hold a partially downloaded release that stalled, which is why it sometimes grows without ever finishing."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "history.jsonl",
+      "directory": ".gapcode",
+      "category": "conversationData",
+      "description": "GapCode prompt history"
+    }
+  ],
+  "keywords": [
+    "gapcode",
+    "gapgpt"
+  ],
+  "confidenceBoosters": [
+    "executableMatch",
+    "appNameMatch"
+  ],
+  "installMethod": "directDownload",
+  "category": "ai",
+  "description": "GapCode — a Codex-based coding agent on the GapGPT backend."
+}

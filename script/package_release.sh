@@ -8,16 +8,16 @@ if [[ -d "${XCODE_APP:-/Applications/Xcode.app}" ]]; then
 elif [[ -d "/Applications/Xcode-beta.app" ]]; then
   XCODE_APP="/Applications/Xcode-beta.app"
 else
-  echo "Scrub99 packaging requires Xcode.app or Xcode-beta.app in /Applications." >&2
+  echo "Housekeeping packaging requires Xcode.app or Xcode-beta.app in /Applications." >&2
   exit 1
 fi
 SWIFTC="$XCODE_APP/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
 SDK="$XCODE_APP/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-APP_NAME="Scrub99"
+APP_NAME="Housekeeping"
 MIN_MACOS="13.0"
 
 if [[ ! -x "$SWIFTC" || ! -d "$SDK" ]]; then
-  echo "Scrub99 packaging could not find a usable macOS SDK and Swift compiler in $XCODE_APP." >&2
+  echo "Housekeeping packaging could not find a usable macOS SDK and Swift compiler in $XCODE_APP." >&2
   exit 1
 fi
 
@@ -26,22 +26,22 @@ fi
 # build failure at packaging time rather than at commit time — which is exactly
 # how ProtectionList.swift went missing from this script.
 SOURCES=(
-  "$ROOT_DIR/Scrub99/Sources/AppDelegate.swift"
-  "$ROOT_DIR/Scrub99/Sources/AppState.swift"
-  "$ROOT_DIR/Scrub99/Sources/Scrub99App.swift"
-  "$ROOT_DIR"/Scrub99/Sources/Core/*.swift
-  "$ROOT_DIR/Scrub99/Sources/Scanner/ScanModels.swift"
-  "$ROOT_DIR/Scrub99/Sources/Scanner/BoundedScanner.swift"
-  "$ROOT_DIR/Scrub99/Sources/Scanner/OfficeAddInAudit.swift"
-  "$ROOT_DIR"/Scrub99/Sources/Classifier/*.swift
-  "$ROOT_DIR/Scrub99/Sources/Cleanup/CleanupModels.swift"
-  "$ROOT_DIR/Scrub99/Sources/Cleanup/SafetyPolicy.swift"
-  "$ROOT_DIR/Scrub99/Sources/Cleanup/ProtectionList.swift"
-  "$ROOT_DIR/Scrub99/Sources/Cleanup/SafeCleanupEngine.swift"
-  "$ROOT_DIR"/Scrub99/Sources/UI/*.swift
+  "$ROOT_DIR/Housekeeping/Sources/AppDelegate.swift"
+  "$ROOT_DIR/Housekeeping/Sources/AppState.swift"
+  "$ROOT_DIR/Housekeeping/Sources/HousekeepingApp.swift"
+  "$ROOT_DIR"/Housekeeping/Sources/Core/*.swift
+  "$ROOT_DIR/Housekeeping/Sources/Scanner/ScanModels.swift"
+  "$ROOT_DIR/Housekeeping/Sources/Scanner/BoundedScanner.swift"
+  "$ROOT_DIR/Housekeeping/Sources/Scanner/OfficeAddInAudit.swift"
+  "$ROOT_DIR"/Housekeeping/Sources/Classifier/*.swift
+  "$ROOT_DIR/Housekeeping/Sources/Cleanup/CleanupModels.swift"
+  "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafetyPolicy.swift"
+  "$ROOT_DIR/Housekeeping/Sources/Cleanup/ProtectionList.swift"
+  "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafeCleanupEngine.swift"
+  "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift
 )
 
-WORK_ROOT="$(mktemp -d /private/tmp/scrub99-package.XXXXXX)"
+WORK_ROOT="$(mktemp -d /private/tmp/housekeeping-package.XXXXXX)"
 cleanup() {
   rm -rf "$WORK_ROOT"
 }
@@ -78,9 +78,9 @@ stage() {
   rm -rf "$app"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/Rules"
   cp "$binary" "$app/Contents/MacOS/$APP_NAME"
-  cp "$ROOT_DIR/Scrub99/Info.plist" "$app/Contents/Info.plist"
-  cp "$ROOT_DIR/Scrub99/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
-  ditto "$ROOT_DIR/Scrub99/Resources/Rules" "$app/Contents/Resources/Rules"
+  cp "$ROOT_DIR/Housekeeping/Info.plist" "$app/Contents/Info.plist"
+  cp "$ROOT_DIR/Housekeeping/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
+  ditto "$ROOT_DIR/Housekeeping/Resources/Rules" "$app/Contents/Resources/Rules"
   codesign --force --deep --sign - "$app"
   codesign --verify --deep --strict "$app"
 }
