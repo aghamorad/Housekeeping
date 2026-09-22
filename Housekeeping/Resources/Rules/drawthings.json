@@ -1,0 +1,41 @@
+{
+  "name": "Draw Things",
+  "bundleIdentifier": "com.liuliu.draw-things",
+  "executableName": "draw-things-cli",
+  "knownPaths": [
+    {
+      "relativePath": "Library/Containers/com.liuliu.draw-things",
+      "category": "downloadedModels",
+      "description": "Draw Things' sandbox container, which holds the model files it generates images with. In a typical installation the container holds nothing else: the folder inside it, Documents/Models, is where every downloaded model lives. Draw Things keeps these files even after the application is deleted, and the command-line version installed with Homebrew reads the same folder, so this is where the space goes if you stop using it. Removing it means downloading the models again."
+    },
+    {
+      "relativePath": "Library/Application Support/Draw Things",
+      "category": "applicationData",
+      "description": "Draw Things application data, for installations that keep their settings here rather than in the sandbox container."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "*.ckpt",
+      "directory": "Library/Containers/com.liuliu.draw-things/Data/Documents/Models",
+      "category": "downloadedModels",
+      "description": "Draw Things model checkpoint"
+    }
+  ],
+  "keywords": [
+    "draw-things",
+    "drawthings",
+    "liuliu",
+    "ckpt"
+  ],
+  "confidenceBoosters": [
+    "bundleIdMatch",
+    "appNameMatch",
+    "executableMatch"
+  ],
+  "installMethod": "directDownload",
+  "documentationURL": "https://github.com/liuliu/draw-things-cli",
+  "homepageURL": "https://drawthings.ai/",
+  "category": "creative",
+  "description": "Draw Things — image generation that runs entirely on the Mac."
+}

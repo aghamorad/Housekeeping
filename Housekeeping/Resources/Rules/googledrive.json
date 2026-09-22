@@ -1,0 +1,63 @@
+{
+  "name": "Google Drive for desktop",
+  "bundleIdentifier": "com.google.drivefs",
+  "executableName": "Google Drive",
+  "knownPaths": [
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS",
+      "category": "applicationData",
+      "description": "DriveFS root. Holds one folder per signed-in account; each account folder contains the local sync database and content_cache. Deleting the account folders forces a full re-sync and can lose anything not yet uploaded. Inspect before touching.",
+      "inventoryDepth": 1,
+      "inventoryDescription": "Per-account folders named as long numeric IDs. Inside each is content_cache (downloaded copies of cloud files, safe to clear) next to the sync database. The same numeric IDs also appear under canceled_uploads and lost_and_found."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/content_cache",
+      "category": "cache",
+      "description": "Local copies of files Drive downloaded from the cloud. Regenerates on demand."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/cef_cache",
+      "category": "cache",
+      "description": "Chromium Embedded Framework cache used by Drive's interface. Regenerates."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/canceled_uploads",
+      "category": "cache",
+      "description": "Contents of uploads Drive began and then cancelled, kept so a retry can resume instead of starting over. This is the folder that balloons during flaky uploads: a failed multi-GB upload can leave a full-size copy here. Nothing in it is part of your Drive mirror."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/canceled_upload_migrated",
+      "category": "cache",
+      "description": "Older canceled-upload content moved aside during a Drive upgrade. Superseded staging data."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/lost_and_found",
+      "category": "applicationData",
+      "description": "Where Drive banks a full copy of a local file when an upload fails and the change is rolled back. NOT disposable: if the original was since deleted or moved, this can be the only remaining copy. Check contents before removing."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/Logs",
+      "category": "logs",
+      "description": "DriveFS diagnostic logs. Useful when diagnosing upload failures, since the log records the failure status and whether the client timed out."
+    },
+    {
+      "relativePath": "Library/Application Support/Google/DriveFS/Crashpad",
+      "category": "logs",
+      "description": "Crash reports waiting to be sent to Google."
+    }
+  ],
+  "filePatterns": [],
+  "keywords": [
+    "drivefs",
+    "google drive",
+    "com.google.drivefs"
+  ],
+  "confidenceBoosters": [
+    "bundleIdMatch",
+    "appNameMatch"
+  ],
+  "installMethod": "directDownload",
+  "homepageURL": "https://www.google.com/drive/download/",
+  "category": "productivity",
+  "description": "Google Drive for desktop — mirrors or streams Drive content through a local DriveFS cache."
+}

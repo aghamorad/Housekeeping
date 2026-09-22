@@ -1,0 +1,43 @@
+{
+  "name": "Gradle",
+  "bundleIdentifier": null,
+  "executableName": "gradle",
+  "knownPaths": [
+    {
+      "relativePath": ".gradle/caches",
+      "category": "cache",
+      "description": "Gradle's dependency and build cache. Safe to delete, but the next build re-downloads every dependency — slow on a throttled connection. Also where incremental task output is stored, so deleting it costs one full rebuild.",
+      "inventoryDepth": 1,
+      "inventoryDescription": "modules-2/ holds downloaded jars and AARs, transforms/ holds processed copies, build-cache-1/ holds task output. The modules-2 cache is the expensive one to rebuild."
+    },
+    {
+      "relativePath": ".gradle/wrapper/dists",
+      "category": "cache",
+      "description": "Gradle distributions fetched by the wrapper. Re-downloaded the next time ./gradlew runs. Deleting this breaks offline builds until a connection is available."
+    },
+    {
+      "relativePath": ".gradle/daemon",
+      "category": "logs",
+      "description": "Daemon logs and registry. Read these when a build fails with a daemon error."
+    },
+    {
+      "relativePath": ".gradle",
+      "category": "applicationData",
+      "description": "Gradle home. Alongside caches it holds gradle.properties, which is where signing keys and repository credentials are normally configured, plus any init scripts. Not disposable.",
+      "inventoryDepth": 1
+    }
+  ],
+  "filePatterns": [],
+  "keywords": [
+    "gradle",
+    "gradlew",
+    "org.gradle"
+  ],
+  "confidenceBoosters": [
+    "executableMatch"
+  ],
+  "installMethod": "homebrew",
+  "homepageURL": "https://gradle.org/",
+  "category": "development",
+  "description": "Gradle build system. Its dependency cache is regenerable but costly to rebuild without a fast connection."
+}

@@ -1,0 +1,49 @@
+{
+  "name": "GPT4All",
+  "bundleIdentifier": null,
+  "executableName": "GPT4All",
+  "knownPaths": [
+    {
+      "relativePath": "Library/Application Support/nomic.ai/GPT4All",
+      "category": "downloadedModels",
+      "description": "GPT4All's data folder. It holds the models the application downloaded, which are large, along with any chat history. Removing the models means downloading them again."
+    },
+    {
+      "relativePath": "Library/Application Support/GPT4All",
+      "category": "applicationData",
+      "description": "GPT4All application data, for installations that do not use the nomic.ai folder."
+    },
+    {
+      "relativePath": "Library/Caches/nomic.ai",
+      "category": "cache",
+      "description": "GPT4All cache. Rebuilt when it is next needed."
+    },
+    {
+      "relativePath": "Library/Logs/GPT4All",
+      "category": "logs",
+      "description": "GPT4All log files."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "*.gguf",
+      "directory": "Library/Application Support/nomic.ai/GPT4All",
+      "category": "downloadedModels",
+      "description": "GPT4All model weights in GGUF format"
+    }
+  ],
+  "keywords": [
+    "gpt4all",
+    "nomic",
+    "gguf"
+  ],
+  "confidenceBoosters": [
+    "appNameMatch",
+    "executableMatch"
+  ],
+  "installMethod": "directDownload",
+  "documentationURL": "https://docs.gpt4all.io/",
+  "homepageURL": "https://www.nomic.ai/gpt4all",
+  "category": "ai",
+  "description": "GPT4All — a desktop chat application that runs language models locally."
+}

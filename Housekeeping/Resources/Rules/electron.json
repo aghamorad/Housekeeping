@@ -1,0 +1,31 @@
+{
+  "name": "Electron",
+  "bundleIdentifier": null,
+  "executableName": null,
+  "knownPaths": [
+    {
+      "relativePath": "Library/Caches/electron",
+      "category": "cache",
+      "description": "Prebuilt Electron runtime binaries downloaded by the electron npm package. One archive per version per architecture, so this grows by hundreds of megabytes per Electron version you have built against. Re-downloaded from GitHub on the next install — slow and failure-prone on a throttled connection.",
+      "inventoryDepth": 1,
+      "inventoryDescription": "Zip archives named electron-v<version>-<platform>-<arch>. Each is a full ~100 MB runtime. Entire versions are safe to drop once no project pins them."
+    },
+    {
+      "relativePath": "Library/Caches/electron-builder",
+      "category": "cache",
+      "description": "Electron-builder's helper downloads: app-builder-bin and, for Windows targets, the bundled nsis and wine toolchains. Re-fetched when you next package an Electron app."
+    }
+  ],
+  "filePatterns": [],
+  "keywords": [
+    "electron",
+    "electron-builder"
+  ],
+  "confidenceBoosters": [
+    "sharedFrameworks"
+  ],
+  "installMethod": "directDownload",
+  "homepageURL": "https://www.electronjs.org/",
+  "category": "development",
+  "description": "Electron runtime downloads cached by the electron and electron-builder npm packages."
+}

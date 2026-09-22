@@ -1,0 +1,36 @@
+{
+  "name": "Homebrew",
+  "bundleIdentifier": null,
+  "executableName": "brew",
+  "knownPaths": [
+    {
+      "relativePath": "Library/Caches/Homebrew",
+      "category": "cache",
+      "description": "Downloaded bottles and formula metadata kept so a reinstall or upgrade does not re-download. Safe to clear: installed packages are unaffected and stay installed, and brew fetches again on demand.",
+      "inventoryDepth": 1,
+      "inventoryDescription": "downloads/ holds the bottle archives themselves. The JSON files beside it are cached formula indexes."
+    },
+    {
+      "relativePath": "Library/Logs/Homebrew",
+      "category": "logs",
+      "description": "Per-formula build logs from source builds. Read these when a brew install failed."
+    },
+    {
+      "relativePath": ".cache/Homebrew",
+      "category": "cache",
+      "description": "Homebrew API response cache. Regenerates."
+    }
+  ],
+  "filePatterns": [],
+  "keywords": [
+    "homebrew",
+    "brew"
+  ],
+  "confidenceBoosters": [
+    "executableMatch"
+  ],
+  "installMethod": "directDownload",
+  "homepageURL": "https://brew.sh/",
+  "category": "development",
+  "description": "Homebrew package manager. Only its download cache is disposable; the installed packages live under the prefix, not here."
+}

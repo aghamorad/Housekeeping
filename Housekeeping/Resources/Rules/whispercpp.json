@@ -1,0 +1,45 @@
+{
+  "name": "whisper.cpp",
+  "bundleIdentifier": null,
+  "executableName": "whisper-cli",
+  "knownPaths": [
+    {
+      "relativePath": "whisper.cpp/models",
+      "category": "downloadedModels",
+      "description": "The speech-recognition models used by whisper.cpp. Each file here is a downloaded model, and the larger ones run into the gigabytes. Removing them means downloading them again."
+    },
+    {
+      "relativePath": ".cache/whisper",
+      "category": "downloadedModels",
+      "description": "Speech-recognition models downloaded by the Python version of Whisper. These are large downloaded files, not regenerable cache; removing them means downloading them again."
+    },
+    {
+      "relativePath": "Library/Caches/whisper",
+      "category": "cache",
+      "description": "Whisper working cache. Rebuilt when it is next needed."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "ggml-*.bin",
+      "directory": "whisper.cpp/models",
+      "category": "downloadedModels",
+      "description": "whisper.cpp speech-recognition model"
+    }
+  ],
+  "keywords": [
+    "whisper",
+    "whisper.cpp",
+    "ggml",
+    "openai-whisper"
+  ],
+  "confidenceBoosters": [
+    "appNameMatch",
+    "executableMatch"
+  ],
+  "installMethod": "gitClone",
+  "documentationURL": "https://github.com/ggml-org/whisper.cpp",
+  "homepageURL": "https://github.com/ggml-org/whisper.cpp",
+  "category": "ai",
+  "description": "whisper.cpp — speech-to-text that runs the Whisper models on the Mac itself."
+}

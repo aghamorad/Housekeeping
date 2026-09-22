@@ -1,0 +1,51 @@
+{
+  "name": "MLX",
+  "bundleIdentifier": null,
+  "executableName": null,
+  "knownPaths": [
+    {
+      "relativePath": ".mlx-lm",
+      "category": "downloadedModels",
+      "description": "The MLX model store: the folder MLX tooling in this home directory keeps its models in. Almost every byte here is a downloaded model file — the multi-gigabyte weights that language and vision models are made of. It also holds a small server script and its Python environment, which together take a few megabytes, so look at the contents before removing the folder as a whole. Removing the models means downloading them again."
+    },
+    {
+      "relativePath": ".cache/mlx",
+      "category": "cache",
+      "description": "MLX working cache. Rebuilt when it is next needed."
+    },
+    {
+      "relativePath": "Library/Caches/mlx",
+      "category": "cache",
+      "description": "MLX cache under the standard Library cache folder. Rebuilt when it is next needed."
+    }
+  ],
+  "filePatterns": [
+    {
+      "pattern": "*.safetensors",
+      "directory": ".mlx-lm/models",
+      "category": "downloadedModels",
+      "description": "MLX model weights in safetensors format"
+    },
+    {
+      "pattern": "*.npz",
+      "directory": ".mlx-lm/models",
+      "category": "downloadedModels",
+      "description": "MLX model weights in NPZ format"
+    }
+  ],
+  "keywords": [
+    "mlx",
+    "mlx-lm",
+    "mlx_lm",
+    "mlx-vlm",
+    "safetensors"
+  ],
+  "confidenceBoosters": [
+    "appNameMatch"
+  ],
+  "installMethod": "pip",
+  "documentationURL": "https://github.com/ml-explore/mlx-lm",
+  "homepageURL": "https://ml-explore.github.io/mlx/",
+  "category": "ai",
+  "description": "MLX — Apple's framework for running language and vision models on Apple silicon."
+}
