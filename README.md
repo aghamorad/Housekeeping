@@ -8,7 +8,7 @@ I also did not want to make one of those cleaners that announces that it has fou
 
 The interface looks like an old Mac utility because I miss the peculiar honesty of those applications: they showed you files, paths, sizes, and consequences. They did not pretend the computer possessed mystical knowledge. The retro icon is original too, with a platinum storage drawer, blue inspection lens, broom, and caution badge.
 
-[Download Housekeeping 0.5.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.5.0)
+[Download Housekeeping 0.6.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.6.0)
 
 ## What you actually do with it
 
@@ -22,7 +22,7 @@ The interface looks like an old Mac utility because I miss the peculiar honesty 
 
 ## What this version can and cannot claim
 
-Housekeeping 0.5.0 is an early safety milestone. It performs a local, rule-backed audit of known application locations and reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Housekeeping says so in its results rather than reporting a clean Mac.
+Housekeeping 0.6.0 is an early safety milestone. It performs a local, rule-backed audit of known application locations and reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Housekeeping says so in its results rather than reporting a clean Mac.
 
 There is no connected AI model in this release. That part comes later, if it can be added without handing an LLM the authority to quietly expand what counts as safe or move files by itself. The scanner, path-safety rules, quarantine records, explanations, and restore tests came first because, honestly, a cleanup app has to earn trust at the boring filesystem level before its “AI” opinions mean very much.
 
@@ -231,6 +231,8 @@ The Mac OS 9 interface is a deliberate choice. Utilities such as Norton Utilitie
 - **Always reversible:** eligible cleanup goes to recoverable quarantine, and restore refuses to overwrite an existing path
 
 ## Version
+
+**Housekeeping 0.6.0:** The application renamed to `Housekeeping.app`, the quarantine left behind by earlier builds carried forward into `~/Housekeeping Quarantine` rather than orphaned, and a newer-release notice that asks GitHub once per launch, shows a line only when a newer release is confirmed, and never reports "current" for a question it could not ask — on top of everything in 0.5.0
 
 **Housekeeping 0.5.0:** Sandbox-container scanning with a note saying what was measured and left out, the seven local-AI applications that install without an application bundle, a corrected description for folders belonging to macOS or to a large vendor, and a Microsoft Office add-in audit that explains what each application will do on its next launch — on top of bounded scanning, protected workspace inventory, reversible quarantine, visible quarantine management, item explanations, full-row inspection, sortable results, last-used dates on every finding, the left-alone list, a working-copy guard over Git repositories and deployment keys, help text on every control, a universal Apple-silicon and Intel build, and reliable Dock reopening
 
