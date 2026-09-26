@@ -33,6 +33,10 @@ final class AppState: ObservableObject {
     /// redraw the moment it changes.
     @Published private(set) var protectionEntries: [ProtectionList.Entry] = []
     @Published var showProtectionList = false
+    /// What GitHub says about this copy's age, once it has been asked. Starts as
+    /// `.checking` rather than "nothing newer" so the screen can tell an answer
+    /// that has not arrived from an answer that says this is the newest release.
+    @Published private(set) var updateStatus: UpdateStatus = .checking
 
     let protectionList: ProtectionList
     /// Rebuilt only when the list changes, and only ever read. Caching it here
@@ -40,6 +44,9 @@ final class AppState: ObservableObject {
     private var cleanupSafetyPolicy = CleanupSafetyPolicy()
     private var scanTask: Task<Void, Never>?
     private var scanWorkerTask: Task<ScanResults, Error>?
+    /// The update question is asked once per launch however many views are on
+    /// screen, so every surface that shows the answer shows the same one.
+    private var updateCheckStarted = false
 
     init() {
         let storedTheme = UserDefaults.standard.string(forKey: "housekeeping.theme")
@@ -122,6 +129,113 @@ final class AppState: ObservableObject {
         guard deepSweep != enabled else { return }
         deepSweep = enabled
         UserDefaults.standard.set(enabled, forKey: "housekeeping.deepSweep")
+    }
+
+    // MARK: - Is a newer Housekeeping out?
+
+    /// Where a reader of an older copy is sent: the newest release, whatever it
+    /// turns out to be. Read here and by the two screens that mention it.
+    static let releasesURL = URL(string: "https://github.com/aghamorad/Housekeeping/releases/latest")!
+
+    private static let updateFeed = URL(string: "https://api.github.com/repos/aghamorad/Housekeeping/releases/latest")!
+
+    /// The version this copy was built from. Read from the bundle rather than
+    /// written here, because this number, the one in Settings, and Info.plist all
+    /// used to carry their own copy and a release could ship naming the wrong one.
+    static var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+
+    /// What the one question to GitHub came back with.
+    enum UpdateStatus: Equatable {
+        /// Asked, not answered yet.
+        case checking
+        /// Answered: this is the newest release.
+        case current
+        /// Answered: a newer release exists. Carries its number.
+        case newer(String)
+        /// Not answered — offline, throttled, behind a proxy that eats it, or
+        /// rate-limited on a shared address. Deliberately not `current`: a screen
+        /// that said "up to date" here would be asserting something it was never
+        /// told, and wrong in the direction that leaves a reader on an old copy.
+        case unknown
+    }
+
+    /// Asks GitHub once, in the background, after the window is already drawn.
+    /// Nothing is downloaded and nothing is installed — the answer only decides
+    /// whether the footer and the About section mention that a newer cut exists.
+    /// Safe to call from more than one place; only the first call reaches the network.
+    func startUpdateCheck() async {
+        guard !updateCheckStarted else { return }
+        updateCheckStarted = true
+
+        let mine = AppState.currentVersion
+        guard !mine.isEmpty else {
+            updateStatus = .unknown
+            return
+        }
+
+        var request = URLRequest(url: AppState.updateFeed)
+        // GitHub answers 403 to a request that carries no User-Agent at all.
+        request.setValue("Housekeeping", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        // Long enough for a slow link, short enough that a dead one is not noticed.
+        request.timeoutInterval = 9
+        // A cached answer is the one thing that could make this say the wrong thing.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                updateStatus = .unknown
+                return
+            }
+            let release = try JSONDecoder().decode(LatestRelease.self, from: data)
+            let latest = AppState.normalize(release.tagName)
+            updateStatus = AppState.isNewer(latest, than: mine) ? .newer(latest) : .current
+        } catch {
+            // Offline, blocked, throttled, or a body that is not JSON. All the same
+            // answer, and never `current` — see `UpdateStatus.unknown`.
+            updateStatus = .unknown
+        }
+    }
+
+    private struct LatestRelease: Decodable {
+        let tagName: String
+
+        enum CodingKeys: String, CodingKey {
+            case tagName = "tag_name"
+        }
+    }
+
+    /// "v1.2.10" -> "1.2.10". A tag may carry the v; the version does not.
+    static func normalize(_ version: String) -> String {
+        let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("v") || trimmed.hasPrefix("V") else { return trimmed }
+        return String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// "1.2.10" -> [1, 2, 10]. Anything unparseable counts as zero, so a tag that
+    /// is not a version number reads as older than every real one instead of
+    /// derailing the comparison.
+    static func versionParts(_ version: String) -> [Int] {
+        version.split(separator: ".", omittingEmptySubsequences: false).map { piece in
+            let digits = piece.filter(\.isNumber)
+            return digits.isEmpty ? 0 : (Int(digits) ?? 0)
+        }
+    }
+
+    /// Numeric, part by part, missing parts counting as zero — so 1.2 equals
+    /// 1.2.0, and 1.10 is newer than 1.9 rather than older the way strings say.
+    static func isNewer(_ candidate: String, than mine: String) -> Bool {
+        let theirs = versionParts(candidate)
+        let ours = versionParts(mine)
+        for index in 0..<max(theirs.count, ours.count) {
+            let x = index < theirs.count ? theirs[index] : 0
+            let y = index < ours.count ? ours[index] : 0
+            if x != y { return x > y }
+        }
+        return false
     }
 
     enum ScanState: String, Codable {
