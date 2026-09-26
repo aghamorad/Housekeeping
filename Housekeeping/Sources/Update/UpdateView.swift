@@ -18,28 +18,103 @@ struct UpdateView: View {
     /// Which rows have their evidence unfolded. Kept here rather than on the row
     /// so it survives a rebuild of the list after an update finishes.
     @State private var expandedEvidence: Set<String> = []
+    @State private var filter: Filter = .needsAttention
+    @State private var query: String = ""
+
+    /// What the list is showing. "Needs updating" is where it opens, because that
+    /// is the only reason anyone opens a screen called Update Apps — and the count
+    /// in the other label is what says the rest of the Mac has not gone missing.
+    private enum Filter: String, CaseIterable, Identifiable {
+        case needsAttention
+        case everything
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .needsAttention: return "Needs updating"
+            case .everything: return "Everything"
+            }
+        }
+    }
+
+    /// Whether a row is worth someone's attention: there is a newer version to be
+    /// had, or Housekeeping has found something wrong with the copy. Nothing else
+    /// qualifies. In particular "could not check" is not an update waiting to
+    /// happen — it is a question Housekeeping failed to answer, and two hundred of
+    /// those in the opening view would bury the fifty that are real.
+    private func isNoteworthy(_ row: UpdateRow) -> Bool {
+        guard !row.isExcepted else { return false }
+        if case .available = row.check { return true }
+        // An unidentified copy that Housekeeping refused is the altered-signature
+        // case: not an update, but the one thing on this screen a reader should
+        // not be able to miss.
+        if case .refused = row.check, row.channel == .unidentified { return true }
+        return false
+    }
+
+    private func matches(_ row: UpdateRow) -> Bool {
+        let needle = query.trimmingCharacters(in: .whitespaces)
+        guard !needle.isEmpty else { return true }
+        return [row.name, row.summary ?? "", row.detail]
+            .contains { $0.localizedCaseInsensitiveContains(needle) }
+    }
 
     private var groups: [(channel: UpdateChannel, rows: [UpdateRow])] {
-        UpdateChannel.allCases
+        let visible = appState.updateRows.filter { matches($0) }
+        return UpdateChannel.allCases
             .sorted { $0.order < $1.order }
             .compactMap { channel in
-                let rows = appState.updateRows.filter { $0.channel == channel }
+                let rows = visible.filter {
+                    $0.channel == channel && (filter == .everything || isNoteworthy($0))
+                }
                 return rows.isEmpty ? nil : (channel, rows)
             }
+    }
+
+    private var noteworthyCount: Int {
+        appState.updateRows.filter { matches($0) && isNoteworthy($0) }.count
+    }
+
+    private var totalCount: Int {
+        appState.updateRows.filter { matches($0) }.count
+    }
+
+    private static func wasNotChecked(_ row: UpdateRow) -> Bool {
+        if case .unknown = row.check { return true }
+        return false
+    }
+
+    /// The one fact the picker beside it cannot supply: how much of the list
+    /// Housekeeping never reached an answer about. The picker already carries the
+    /// other two counts, so repeating them here would put two different numbers
+    /// for "needs attention" a centimetre apart.
+    private var summaryLine: String {
+        let unchecked = appState.updateRows
+            .filter { matches($0) && !$0.isExcepted }
+            .filter(Self.wasNotChecked).count
+
+        let installed = "\(totalCount) installed"
+        guard unchecked > 0 else { return "\(installed) · every one checked" }
+        return "\(installed) · \(unchecked) it could not check"
     }
 
     private var selectedCount: Int {
         appState.updateRows.filter { $0.isSelected && $0.canUpdate && $0.channel.canInstall }.count
     }
 
+    private var visibleCount: Int {
+        groups.reduce(0) { $0 + $1.rows.count }
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             header
-            ThemePanel(padding: 10) { explanationPanel }
+            ThemePanel(padding: 10) { toolbar }
 
             if appState.updateIsReading {
                 readingState
-            } else if appState.updateRows.isEmpty {
+            } else if visibleCount == 0 {
                 emptyState
             } else {
                 list
@@ -73,7 +148,7 @@ struct UpdateView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Update Apps")
                     .font(style.titleFont)
-                Text("Everything on this Mac that could be updated, sorted by where its updates come from.")
+                Text("Every application and Homebrew package on this Mac, what each one actually is, and whether it is out of date.")
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
             }
@@ -87,14 +162,36 @@ struct UpdateView: View {
         }
     }
 
-    private var explanationPanel: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Why this is grouped this way")
-                .font(style.labelFont)
-            Text("Software does not arrive by one route. A Homebrew cask is a command and an answer; an App Store app belongs to the store and can only be asked; an app that came as a file has to be fetched and swapped. Each group below says in one line what Housekeeping does for it, and a row says in plain words why it will not act when it will not. Nothing here is updated until you tick it and press Update.")
-                .font(style.smallFont)
-                .foregroundColor(style.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+    /// What the list is showing, and how to look through it. The explanation of
+    /// the grouping lives in each group's own heading, one line at a time, rather
+    /// than in a paragraph pinned above everything: a reader who has to scroll past
+    /// the same six lines on every visit stops reading them, and the line that
+    /// mattered was one of the six.
+    private var toolbar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Picker("Show", selection: $filter) {
+                    Text("\(Filter.needsAttention.title) (\(noteworthyCount))")
+                        .tag(Filter.needsAttention)
+                    Text("\(Filter.everything.title) (\(totalCount))")
+                        .tag(Filter.everything)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 320)
+
+                TextField("Search by name", text: $query)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 180)
+
+                Spacer()
+
+                if !appState.updateIsReading {
+                    Text(summaryLine)
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                }
+            }
             ForEach(appState.updateNotes, id: \.self) { note in
                 Text(note)
                     .font(style.smallFont)
@@ -126,16 +223,57 @@ struct UpdateView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Shown when the list has nothing to draw. The message has to name the real
+    /// reason: an empty pane under a search that *did* match something, with the
+    /// picker beside it counting those matches, would otherwise send the reader off
+    /// to clear a search that was working.
     private var emptyState: some View {
-        VStack(spacing: 6) {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        return VStack(spacing: 6) {
             Spacer()
-            Text("Nothing came back to list.")
-                .font(style.bodyFont)
-            Text("Either every source was quiet, or the reading did not finish. Press Recheck to try again.")
-                .font(style.smallFont)
-                .foregroundColor(style.secondaryText)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 460)
+            if appState.updateRows.isEmpty {
+                Text("Nothing came back to list.")
+                    .font(style.bodyFont)
+                Text("Either every source was quiet, or the reading did not finish. Press Recheck to try again.")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 460)
+            } else if totalCount == 0 {
+                Text("Nothing matches “\(trimmed)”.")
+                    .font(style.bodyFont)
+                Text("Clear the search to see the rest of the list.")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 460)
+            } else if trimmed.isEmpty {
+                Text("Nothing needs updating.")
+                    .font(style.bodyFont)
+                Text("None of the \(totalCount) things installed here has a newer version that Housekeeping can see.")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 460)
+            } else {
+                Text("Nothing matching “\(trimmed)” needs updating.")
+                    .font(style.bodyFont)
+                Text("The \(totalCount) that match are up to date, or could not be checked.")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 460)
+            }
+            // The pane is otherwise a dead end: the thing to look at is one
+            // filter away, and the reader should not have to work out that the
+            // picker above is the way to it.
+            if filter == .needsAttention, totalCount > 0 {
+                ThemeButton(
+                    title: "Show all \(totalCount)",
+                    help: "List everything that matches, including the things Housekeeping could not check."
+                ) { filter = .everything }
+                .padding(.top, 4)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -271,6 +409,16 @@ struct UpdateView: View {
                         .font(style.bodyFont)
                         .foregroundColor(style.text)
                         .lineLimit(1)
+                    // What this is, before anything about its version. A reader who
+                    // does not know what `dav1d` is cannot decide anything about it,
+                    // and its version number is no help at all.
+                    if let summary = row.summary {
+                        Text(summary)
+                            .font(style.smallFont)
+                            .foregroundColor(style.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(2)
+                    }
                     Text(row.detail)
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
@@ -290,14 +438,16 @@ struct UpdateView: View {
                 .frame(width: 150, alignment: .trailing)
             }
 
-            HStack(alignment: .top, spacing: 10) {
-                Text(explanation(row))
-                    .font(style.smallFont)
-                    .foregroundColor(style.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
+            if let said = explanation(row) {
+                HStack(alignment: .top, spacing: 10) {
+                    Text(said)
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 32)
             }
-            .padding(.leading, 32)
 
             HStack(spacing: 8) {
                 if !row.evidence.isEmpty {
@@ -312,9 +462,7 @@ struct UpdateView: View {
                 }
                 if let path = row.path {
                     Button {
-                        NSWorkspace.shared.activateFileViewerSelecting(
-                            [row.action.flatMap { _ in URL(fileURLWithPath: path) } ?? URL(fileURLWithPath: path)]
-                        )
+                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
                     } label: {
                         Text("Show in Finder")
                             .font(style.smallFont)
@@ -330,16 +478,22 @@ struct UpdateView: View {
                         help: actionLabel.help
                     ) { appState.runUpdate(row) }
                 }
-                if !row.isExcepted {
-                    ThemeButton(
-                        title: "Ignore from now on",
-                        help: "Add this to the list Housekeeping stops offering. It updates nothing and deletes nothing — it only means this row stops being offered, on this and every later reading. You can take it off again in Settings."
-                    ) { appState.ignoreUpdate(row) }
-                } else {
-                    Text("Ignored")
-                        .font(style.smallFont)
+                // One small control instead of a button per row. "Leave this alone
+                // for good" is a rare decision about a single row, and printing it
+                // on all fifty-five of them is most of what made this list feel
+                // like something to be got past.
+                Menu {
+                    rowMenuItems(row)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 13))
                         .foregroundColor(style.secondaryText)
                 }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Everything else you can do with this row — including leaving it alone from now on.")
+                .accessibilityLabel("More options for \(row.name)")
             }
             .padding(.leading, 32)
 
@@ -366,6 +520,35 @@ struct UpdateView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+        // The same list again on a right-click, because that is where a reader
+        // looks for the thing that is not a button, and the ellipsis above is what
+        // tells them there is one.
+        .contextMenu { rowMenuItems(row) }
+    }
+
+    /// Everything a row can be asked to do that is not "update it". Written once
+    /// and used by both the ellipsis and the right-click, so the two can never
+    /// drift into offering different things.
+    @ViewBuilder
+    private func rowMenuItems(_ row: UpdateRow) -> some View {
+        if let path = row.path {
+            Button("Show in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+            }
+        }
+        if !row.evidence.isEmpty {
+            Button(expandedEvidence.contains(row.id) ? "Hide how this was worked out" : "How this was worked out") {
+                toggleEvidence(row.id)
+            }
+        }
+        if row.path != nil || !row.evidence.isEmpty {
+            Divider()
+        }
+        if row.isExcepted {
+            Button("Offer this again") { appState.offerUpdateAgain(row) }
+        } else {
+            Button("Ignore from now on") { appState.ignoreUpdate(row) }
+        }
     }
 
     // MARK: - Words
@@ -388,34 +571,32 @@ struct UpdateView: View {
         }
     }
 
-    /// Why Housekeeping will or will not act on this row, in one plain sentence.
-    /// This is the part that has to be right even when it is unwelcome news, so it
-    /// never falls back on a cheerful default.
-    private func explanation(_ row: UpdateRow) -> String {
+    /// Why Housekeeping will or will not act on this row — and nothing at all when
+    /// the row already says it. "Up to date" in the right-hand column does not need
+    /// a sentence under it repeating the same fact, and fifty-five of those
+    /// sentences is what made this list a wall to be got past rather than a list to
+    /// be read.
+    ///
+    /// What is left is the part that has to be right even when it is unwelcome
+    /// news: a reason for standing still that a reader could not have worked out
+    /// from the row alone. It never falls back on a cheerful default.
+    private func explanation(_ row: UpdateRow) -> String? {
         if row.isExcepted {
-            return "You have told Housekeeping to stop offering this one."
-        }
-        if row.action != nil {
-            switch row.check {
-            case .available(let version, _):
-                return "A newer version, \(version), is available."
-            case .current:
-                return "This is the newest version Housekeeping can see."
-            default:
-                break
-            }
+            return "You have told Housekeeping to leave this one alone, so it is not offered. Right-click the row to put it back on offer."
         }
         switch row.check {
         case .checking:
             return "Still being checked."
         case .current:
-            return "This is the newest version Housekeeping can see."
+            return nil
         case .available(let version, let download):
-            // Only a feed that names a version without offering anything
-            // Housekeeping can install gets this far: Homebrew and the App Store
-            // both answer without a download and are dealt with above, and a
-            // pinned package comes back refused rather than available.
-            if download == nil {
+            // With an action, the status column already reads "\(version)
+            // available" and the row carries its own Update button. Saying it a
+            // third time in a sentence is noise.
+            guard row.action == nil else { return nil }
+            // Reached by a feed that named a version without offering anything
+            // Housekeeping can verify and install.
+            guard download != nil else {
                 return "\(version) is available, but the release offers no disk image or archive Housekeeping can verify, so it will not replace anything."
             }
             return "\(version) is available."

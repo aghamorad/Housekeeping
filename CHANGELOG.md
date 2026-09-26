@@ -1,3 +1,33 @@
+# Housekeeping 0.8.0
+
+Every row now says what the thing is. A window that lists `dav1d`, `cjson` and `Google Chrome` and
+stops there is a name and a version number, which is no help to anyone deciding whether to update
+it. Alongside that, the four jobs are visible the moment the window opens instead of buried in a
+menu, and the Update Apps screen was cut back to what it is for.
+
+- **Every line explains what it is.** An application now carries one sentence under its name saying
+  what it is and who made it — `A video app from Acme Ltd., installed with Homebrew.` For a Homebrew
+  package, whose name is the only thing on screen that means anything, the sentence is Homebrew's
+  own description of it: written by someone who knows what the program does, rather than assembled
+  from the parts. A package Homebrew has no description for is simply left as its name.
+- **The explanation comes off the disk, or it does not come at all.** Nothing is inferred from a
+  name. A `.app` is described from what it says about itself — the category it files under, the
+  maker in its own copyright line, whether it carries an App Store receipt, a Homebrew cask, a
+  GitHub source or an update feed. Where a bundle states none of that, Housekeeping reads the maker
+  out of the signing certificate instead, which is the one thing still standing for software
+  distributed outside the App Store. A bundle that names nobody stays silent rather than being given
+  a maker it never claimed.
+- **The four jobs are on screen.** Quarantine, Left Alone, Browse the Disk and Update Apps used to
+  be reachable only through the menu, which made the app look like it did one thing. They are now a
+  permanent row across the top of every screen, with the keyboard shortcuts unchanged.
+- **Update Apps says less and does more.** The header reports what came of the check rather than
+  restating the whole inventory; when a filter or a search leaves the list empty, the empty state
+  says which one it was and offers a **Show all** button that clears it, instead of leaving a blank
+  panel to be puzzled over.
+
+The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized, so
+macOS may warn you the first time you open it.
+
 # Housekeeping 0.7.0
 
 A second job beside cleanup: what is installed, where each thing came from, and whether any of it is

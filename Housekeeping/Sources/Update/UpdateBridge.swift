@@ -121,6 +121,7 @@ extension AppState {
         UpdateRow(
             id: application.bundleIdentifier,
             name: application.name,
+            summary: application.summary,
             detail: "\(application.provenance.label) — \(application.url.homeAbbreviatedPath)",
             channel: application.channel,
             installedVersion: application.version,
@@ -145,6 +146,10 @@ extension AppState {
         UpdateRow(
             id: package.id,
             name: package.name,
+            // Homebrew's own description, which is the only place a name like
+            // `dav1d` or `cjson` is ever written out in words. Empty ones are
+            // dropped to nil so the row shows nothing rather than an empty line.
+            summary: package.summary.isEmpty ? nil : package.summary,
             detail: package.isCask ? "Homebrew cask" : "Homebrew formula",
             channel: package.channel,
             installedVersion: package.installedVersion,
@@ -327,9 +332,15 @@ extension AppState {
         applyUpdateExceptions()
     }
 
-    /// Puts one thing back on offer. The row only reappears after the next reading
-    /// — the exception decides whether a row is offered, and the reading is what
-    /// builds rows — but the state change itself is immediate and is written down.
+    /// Puts one thing back on offer, named by the row it was ignored from. The row
+    /// only reappears after the next reading — the exception decides whether a row
+    /// is offered, and the reading is what builds rows — but the state change
+    /// itself is immediate and is written down.
+    func offerUpdateAgain(_ row: UpdateRow) {
+        let (key, _) = exceptionKey(for: row)
+        offerUpdateAgain(key: key)
+    }
+
     func offerUpdateAgain(key: String) {
         guard updateExceptions.remove(key: key) else { return }
         applyUpdateExceptions()
