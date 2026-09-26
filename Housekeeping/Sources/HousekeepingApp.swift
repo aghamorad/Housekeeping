@@ -100,6 +100,14 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
 
+                // The other half of looking after a Mac: what is installed and
+                // whether any of it is out of date. Kept off the cleanup screens
+                // because it changes things rather than removing them.
+                Button("Update Apps…") {
+                    appState.showUpdateList = true
+                }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
+
                 Divider()
 
                 Picker("Theme", selection: Binding(

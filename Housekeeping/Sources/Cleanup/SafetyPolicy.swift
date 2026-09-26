@@ -140,7 +140,7 @@ struct CleanupSafetyPolicy {
         if item.isUndeclared {
             return Assessment(
                 decision: .reviewOnly,
-                reason: "No rule in Housekeeping's database describes this path; it was found by sweeping the folders where undeclared data collects. It can enter reversible quarantine only after the additional typed confirmation."
+                reason: "Housekeeping has nothing on file for this path; it was found by sweeping the folders where undeclared data collects. It can enter reversible quarantine only after the additional typed confirmation."
             )
         }
 

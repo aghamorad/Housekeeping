@@ -40,6 +40,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/ProtectionList.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafeCleanupEngine.swift" \
   "$ROOT_DIR"/Housekeeping/Sources/Disk/*.swift \
+  "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift
 
 echo "Housekeeping GUI source type-check passed with warnings treated as errors"

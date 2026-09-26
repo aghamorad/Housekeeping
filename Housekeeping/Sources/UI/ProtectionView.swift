@@ -36,7 +36,7 @@ struct ProtectionView: View {
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Protecting a folder covers everything inside it, which is why one entry can quiet a great many rows. Taking it off the list never exposes anything to cleanup by itself: the rows simply become ordinary findings again, judged by the same rules as everything else.")
+                    Text("Protecting a folder covers everything inside it, which is why one entry can quiet a great many rows. Taking it off the list never exposes anything to cleanup by itself: the rows simply become ordinary findings again, judged the same way as everything else.")
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -61,7 +61,7 @@ struct ProtectionView: View {
                 VStack(spacing: 6) {
                     Text("Nothing is on the left-alone list.")
                         .font(style.bodyFont)
-                    Text("Everything Housekeeping finds is judged by its rules alone right now. When something keeps coming back that you know you want, open it and press “Leave It Alone”. It stops being offered, on this scan and every later one.")
+                    Text("Nothing is left alone right now. When something keeps coming back that you know you want, open it and press “Leave It Alone”. It stops being offered, on this scan and every later one.")
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
                         .multilineTextAlignment(.center)
@@ -89,7 +89,7 @@ struct ProtectionView: View {
                 if entries.count > 1 {
                     ThemeButton(
                         title: "Offer Everything Again",
-                        help: "Empties this list. It moves nothing and deletes nothing — those paths just go back to being judged by Housekeeping's rules like everything else."
+                        help: "Empties this list. It moves nothing and deletes nothing — those paths just go back to being judged like everything else."
                     ) { appState.releaseAllProtection() }
                 }
                 ThemeButton(title: "Done", isPrimary: true) { appState.showProtectionList = false }
@@ -136,7 +136,7 @@ struct ProtectionView: View {
                         title: "Offer It Again",
                         systemImage: "arrow.uturn.backward",
                         isPrimary: true,
-                        help: "Takes this off the list. It does not clean anything and it does not delete anything — the path goes back to being judged by Housekeeping's normal rules."
+                        help: "Takes this off the list. It does not clean anything and it does not delete anything — the path goes back to being judged like everything else."
                     ) { appState.releaseProtection(path: entry.path) }
                     Spacer()
                 }

@@ -57,6 +57,15 @@ struct ContentView: View {
                 DiskBrowserView()
                     .environment(\.uiStyle, style)
             }
+            // Like the disk browser this is its own job, but unlike it this one
+            // acts: it runs Homebrew, the store's tool, and swaps bundles. So it
+            // gets the state, and it starts its own reading rather than showing
+            // rows from a scan that was about something else entirely.
+            .sheet(isPresented: $appState.showUpdateList) {
+                UpdateView()
+                    .environment(\.uiStyle, style)
+                    .environmentObject(appState)
+            }
             // Asked after the first screen is already drawn, not before it: the
             // answer is a line in a footer, and a launch should never wait on the
             // network to show itself.
@@ -744,7 +753,7 @@ private struct ResultsScreen: View {
                 .foregroundStyle(style.text)
             Text(appState.deepSweep
                  ? "Every folder Housekeeping knows about came back empty, and the deep sweep found nothing outside them either. Your Mac is already tidy — or the remaining clutter is somewhere Housekeeping cannot name."
-                 : "Every rule Housekeeping has came back empty. Turning on the deep sweep would also measure folders no rule describes, which is often where the real leftovers are.")
+                 : "Everything Housekeeping knows about came back empty. Turning on the deep sweep would also measure folders it has nothing on file for, which is often where the real leftovers are.")
                 .font(style.bodyFont)
                 .foregroundStyle(style.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -773,7 +782,7 @@ private struct GroupHeader: View {
                 Image(systemName: kind.iconName)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(style.text)
-                Text(kind.rawValue)
+                Text(kind.displayName)
                     .font(style.labelFont)
                     .foregroundStyle(style.text)
                 Text("\(items.count)")
@@ -1027,7 +1036,7 @@ private struct DetailPane: View {
                 if appState.isProtected(item.path.path) {
                     ThemeButton(
                         title: "Offer It Again",
-                        help: "This is on your left-alone list. Pressing this takes it off, which does not clean anything — it just lets Housekeeping judge this path by its rules again."
+                        help: "This is on your left-alone list. Pressing this takes it off, which does not clean anything — it just lets Housekeeping judge this path the same way as everything else again."
                     ) {
                         appState.releaseProtection(path: ProtectionList.normalize(item.path).path)
                     }

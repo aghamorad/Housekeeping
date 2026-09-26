@@ -32,7 +32,7 @@ struct SettingsView: View {
 
                 Text(appState.deepSweep
                      ? "The deep sweep is on. It measures the folders where undeclared data collects — usually where the larger wins are, since nothing else reports them. It adds up to a minute to a scan, and anything it finds can only be cleaned after an extra typed confirmation."
-                     : "The deep sweep is off. Housekeeping will only report what one of its \(RuleEngine.shared.applications.count) rules describes, which means it will miss whatever those rules do not cover.")
+                     : "The deep sweep is off. Housekeeping will only report what its list of \(RuleEngine.shared.applications.count) known applications and tools covers, so anything not on that list goes unmeasured.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -42,6 +42,46 @@ struct SettingsView: View {
                 safetyLine("Housekeeping never ticks anything for you. Every scan starts with an empty selection.", icon: "checkmark.square")
                 safetyLine("Cleaning moves items into Quarantine. Nothing is deleted, and everything moved can be put back.", icon: "arrow.uturn.backward")
                 safetyLine("Anything Housekeeping cannot prove is replaceable is shown but locked, with the reason stated.", icon: "lock.fill")
+            }
+
+            // Where the "ignore this one from now on" choice is undone. The choice
+            // is made on the update screen, which is the right place for it, but a
+            // decision with no way back is a trap — so the way back lives here,
+            // with the other things that are about the whole app rather than one
+            // screen, and it names every entry rather than offering a reset.
+            Section("Updates you have told Housekeeping to leave alone") {
+                if let note = appState.updateExceptionNote {
+                    Text(note)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if appState.updateExceptionEntries.isEmpty {
+                    Text("Nothing yet. Every application and package Housekeeping finds will be offered the next time you open Update Apps.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(appState.updateExceptionEntries) { entry in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.name)
+                                    .font(.callout)
+                                Text(entry.displayKey)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                            Spacer(minLength: 8)
+                            Button("Offer Again") { appState.offerUpdateAgain(key: entry.key) }
+                                .help("Put this back in the update list. Nothing is installed by doing this — it only stops Housekeeping from hiding it.")
+                        }
+                    }
+
+                    Button("Offer Everything Again") { appState.offerAllUpdatesAgain() }
+                        .help("Put every one of these back in the update list at once.")
+                }
             }
 
             Section("Where quarantine lives") {

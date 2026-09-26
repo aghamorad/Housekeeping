@@ -42,6 +42,48 @@ final class AppState: ObservableObject {
     /// that has not arrived from an answer that says this is the newest release.
     @Published private(set) var updateStatus: UpdateStatus = .checking
 
+    // MARK: - Updating the applications
+
+    /// Whether the update sheet is open.
+    @Published var showUpdateList = false
+    /// What the last reading found. Kept as one flat list: `UpdateView` groups it
+    /// by channel itself, because the grouping is a presentation choice and the
+    /// list should stay usable without it.
+    @Published var updateRows: [UpdateRow] = []
+    /// True while the disk and the sources are being read, which is the only part
+    /// of this feature that can take a while before anything is decided.
+    @Published var updateIsReading = false
+    /// True while updates are actually being applied.
+    @Published var updateIsWorking = false
+    /// The one line above the outcomes, e.g. "3 of 5 updated".
+    @Published var updateSummaryLine: String?
+    /// Things the reading noticed — Homebrew missing, `mas` missing, an answer
+    /// that could not be read. Shown in the sheet rather than logged.
+    @Published var updateNotes: [String] = []
+    @Published var updateOutcomes: [UpdateOutcome] = []
+    /// The reader's "ignore from now on" list, published so the Settings screen
+    /// redraws the moment it changes.
+    @Published var updateExceptionEntries: [UpdateExceptions.Entry] = []
+    /// Set when a list existed and could not be read. A list that came back empty
+    /// for a reason is not the same as one that was empty.
+    @Published var updateExceptionNote: String?
+
+    /// These three are stored here rather than in the bridge's extension because
+    /// Swift does not allow stored properties in an extension. They are internal
+    /// rather than private for the same reason — the extension lives in its own
+    /// file — and read as belonging to the update feature by their names.
+    let updateExceptions: UpdateExceptions
+    var updateTask: Task<Void, Never>?
+    var updateRunner: ProcessRunner?
+    /// The last reading's bundles, kept so a row's update can name the bundle it
+    /// is about to replace. Keyed by the row id, which for an application is its
+    /// bundle identifier.
+    var updateApplications: [InstalledApplication] = []
+    /// Set by a Stop press while updates are running. The loop between items reads
+    /// it; the program already running is left to finish, because stopping `brew`
+    /// or a bundle swap halfway is the one way this could leave a Mac worse off.
+    var updateStopRequested = false
+
     let protectionList: ProtectionList
     /// Rebuilt only when the list changes, and only ever read. Caching it here
     /// keeps a per-row assessment from re-deriving the whole list on every redraw.
@@ -70,6 +112,14 @@ final class AppState: ObservableObject {
 
         protectionList = ProtectionList()
         protectionEntries = protectionList.entries
+
+        // The update feature's own left-alone list. Read once here so the Settings
+        // section that offers things again shows the real list from the start.
+        let exceptions = UpdateExceptions()
+        updateExceptions = exceptions
+        updateExceptionEntries = exceptions.entries
+        updateExceptionNote = exceptions.loadFailureNote
+
         cleanupSafetyPolicy = CleanupSafetyPolicy(protectedPaths: protectionEntries.map(\.path))
 
         // Anything quarantined by an older build sits in a hidden folder. Move
@@ -213,7 +263,10 @@ final class AppState: ObservableObject {
     }
 
     /// "v1.2.10" -> "1.2.10". A tag may carry the v; the version does not.
-    static func normalize(_ version: String) -> String {
+    /// `nonisolated` because the update engine compares versions on its own
+    /// threads, and none of these three touch any state that belongs to the main
+    /// actor — they are pure functions on strings that happen to live here.
+    nonisolated static func normalize(_ version: String) -> String {
         let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.hasPrefix("v") || trimmed.hasPrefix("V") else { return trimmed }
         return String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
@@ -222,7 +275,7 @@ final class AppState: ObservableObject {
     /// "1.2.10" -> [1, 2, 10]. Anything unparseable counts as zero, so a tag that
     /// is not a version number reads as older than every real one instead of
     /// derailing the comparison.
-    static func versionParts(_ version: String) -> [Int] {
+    nonisolated static func versionParts(_ version: String) -> [Int] {
         version.split(separator: ".", omittingEmptySubsequences: false).map { piece in
             let digits = piece.filter(\.isNumber)
             return digits.isEmpty ? 0 : (Int(digits) ?? 0)
@@ -231,7 +284,7 @@ final class AppState: ObservableObject {
 
     /// Numeric, part by part, missing parts counting as zero — so 1.2 equals
     /// 1.2.0, and 1.10 is newer than 1.9 rather than older the way strings say.
-    static func isNewer(_ candidate: String, than mine: String) -> Bool {
+    nonisolated static func isNewer(_ candidate: String, than mine: String) -> Bool {
         let theirs = versionParts(candidate)
         let ours = versionParts(mine)
         for index in 0..<max(theirs.count, ours.count) {

@@ -49,6 +49,14 @@
 		A1000051 /* DiskScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000051; };
 		A1000052 /* DiskBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000052; };
 		A1000053 /* DiskBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000053; };
+		A1000054 /* AppProvenance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000054; };
+		A1000055 /* AppUpdateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000055; };
+		A1000056 /* InstalledAppInventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000056; };
+		A1000057 /* ProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000057; };
+		A1000058 /* UpdateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000058; };
+		A1000059 /* UpdateExceptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000059; };
+		A1000060 /* UpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000060; };
+		A1000061 /* UpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000061; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -94,6 +102,14 @@
 		A2000051 /* DiskScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskScanner.swift; sourceTree = "<group>"; };
 		A2000052 /* DiskBrowserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskBrowserModel.swift; sourceTree = "<group>"; };
 		A2000053 /* DiskBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskBrowserView.swift; sourceTree = "<group>"; };
+		A2000054 /* AppProvenance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/AppProvenance.swift; sourceTree = "<group>"; };
+		A2000055 /* AppUpdateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/AppUpdateEngine.swift; sourceTree = "<group>"; };
+		A2000056 /* InstalledAppInventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/InstalledAppInventory.swift; sourceTree = "<group>"; };
+		A2000057 /* ProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/ProcessRunner.swift; sourceTree = "<group>"; };
+		A2000058 /* UpdateBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateBridge.swift; sourceTree = "<group>"; };
+		A2000059 /* UpdateExceptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateExceptions.swift; sourceTree = "<group>"; };
+		A2000060 /* UpdateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateModels.swift; sourceTree = "<group>"; };
+		A2000061 /* UpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateView.swift; sourceTree = "<group>"; };
 		A3000001 /* Housekeeping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housekeeping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -163,6 +179,14 @@
 				A2000027,
 				A2000028,
 				A2000030,
+				A2000054,
+				A2000055,
+				A2000056,
+				A2000057,
+				A2000058,
+				A2000059,
+				A2000060,
+				A2000061,
 			);
 			path = Housekeeping;
 			sourceTree = "<group>";
@@ -246,6 +270,14 @@
 				A1000051,
 				A1000052,
 				A1000053,
+				A1000054,
+				A1000055,
+				A1000056,
+				A1000057,
+				A1000058,
+				A1000059,
+				A1000060,
+				A1000061,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
