@@ -1,3 +1,30 @@
+# Housekeeping 0.6.0
+
+The name catches up with the app, and the app starts telling an old copy that a newer one exists.
+
+- Renames the application to `Housekeeping.app`. It has called itself Housekeeping on screen since
+  0.4.1, while the bundle, the download and the folder it kept its own state in still carried the
+  former name.
+- Brings the old quarantine forward instead of starting an empty one. Anything quarantined by an
+  earlier build sits in a folder named after the former app, in one of two places — hidden inside
+  Application Support, or beside the home folder. First launch walks both, transaction by
+  transaction, into `~/Housekeeping Quarantine`. Each transaction's manifest is re-pointed at its
+  new location before the move counts as done, and the move is undone if that rewrite fails, because
+  a manifest still naming the old path leaves its items unrestorable.
+- Moves the support folder in one go rather than teaching every path in the application two names: a
+  folder renamed is one move, a folder read from two places is two chances to disagree. If a folder
+  already exists under the new name the old one is left exactly where it is — doing nothing costs
+  someone one folder moved by hand, and guessing costs them a file they cannot find.
+- Adds the update notice. Once the window is drawn, and never before, Housekeeping asks GitHub for
+  the newest release tag with a nine-second limit. A copy that is behind shows a line in the footer
+  reading `Version 0.7.0 is out`, and Settings → About carries the same answer as one row: the
+  newer release as a link, `None — this is the newest`, or `Could not check`. The third is
+  deliberately not the second. Offline, throttled or rate-limited is not news that you are current,
+  and a row that said so would tell someone on an old copy to sit still. Nothing is downloaded and
+  nothing is installed; the link opens the releases page.
+
+The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized.
+
 # Housekeeping 0.5.0
 
 Two things this release is about. One is that Housekeeping was blind to a whole shelf of leftovers, and
