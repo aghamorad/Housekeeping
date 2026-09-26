@@ -62,7 +62,8 @@ struct SettingsView: View {
 
             Section("About") {
                 LabeledContent("App", value: "Housekeeping")
-                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown")
+                LabeledContent("Version", value: AppState.currentVersion.isEmpty ? "Unknown" : AppState.currentVersion)
+                updateRow
                 LabeledContent("Rules loaded", value: "\(RuleEngine.shared.applications.count)")
                 LabeledContent("Purpose", value: "Find storage, explain it, and move nothing without you.")
             }
@@ -70,6 +71,25 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .padding(20)
         .frame(width: 540, height: 560)
+    }
+
+    /// Four states, said four ways. "Could not check" is not "up to date", and a
+    /// row that claimed the second while holding the first would be telling
+    /// someone on an old copy to sit still.
+    @ViewBuilder
+    private var updateRow: some View {
+        switch appState.updateStatus {
+        case .checking:
+            LabeledContent("Newer release", value: "Checking…")
+        case .current:
+            LabeledContent("Newer release", value: "None — this is the newest")
+        case .newer(let available):
+            LabeledContent("Newer release") {
+                Link("Get \(available)", destination: AppState.releasesURL)
+            }
+        case .unknown:
+            LabeledContent("Newer release", value: "Could not check")
+        }
     }
 
     private func safetyLine(_ text: String, icon: String) -> some View {

@@ -50,6 +50,10 @@ struct ContentView: View {
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
             }
+            // Asked after the first screen is already drawn, not before it: the
+            // answer is a line in a footer, and a launch should never wait on the
+            // network to show itself.
+            .task { await appState.startUpdateCheck() }
     }
 }
 
@@ -360,13 +364,36 @@ private struct WelcomeScreen: View {
     }
 
     private var footer: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 6) {
             // Read from the bundle rather than written here: this line, the one
             // in Settings, and Info.plist all used to carry their own copy of the
             // version, so a release could ship with the app naming the wrong one.
-            Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown")")
+            Text("Version \(AppState.currentVersion.isEmpty ? "Unknown" : AppState.currentVersion)")
                 .font(style.smallFont)
                 .foregroundStyle(style.secondaryText)
+
+            // The one place the app mentions its own age, and only once a newer
+            // release has been confirmed. A copy that is current and a copy that
+            // could not ask both stay silent, because neither has anything to say.
+            // It is a line, not a dialog: Housekeeping is fully usable either way,
+            // and a window that interrupts a cleanup to talk about packaging has
+            // its priorities wrong.
+            if case .newer(let available) = appState.updateStatus {
+                Text("·")
+                    .font(style.smallFont)
+                    .foregroundStyle(style.secondaryText)
+                Link(destination: AppState.releasesURL) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Version \(available) is out")
+                    }
+                    .font(style.smallFont)
+                    .foregroundStyle(style.accent)
+                }
+                .buttonStyle(.plain)
+                .help("Open the release page on GitHub. Housekeeping does not update itself and has downloaded nothing — this is only the address of the newer copy.")
+            }
+
             Spacer()
         }
     }
