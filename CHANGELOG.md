@@ -1,3 +1,39 @@
+# Housekeeping 0.7.0
+
+A second job beside cleanup: what is installed, where each thing came from, and whether any of it is
+out of date. Plus two fixes — the whole-home scan now runs to the end, and findings stop saying "no
+rule".
+
+- Adds **Update Apps** (⌘⇧U), a list of everything on the Mac that could be updated, grouped by
+  where its updates actually come from rather than by name. Software does not arrive by one route:
+  a Homebrew cask is a command and an answer, an App Store app belongs to the store and can only be
+  asked, and an app that came as a file has to be fetched and swapped. One "Update All" over all of
+  them would be wrong for at least three of the four, so the groups are the screen.
+- **Nothing is guessed from an app's name.** Each row's group comes from evidence on disk — a
+  Homebrew receipt, a Homebrew list, an App Store receipt, the bundle's own update feed, and the
+  signature's developer team. A copy whose signature no longer matches its origin is reported as
+  altered and is never touched. Every row can unfold the observations it was decided from, because
+  a reader who disagrees with a verdict should be able to see exactly which fact they disagree with.
+- **Update All only covers what it can finish.** Rows in the App Store, macOS, and unidentified
+  groups carry no tick box at all rather than one the button would then skip, and each says why. An
+  app with no `mas` installed offers to open the store's Updates page instead. A Homebrew package
+  held by `brew pin` is reported as pinned and left alone, since the pin is the point.
+- **Apps that update themselves are read, not replaced blindly.** For a bundle carrying its own
+  feed, Housekeeping reads the version from the feed and, when it does install, fetches the same
+  enclosure the app's own updater would, under the same checks.
+- **Ignore from now on**, per row, for anything you never want offered again — and the way back,
+  naming every entry, in Settings. Ignoring installs nothing and deletes nothing.
+- Fixes the whole-home scan stopping at a wall-clock budget partway through the disk. It now runs
+  until it has finished, so a folder reached by going down is reached again on the way back up
+  instead of the walk being abandoned where the timer ran out.
+- Fixes the wording on findings Housekeeping has no entry for. Rows said `No Rule`, which tells a
+  reader nothing; they now say `Unrecognised`, and the sentences around them say that Housekeeping
+  has nothing on file for that folder rather than talking about rules. Saved scans keep the old
+  value, so nothing already on disk is rewritten.
+
+The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized, so
+macOS may warn you the first time you open it.
+
 # Housekeeping 0.6.0
 
 The name catches up with the app, and the app starts telling an old copy that a newer one exists.
