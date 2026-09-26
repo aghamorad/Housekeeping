@@ -116,7 +116,7 @@ final class Scanner {
                 phase: "Sweep",
                 message: undeclaredCount == 0
                     ? "No undeclared folder over \(Self.minimumUndeclaredSize.humanReadable) was found outside the rule database."
-                    : "Found \(undeclaredCount) folders totaling \(undeclaredSize.humanReadable) that no rule in Housekeeping's database describes."
+                    : "Found \(undeclaredCount) folders totaling \(undeclaredSize.humanReadable) that Housekeeping has nothing on file for."
             ))
             if suppressedCount > 0 {
                 scanNotes.append(.init(
@@ -581,11 +581,11 @@ final class Scanner {
 
         let description: String
         if evidence.isSystemOwned {
-            description = "No rule in Housekeeping's database describes this folder. Its name marks it as belonging to macOS or to a large vendor's own naming rather than to one application you installed, so it is not treated as residue from something you removed. It is \(role) inside \(container); check the path and contents before trusting it."
+            description = "Housekeeping has nothing on file for this folder.Its name marks it as belonging to macOS or to a large vendor's own naming rather than to one application you installed, so it is not treated as residue from something you removed. It is \(role) inside \(container); check the path and contents before trusting it."
         } else if evidence.isInstalled {
-            description = "No rule in Housekeeping's database describes this folder. It appears to belong to \(evidence.ownerName), which is installed on this Mac. Housekeeping cannot say what is inside it or whether it is safe to remove, so it is reported for inspection only."
+            description = "Housekeeping has nothing on file for this folder.It appears to belong to \(evidence.ownerName), which is installed on this Mac. Housekeeping cannot say what is inside it or whether it is safe to remove, so it is reported for inspection only."
         } else {
-            description = "No rule in Housekeeping's database describes this folder. Its name suggests \(evidence.ownerName), but Housekeeping found no matching installed application. That makes it a candidate for residue left behind by something you removed. It is \(role) inside \(container); check the path and contents before trusting it."
+            description = "Housekeeping has nothing on file for this folder.Its name suggests \(evidence.ownerName), but Housekeeping found no matching installed application. That makes it a candidate for residue left behind by something you removed. It is \(role) inside \(container); check the path and contents before trusting it."
         }
 
         return ScanTarget(
@@ -909,7 +909,7 @@ final class Scanner {
             association: target.association,
             primaryApplication: target.app,
             reason: target.customReason ?? (target.isUndeclared
-                ? "Found by sweeping \(target.url.deletingLastPathComponent().abbreviatingWithTilde(homeDirectory: homeDirectory)) — no rule describes this path"
+                ? "Found by sweeping \(target.url.deletingLastPathComponent().abbreviatingWithTilde(homeDirectory: homeDirectory)) — Housekeeping has nothing on file for it"
                 : (target.isInventoryChild
                     ? "Immediate child of an expanded inventory root in the \(target.rule.name) rule"
                     : "Exact path from the \(target.rule.name) rule")),

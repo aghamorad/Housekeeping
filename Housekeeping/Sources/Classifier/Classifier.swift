@@ -15,6 +15,24 @@ enum FindingKind: String, CaseIterable {
     case userProject = "User / Project Data"
     case other = "Other"
 
+    /// The name of this group as a reader sees it. `rawValue` is Housekeeping's own
+    /// word for the group and is written into saved scan results, so it cannot be
+    /// reworded without breaking every file already on disk; this is the one the
+    /// screen shows instead. "No Rule" in particular said nothing to anyone who had
+    /// not read the source — it described the absence of something the reader had
+    /// never heard of.
+    var displayName: String {
+        switch self {
+        case .undeclared: return "Unrecognised"
+        case .aiAppData: return "AI app data"
+        case .aiLeftover: return "AI leftover"
+        case .applicationLeftover: return "App leftover"
+        case .housekeeping: return "System & developer caches"
+        case .userProject: return "Your project data"
+        case .other: return "Other"
+        }
+    }
+
     /// SF Symbol for this origin group. Lives here rather than in the views so a
     /// new group cannot be added without an icon, and so no view has to switch
     /// over every case just to draw a row.
