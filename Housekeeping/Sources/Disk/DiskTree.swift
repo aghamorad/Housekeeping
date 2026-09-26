@@ -44,9 +44,9 @@ struct DiskNode: Codable, Equatable, Identifiable {
     /// missing, and the row says so instead of printing a confident small number.
     var isPartial: Bool
 
-    /// The scan stopped before it reached here — the time budget ran out. A folder
-    /// in this state has a size of zero that means *unknown*, which is exactly the
-    /// distinction `Int64.sizeDescription` exists to preserve.
+    /// The walk was stopped before it reached here. A folder in this state has a
+    /// size of zero that means *unknown*, which is exactly the distinction
+    /// `Int64.sizeDescription` exists to preserve.
     var isUnmeasured: Bool
 
     /// Children too small to earn a row of their own, and what they add up to.

@@ -31,9 +31,15 @@ final class DiskScanner {
         /// moment it is most needed.
         var minimumKeptSize: Int64 = 1_000_000
         /// How long to walk before stopping and keeping what has been measured.
-        /// A partial answer the reader can use beats a complete one they cannot,
-        /// and `isComplete` is false so the screen can say which they have.
-        var timeBudget: TimeInterval = 240
+        /// Off by default, which is the opposite of what this did at first: a
+        /// half-measured tree is not a faster answer here, it is a wrong one.
+        /// The browser answers every later question — how big is this folder,
+        /// what is inside it — out of what the scan already read, so a folder the
+        /// walk never reached is reported as small rather than reported late, and
+        /// the reader has no way to tell the difference. A wall-clock stop made
+        /// the whole screen quietly untrustworthy to save four minutes. Stop is
+        /// still there for anyone who wants out early.
+        var timeBudget: TimeInterval? = nil
         /// A backstop on memory, separately from the clock. A deeply nested
         /// filesystem can produce folders faster than it produces bytes.
         var maximumKeptFolders = 250_000
@@ -87,7 +93,7 @@ final class DiskScanner {
         isCancelled: @escaping () -> Bool
     ) -> DiskSnapshot {
         var context = Context(options: options, fileManager: fileManager)
-        context.deadline = Date().addingTimeInterval(options.timeBudget)
+        context.deadline = options.timeBudget.map { Date().addingTimeInterval($0) } ?? .distantFuture
         context.progress = progress
         context.isCancelled = isCancelled
 
@@ -102,7 +108,7 @@ final class DiskScanner {
         context.progress?(context.progressValue(path: options.root.path, force: true))
 
         if aggregate.isUnmeasured {
-            context.notes.append("The time budget of \(Int(options.timeBudget))s ran out while measuring \(options.root.path). What is shown was measured; what was not reached is marked as such.")
+            context.notes.append("The walk was stopped before it finished, so what is shown is only what was read. Folders marked as not measured were never looked at.")
         }
         if context.totalSkippedSymlinks > 0 {
             context.notes.append("\(context.totalSkippedSymlinks) symbolic links were passed over rather than followed, so the folders they point at are counted once instead of twice.")
