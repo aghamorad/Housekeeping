@@ -129,8 +129,72 @@ private struct ScreenChrome<Content: View>: View {
                 TitleBarView(title: title, subtitle: subtitle)
                     .frame(height: 28)
             }
+            JobBar()
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+}
+
+/// The four jobs that are not the scan, on screen rather than only in the menu.
+///
+/// They were reachable from the app menu alone, which meant a reader who never
+/// opened that menu would never learn Housekeeping does anything besides clean —
+/// and the screen they were removed from even said so in a comment, as though
+/// the menu were an interface. It is not: it is where a thing goes to be hidden.
+/// The bar hangs off `ScreenChrome`, so every screen carries it in both
+/// appearances, and no appearance can quietly lose a button the other has.
+///
+/// Quiet by construction: secondary buttons, never the default action, so
+/// nothing here can be hit by pressing Return on a screen that was asking
+/// something else entirely.
+private struct JobBar: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.uiStyle) private var style
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ThemeButton(
+                title: "Quarantine",
+                systemImage: "archivebox",
+                help: "Everything Housekeeping has moved aside, where it went, and how to put any of it back."
+            ) {
+                appState.showQuarantineManagement = true
+            }
+
+            ThemeButton(
+                title: "Left Alone",
+                systemImage: "hand.raised",
+                help: "Folders and apps you have told Housekeeping never to offer again, and the way to undo that."
+            ) {
+                appState.showProtectionList = true
+            }
+
+            ThemeButton(
+                title: "Browse the Disk",
+                systemImage: "internaldrive",
+                help: "Measure the whole disk and walk around it yourself. This only reads — it changes nothing, offers nothing, and removes nothing."
+            ) {
+                appState.showDiskBrowser = true
+            }
+
+            ThemeButton(
+                title: "Update Apps",
+                systemImage: "arrow.down.circle",
+                help: "What is installed, where each thing came from, and whether any of it is out of date — grouped by where its updates actually come from."
+            ) {
+                appState.showUpdateList = true
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(style.rowBackground)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(style.border)
+                .frame(height: 1)
         }
     }
 }
@@ -320,9 +384,9 @@ private struct WelcomeScreen: View {
 
     private var scanControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // One button, because there is one thing to do here. Quarantine and
-            // Left Alone used to sit beside it and both are still in the app menu:
-            // neither is a decision anyone makes standing on the opening screen.
+            // One button here, because on this screen there is one thing to do.
+            // The other jobs are not gone — they are in the bar above, which is
+            // where they can be seen rather than merely available.
             ThemeButton(
                 title: "Scan My Mac",
                 systemImage: "magnifyingglass",

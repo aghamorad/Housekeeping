@@ -176,6 +176,13 @@ struct InstalledApplication: Identifiable, Equatable {
     let isAdHoc: Bool
     /// The update feed the bundle itself declares, if any.
     let feedURL: URL?
+    /// What this application is, in one plain sentence, assembled only from what
+    /// was read off the bundle: the category it files itself under, the maker its
+    /// own copyright line names, and the route it arrived by. Nil when a bundle
+    /// declares none of those — a description Housekeeping made up would be worth
+    /// less than the gap it filled, and a reader who cannot tell the invented
+    /// sentence from the read one has lost the only thing this screen trades on.
+    let summary: String?
     let provenance: Provenance
     let evidence: [ProvenanceEvidence]
 
@@ -195,6 +202,11 @@ struct InstalledApplication: Identifiable, Equatable {
 struct BrewPackage: Identifiable, Equatable {
     let name: String
     let isCask: Bool
+    /// Homebrew's own one-line description of the package, read from the same
+    /// `brew info` answer the name and version came from. It is the only place a
+    /// name like `cjson` is ever spelled out, so it is carried rather than
+    /// discarded. Empty when Homebrew offers none.
+    let summary: String
     let installedVersion: String
     let currentVersion: String
     let isPinned: Bool
@@ -255,6 +267,11 @@ enum UpdateCheck: Equatable {
 struct UpdateRow: Identifiable, Equatable {
     let id: String
     let name: String
+    /// What this is, in plain words, when anything on disk could say. Shown under
+    /// the name, above the provenance line: a reader who does not know what
+    /// `dav1d` is cannot decide anything about it, and the version column is no
+    /// help to someone who has not yet worked out what the row is about.
+    let summary: String?
     let detail: String
     let channel: UpdateChannel
     let installedVersion: String
