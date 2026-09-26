@@ -34,13 +34,13 @@ enum FindingKind: String, CaseIterable {
     /// means, in their terms rather than Housekeeping's.
     var tagline: String {
         switch self {
-        case .undeclared: return "Real folders Housekeeping has no rule for"
+        case .undeclared: return "Real folders Housekeeping can't name"
         case .aiAppData: return "Belongs to an AI app you still have installed"
         case .aiLeftover: return "Belongs to an AI app Housekeeping cannot find installed"
         case .applicationLeftover: return "Looks like residue from an app that is no longer installed"
         case .housekeeping: return "Caches, logs, and package-manager leftovers"
         case .userProject: return "Your own project and workspace data — never ticked for you"
-        case .other: return "Found by a rule, but the origin is not clear"
+        case .other: return "Found it, but can't tell what it belongs to"
         }
     }
 
@@ -50,7 +50,7 @@ enum FindingKind: String, CaseIterable {
     /// finish the sentence "Most of it is …".
     var plainName: String {
         switch self {
-        case .undeclared: return "in folders nothing claims"
+        case .undeclared: return "in folders it can't name"
         case .aiAppData: return "inside the AI apps you still use"
         case .aiLeftover: return "AI leftovers"
         case .applicationLeftover: return "app leftovers"
@@ -75,7 +75,7 @@ enum FindingKind: String, CaseIterable {
     var explanation: String {
         switch self {
         case .undeclared:
-            return "Housekeeping measured this path while sweeping the folders where undeclared data collects, but no rule in its database describes it. Nothing here is a judgment about whether the contents matter — only that Housekeeping found real, measured storage it has no rule for."
+            return "Housekeeping measured this folder while sweeping the places where unclaimed data collects, but it has no entry that says what this one is. Nothing here is a judgment about whether the contents matter — only that this is real, measured storage Housekeeping cannot put a name to."
         case .aiAppData:
             return "This path belongs to a known AI application or AI tool that Housekeeping currently detects as installed or active."
         case .aiLeftover:
@@ -87,7 +87,7 @@ enum FindingKind: String, CaseIterable {
         case .userProject:
             return "This is user-created project or workspace data. It is shown for awareness and must not be treated as disposable application residue."
         case .other:
-            return "This finding does not fit Housekeeping's AI, application-leftover, housekeeping, or user-project origin groups."
+            return "Housekeeping found this one but cannot place it in any of its groups: AI data, app leftovers, housekeeping, or your own projects."
         }
     }
 }

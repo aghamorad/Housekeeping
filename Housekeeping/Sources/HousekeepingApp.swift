@@ -91,6 +91,15 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
 
+                // Reading the disk, which is not the same job as cleaning it. The
+                // scan above decides what Housekeeping would offer to remove; this
+                // only measures, and it is here rather than on a screen because
+                // "where did it all go" is a question that arrives on its own.
+                Button("Browse the Disk…") {
+                    appState.showDiskBrowser = true
+                }
+                .keyboardShortcut("b", modifiers: [.command, .shift])
+
                 Divider()
 
                 Picker("Theme", selection: Binding(

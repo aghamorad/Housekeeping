@@ -25,7 +25,7 @@ struct SettingsView: View {
             }
 
             Section("Scanning") {
-                Toggle("Also measure folders Housekeeping has no rule for", isOn: Binding(
+                Toggle("Also measure folders Housekeeping can't name", isOn: Binding(
                     get: { appState.deepSweep },
                     set: { appState.setDeepSweep($0) }
                 ))
