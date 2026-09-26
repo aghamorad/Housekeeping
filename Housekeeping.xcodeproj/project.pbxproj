@@ -45,6 +45,10 @@
 		A1000035 /* ProtectionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000035; };
 		A1000036 /* ProtectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000036; };
 		A1000037 /* OfficeAddInAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000037; };
+		A1000050 /* DiskTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000050; };
+		A1000051 /* DiskScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000051; };
+		A1000052 /* DiskBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000052; };
+		A1000053 /* DiskBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000053; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -86,6 +90,10 @@
 		A2000035 /* ProtectionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleanup/ProtectionList.swift; sourceTree = "<group>"; };
 		A2000036 /* ProtectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/ProtectionView.swift; sourceTree = "<group>"; };
 		A2000037 /* OfficeAddInAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Scanner/OfficeAddInAudit.swift; sourceTree = "<group>"; };
+		A2000050 /* DiskTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskTree.swift; sourceTree = "<group>"; };
+		A2000051 /* DiskScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskScanner.swift; sourceTree = "<group>"; };
+		A2000052 /* DiskBrowserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskBrowserModel.swift; sourceTree = "<group>"; };
+		A2000053 /* DiskBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/DiskBrowserView.swift; sourceTree = "<group>"; };
 		A3000001 /* Housekeeping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housekeeping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -148,6 +156,10 @@
 				A2000035,
 				A2000036,
 				A2000037,
+				A2000050,
+				A2000051,
+				A2000052,
+				A2000053,
 				A2000027,
 				A2000028,
 				A2000030,
@@ -230,6 +242,10 @@
 				A1000035,
 				A1000036,
 				A1000037,
+				A1000050,
+				A1000051,
+				A1000052,
+				A1000053,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

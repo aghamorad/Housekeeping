@@ -50,6 +50,13 @@ struct ContentView: View {
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
             }
+            // The disk browser gets the appearance and nothing else. It is handed
+            // no `appState` on purpose: it measures and navigates, it never acts on
+            // what it finds, so it has no business holding the cleanup state.
+            .sheet(isPresented: $appState.showDiskBrowser) {
+                DiskBrowserView()
+                    .environment(\.uiStyle, style)
+            }
             // Asked after the first screen is already drawn, not before it: the
             // answer is a line in a footer, and a launch should never wait on the
             // network to show itself.
@@ -326,7 +333,7 @@ private struct WelcomeScreen: View {
                 set: { appState.setDeepSweep($0) }
             )) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Also measure folders Housekeeping has no rule for")
+                    Text("Also measure folders Housekeeping can't name")
                         .font(style.bodyFont)
                         .foregroundStyle(style.text)
                     Text("This is usually where the big wins hide, because nothing else reports them. It adds up to a minute to the scan. Those findings are shown for information and can only be cleaned after an extra typed confirmation.")
@@ -736,7 +743,7 @@ private struct ResultsScreen: View {
                 .font(style.titleFont)
                 .foregroundStyle(style.text)
             Text(appState.deepSweep
-                 ? "Every rule Housekeeping has came back empty, and the deep sweep found nothing outside them either. Your Mac is already tidy — or the remaining clutter is somewhere Housekeeping has no rule for."
+                 ? "Every folder Housekeeping knows about came back empty, and the deep sweep found nothing outside them either. Your Mac is already tidy — or the remaining clutter is somewhere Housekeeping cannot name."
                  : "Every rule Housekeeping has came back empty. Turning on the deep sweep would also measure folders no rule describes, which is often where the real leftovers are.")
                 .font(style.bodyFont)
                 .foregroundStyle(style.secondaryText)
@@ -976,10 +983,10 @@ private struct DetailPane: View {
 
                     section("What this is") {
                         Text(guide.whatItIs)
-                        Text("Housekeeping grouped it as “\(item.findingKind.rawValue)” — \(item.findingKind.tagline.lowercased()).")
+                        Text("Housekeeping grouped it as: \(item.findingKind.tagline.lowercased()).")
                             .foregroundStyle(style.secondaryText)
                         if item.isUndeclared {
-                            Text("Housekeeping has no rule that describes this path. It measured it because it lives where undeclared data collects. That is a statement about its rule database, not about whether the contents matter.")
+                            Text("Housekeeping has no entry that says what this path is. It measured it because it lives where unclaimed data collects. That says something about what Housekeeping knows, not about whether the contents matter.")
                                 .foregroundStyle(style.caution)
                         }
                     }

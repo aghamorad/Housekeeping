@@ -33,6 +33,10 @@ final class AppState: ObservableObject {
     /// redraw the moment it changes.
     @Published private(set) var protectionEntries: [ProtectionList.Entry] = []
     @Published var showProtectionList = false
+    /// Whether the disk browser is open. Only the flag lives here — which folder
+    /// is on screen and what the measurement found belong to `DiskBrowserModel`,
+    /// so that walking around the disk cannot disturb the scan or the quarantine.
+    @Published var showDiskBrowser = false
     /// What GitHub says about this copy's age, once it has been asked. Starts as
     /// `.checking` rather than "nothing newer" so the screen can tell an answer
     /// that has not arrived from an answer that says this is the newest release.
