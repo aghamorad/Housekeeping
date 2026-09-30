@@ -8,7 +8,10 @@ struct HousekeepingApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {
-        WindowGroup {
+        // Named, because a `WindowGroup` can only be opened again from the code
+        // side when it has an id — and "again" is the whole point: see
+        // `WindowOpener`.
+        WindowGroup(id: "main") {
             ContentView()
                 .environmentObject(appState)
         }
@@ -107,6 +110,16 @@ struct HousekeepingApp: App {
                     appState.showUpdateList = true
                 }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
+
+                Divider()
+
+                // Opens on whatever is picked out in the list, and introduces
+                // itself when nothing is. It is deliberately not gated on a scan
+                // having run: "what is this app" is a fair question at any moment.
+                Button("Ask the Housekeeper") {
+                    appState.showHousekeeper = true
+                }
+                .keyboardShortcut("k", modifiers: .command)
 
                 Divider()
 

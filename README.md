@@ -6,9 +6,9 @@ Housekeeping is my attempt to make that whole business legible. It scans a defin
 
 I also did not want to make one of those cleaners that announces that it has found “47 GB OF JUNK” in alarming red letters and then expects you to trust a single enormous Clean button. Housekeeping deliberately slows the process down. Nothing is selected automatically. Most personal data is inspection-only. When something genuinely low-risk is eligible for cleanup, you still review it one item at a time, read the explanation again, and decide whether to keep it or move it into Housekeeping's reversible quarantine. The app does not permanently delete it.
 
-The interface looks like an old Mac utility because I miss the peculiar honesty of those applications: they showed you files, paths, sizes, and consequences. They did not pretend the computer possessed mystical knowledge. The retro icon is original too, with a platinum storage drawer, blue inspection lens, broom, and caution badge.
+The interface looks like an old Mac utility because I miss the peculiar honesty of those applications: they showed you files, paths, sizes, and consequences. They did not pretend the computer possessed mystical knowledge. The retro icon is original too, with a platinum storage drawer, blue inspection lens, broom, and caution badge. The octopus who lives in the menu bar is the housekeeper: many arms, many jobs, which is rather the point of the thing.
 
-[Download Housekeeping 0.6.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.6.0)
+[Download Housekeeping 0.8.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.8.0)
 
 ## What you actually do with it
 
@@ -22,9 +22,9 @@ The interface looks like an old Mac utility because I miss the peculiar honesty 
 
 ## What this version can and cannot claim
 
-Housekeeping 0.6.0 is an early safety milestone. It performs a local, rule-backed audit of known application locations and reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Housekeeping says so in its results rather than reporting a clean Mac.
+Housekeeping 0.9.0 audits a defined set of known application locations and reports what it can establish from local evidence. It performs a rule-backed audit of those locations, reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Housekeeping says so in its results rather than reporting a clean Mac.
 
-There is no connected AI model in this release. That part comes later, if it can be added without handing an LLM the authority to quietly expand what counts as safe or move files by itself. The scanner, path-safety rules, quarantine records, explanations, and restore tests came first because, honestly, a cleanup app has to earn trust at the boring filesystem level before its “AI” opinions mean very much.
+The AI model is local, small, and subordinate. The Housekeeper — an octopus who lives in the menu bar and in a chat bubble you can open with ⌘K — is a 0.6-billion-parameter model that runs on your Mac and explains any finding in plain English. It does not decide anything. It is handed Housekeeping's own hand-written account of a finding, along with Housekeeping's verdict, and it is never asked whether something should be deleted, never sees what is ticked, and is never given a control. The verdict you act on is drawn by Housekeeping, always, above whatever the octopus says — which is exactly why a model that small is enough, and why the scanner, path-safety rules, quarantine records, explanations, and restore tests came first. A cleanup app has to earn trust at the boring filesystem level before its opinions mean very much.
 
 The downloadable build is a universal binary for both Apple-silicon and Intel Macs running macOS 13 or later, and downloads are offered universal as well as separately for each architecture. It is ad-hoc signed for local use and has not been Apple-notarized, so macOS may warn you when you first open it. The source is here for anyone who would prefer to inspect and build it themselves.
 
@@ -93,6 +93,16 @@ Protecting a folder protects everything inside it, because being offered the con
 
 Housekeeping's own records live in the same folder as this file, which is a path the safety policy refuses to quarantine, so the list that says what must be left alone is itself something Housekeeping cannot touch.
 
+### The Housekeeper
+
+The octopus in the menu bar is the housekeeper. Click it and you get a small chat bubble; press ⌘K and you get the same bubble from anywhere in the app, opened on whatever you have selected. Ask what a folder is, why it is on your disk, or what would happen if it went, and it answers in plain English.
+
+It is a 0.6B model — Qwen3 0.6B, quantised to about 380 MB — running through a copy of `llama-server` that travels inside the app bundle. It is not downloaded with the app. The first time you open the Housekeeper it offers to fetch the model once, shows you the progress, and keeps it in `~/Library/Application Support/Housekeeping/`. After that it works with no network at all. The download is resumable, and a connection that drops halfway through is picked up where it stopped rather than started again.
+
+**The division of labour is the whole design.** Housekeeping already works out what a thing is, why it exists, and whether it is safe — that lives in hand-written, testable code. The model is handed that account as a briefing, together with Housekeeping's verdict, and asked to say it in sentences. It never sees a checkbox, never sees what is ticked, is never asked whether something should go, and has no way to move a file. The verdict you act on is drawn by Housekeeping and printed above the model's paragraph, in the same words used everywhere else in the app. The menu bar's *Ask the Housekeeper* opens the bubble with nothing selected, in which case it introduces itself and waits.
+
+This is a cue taken from the same place the working-copy rule came from, turned around: [Mole](https://github.com/tw93/mole) put a character in the menu bar and made the tool feel like something that lives on your Mac. Housekeeping's character is allowed to be charming. It is not allowed to be the one deciding.
+
 ### Working copies
 
 A folder that calls itself a cache can still be somebody's project. Before anything is offered for cleanup, Housekeeping looks inside it — three levels down, stopping at the first thing it finds — for a Git repository or a deployment key. If it finds one, the folder is refused, whatever category and safety level the scan assigned it.
@@ -137,6 +147,32 @@ Housekeeping/Sources/
 │   ├── ProtectionList.swift     Your refusals: the left-alone list, on disk
 │   ├── SafeCleanupEngine.swift  Transactional quarantine and no-overwrite restore
 │   ├── CleanupModels.swift      Cleanup and restore record types
+│
+├── Disk/                    Reading the disk, which is not the same as cleaning it
+│   ├── DiskScanner.swift        Measured folder sizes
+│   ├── DiskTree.swift           The tree they add up to
+│   ├── DiskBrowserModel.swift   Navigation and selection
+│   └── DiskBrowserView.swift    Browse the Disk
+│
+├── Update/                  What is installed, and where its updates come from
+│   ├── InstalledAppInventory.swift  What is on the Mac
+│   ├── AppProvenance.swift      Evidence on disk for where each app came from
+│   ├── AppUpdateEngine.swift    The check, grouped by route
+│   ├── UpdateBridge.swift       Running the update, once you have said so
+│   ├── ProcessRunner.swift      Run-to-completion subprocess with a deadline
+│   ├── UpdateExceptions.swift   Apps the check must not touch
+│   ├── UpdateModels.swift       Rows, groups, and states
+│   └── UpdateView.swift         Update Apps
+│
+├── MenuBar/
+│   ├── OctopusMark.swift        The housekeeper's mark, drawn as one path
+│   └── StatusItemController.swift  The animated menu-bar item and its menu
+│
+├── Housekeeper/             The local model, kept strictly in its place
+│   ├── Housekeeper.swift        The conversation, and what the model is told
+│   ├── HousekeeperView.swift    The chat bubble (⌘K)
+│   ├── HousekeeperWeights.swift The model download, resumable
+│   └── LlamaServer.swift        The bundled llama-server, supervised
 │
 └── UI/
     ├── ContentView.swift       Main navigation (Welcome → Scan → Results)
@@ -219,7 +255,7 @@ All files in this project parse cleanly with Swift 6.4.
 
 ## Distribution
 
-Distribution signing and notarization have not been completed. Scanning and classification are local, and no AI provider or telemetry endpoint is connected in this milestone.
+Distribution signing and notarization have not been completed. Scanning, classification, and the Housekeeper are all local: the model is downloaded once from Hugging Face and then runs on your Mac, and no AI provider, cloud service, or telemetry endpoint is contacted with anything about your files. The only network requests the app makes are that one model download and the optional check for a newer release.
 
 ## Design Philosophy
 
@@ -231,6 +267,12 @@ The Mac OS 9 interface is a deliberate choice. Utilities such as Norton Utilitie
 - **Always reversible:** eligible cleanup goes to recoverable quarantine, and restore refuses to overwrite an existing path
 
 ## Version
+
+**Housekeeping 0.9.0:** The Housekeeper — a small local model, downloaded on first use, that explains any finding in plain English while Housekeeping itself keeps the verdict — the octopus in the menu bar, and a direct way to ask about whatever item is in front of you
+
+**Housekeeping 0.8.0:** Every row now says what the thing is and who made it, read off the disk rather than guessed from the name, and the four jobs — quarantine, left alone, browse the disk, update apps — are a permanent row across the top of every screen
+
+**Housekeeping 0.7.0:** Update Apps, a list of everything installed that could be updated, grouped by where its updates actually come from rather than by name, with nothing inferred from an app's name
 
 **Housekeeping 0.6.0:** The application renamed to `Housekeeping.app`, the quarantine left behind by earlier builds carried forward into `~/Housekeeping Quarantine` rather than orphaned, and a newer-release notice that asks GitHub once per launch, shows a line only when a newer release is confirmed, and never reports "current" for a question it could not ask — on top of everything in 0.5.0
 

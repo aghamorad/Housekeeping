@@ -37,6 +37,11 @@ final class AppState: ObservableObject {
     /// is on screen and what the measurement found belong to `DiskBrowserModel`,
     /// so that walking around the disk cannot disturb the scan or the quarantine.
     @Published var showDiskBrowser = false
+    /// Whether the housekeeper sheet is open. Only the flag lives here; the
+    /// conversation belongs to `Housekeeper` and is shared rather than owned by
+    /// the sheet, so opening it from the menu bar the second time does not lose
+    /// what was said the first.
+    @Published var showHousekeeper = false
     /// What GitHub says about this copy's age, once it has been asked. Starts as
     /// `.checking` rather than "nothing newer" so the screen can tell an answer
     /// that has not arrived from an answer that says this is the newest release.
