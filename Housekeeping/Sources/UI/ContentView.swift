@@ -10,6 +10,7 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         let style = UIStyle.resolve(appState.currentTheme)
@@ -66,10 +67,32 @@ struct ContentView: View {
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
             }
+            // The housekeeper gets the state because it has to know which finding
+            // is on screen and what Housekeeping decided about it — that pairing is
+            // the whole of what it explains.
+            .sheet(isPresented: $appState.showHousekeeper) {
+                HousekeeperView()
+                    .environment(\.uiStyle, style)
+                    .environmentObject(appState)
+            }
             // Asked after the first screen is already drawn, not before it: the
             // answer is a line in a footer, and a launch should never wait on the
             // network to show itself.
             .task { await appState.startUpdateCheck() }
+            // The menu bar holds no reference to this view, so it asks by
+            // notification. Both are only posted once a window is up, because it
+            // is the one that delivers them — see `WindowOpener`. What that means
+            // here is that closing the window does not close the door: the octopus
+            // can still be clicked, and it will build this view again to talk to.
+            .onAppear {
+                WindowOpener.shared.register { openWindow(id: "main") }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenHousekeeper)) { _ in
+                appState.showHousekeeper = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingScanNow)) { _ in
+                appState.startScan()
+            }
     }
 }
 
@@ -475,6 +498,10 @@ private struct WelcomeScreen: View {
             }
 
             Spacer()
+
+            Text("Made by Morad")
+                .font(style.smallFont)
+                .foregroundStyle(style.secondaryText)
         }
     }
 }
@@ -955,7 +982,9 @@ private struct FindingRow: View {
 /// The three things Housekeeping can say about an item, in the reader's words
 /// rather than its own. Every place a verdict appears goes through here, so the
 /// wording cannot drift apart between the list and the details.
-private enum Verdict {
+/// Not private: the housekeeper prints the same verdict above the model's prose,
+/// and there has to be exactly one wording of it.
+enum Verdict {
     case ready, inspect, leave
 
     static func of(_ decision: CleanupSafetyPolicy.Decision) -> Verdict {
@@ -1053,6 +1082,18 @@ private struct DetailPane: View {
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(style.rowSelection.opacity(0.4))
+
+                    // Sits directly under the verdict because the question it
+                    // answers is "why", which is the question the verdict has just
+                    // raised. It belongs here rather than in the footer below,
+                    // which is already carrying three buttons in a narrow pane.
+                    ThemeButton(
+                        title: "Ask the Housekeeper About This",
+                        systemImage: "bubble.left.and.text.bubble.right",
+                        help: "Opens the housekeeper on this item. It explains the verdict above in plain English; it does not make one, and it cannot clean anything."
+                    ) {
+                        appState.showHousekeeper = true
+                    }
 
                     section("What this is") {
                         Text(guide.whatItIs)

@@ -1,3 +1,30 @@
+# Housekeeping 0.9.0
+
+There is now someone in the house. An octopus sits in the menu bar, and when you want to know what
+something is, you ask it instead of reading a table.
+
+- **The Housekeeper (⌘K).** A small local model that explains what Housekeeping found. It talks in
+  plain English about one finding at a time — what the thing is, why it is on your disk, and what
+  Housekeeping's own verdict was. It arrives as a download on first use, around 380 MB, and runs
+  entirely on your Mac; nothing about your files leaves the machine.
+- **It explains. It does not decide.** The verdict you act on — *Ready to go*, *Worth a look*,
+  *Leave it alone* — is drawn by Housekeeping, above the octopus's answer, in the same words as
+  everywhere else in the app. The model is handed that verdict as a fact and is never asked whether
+  something should go, never sees what is ticked, and cannot clean anything. That division is why a
+  model this small is enough: the judgement was already made and written down by hand, and the
+  model's only job is to say it in sentences.
+- **An octopus in the menu bar.** The mark from the app icon, animated — breathing, tentacles
+  drifting — and still, one colour, cut into a template image so it matches whatever the menu bar is
+  doing. The menu opens the app, opens the Housekeeper on its own, or starts a scan.
+- **Ask about this one.** The button sits directly under the verdict on any finding, which is where
+  the question "but why?" actually arrives.
+
+The housekeeper needs macOS 13 or later, as the app does. Its runtime is a single static binary
+inside the bundle, and on first use it downloads its model once and keeps it in Application Support.
+
+The distributed build is ad-hoc signed for local use on macOS 13 or later. It is not notarized, so
+macOS may warn you the first time you open it.
+
 # Housekeeping 0.8.0
 
 Every row now says what the thing is. A window that lists `dav1d`, `cjson` and `Google Chrome` and

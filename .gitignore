@@ -35,3 +35,9 @@ Housekeeping/Sources/Scanner/Scanner.swift
 Housekeeping/Sources/Cleanup/CleanupEngine.swift
 Housekeeping/Sources/main.swift
 Housekeeping/Resources/*.json
+
+# The housekeeper's runtime. 38 MB of llama.cpp, built from source by
+# Tools/llama-static/build.sh, and reproducible from there — so it stays out of
+# the repository rather than being cloned by everyone forever. packaging fails
+# with a clear message rather than shipping an app whose housekeeper is dead.
+Housekeeping/Resources/llama-server

@@ -41,6 +41,8 @@ SOURCES=(
   "$ROOT_DIR"/Housekeeping/Sources/Disk/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/Housekeeper/*.swift
 )
 
 WORK_ROOT="$(mktemp -d /private/tmp/housekeeping-package.XXXXXX)"
@@ -61,6 +63,18 @@ for existing in "$UNIVERSAL_APP" "$UNIVERSAL_ZIP" "$ARM_ZIP" "$X86_ZIP"; do
   fi
 done
 
+# The housekeeper's runtime, built from source by Tools/llama-static/build.sh.
+# It is deliberately not in the repository — 38 MB that every clone would carry
+# forever, for a file three scripted steps can rebuild — so a fresh checkout has
+# to be pointed at a copy. Missing, this stops the release rather than shipping
+# an app whose housekeeper silently never wakes up.
+RUNTIME="$ROOT_DIR/Housekeeping/Resources/llama-server"
+if [[ ! -x "$RUNTIME" ]]; then
+  echo "Safety stop: $RUNTIME is missing." >&2
+  echo "Build it with Tools/llama-static/build.sh and copy the result there." >&2
+  exit 1
+fi
+
 compile() {
   local arch="$1"
   local output="$2"
@@ -76,13 +90,24 @@ compile() {
 
 stage() {
   local binary="$1"
-  local app="$2"
+  local runtime="$2"
+  local app="$3"
   rm -rf "$app"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/Rules"
   cp "$binary" "$app/Contents/MacOS/$APP_NAME"
   cp "$ROOT_DIR/Housekeeping/Info.plist" "$app/Contents/Info.plist"
   cp "$ROOT_DIR/Housekeeping/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
   ditto "$ROOT_DIR/Housekeeping/Resources/Rules" "$app/Contents/Resources/Rules"
+
+  # The housekeeper's runtime travels inside the bundle. It is a single static
+  # binary that links nothing but system frameworks — which is the whole reason a
+  # shared llama.cpp build was rejected, since that shape would mean signing a
+  # pile of nested dylibs beside it. It is signed before the bundle so there is
+  # exactly one signature covering it, and no ambiguity about which one counts.
+  cp "$runtime" "$app/Contents/Resources/llama-server"
+  chmod 755 "$app/Contents/Resources/llama-server"
+  codesign --force --sign - "$app/Contents/Resources/llama-server"
+
   codesign --force --deep --sign - "$app"
   codesign --verify --deep --strict "$app"
 }
@@ -100,9 +125,15 @@ lipo -create \
 mkdir -p "$OUTPUT_DIR" "$WORK_ROOT/stage-universal" "$WORK_ROOT/stage-arm64" "$WORK_ROOT/stage-x86_64"
 
 echo "Staging and signing..."
-stage "$WORK_ROOT/$APP_NAME-universal" "$WORK_ROOT/stage-universal/$APP_NAME.app"
-stage "$WORK_ROOT/$APP_NAME-arm64" "$WORK_ROOT/stage-arm64/$APP_NAME.app"
-stage "$WORK_ROOT/$APP_NAME-x86_64" "$WORK_ROOT/stage-x86_64/$APP_NAME.app"
+
+# Each thin build gets a thin runtime. Handing the Intel reader a universal
+# helper would undo in the housekeeper exactly what the thin app bundle was for.
+lipo -thin arm64 "$RUNTIME" -output "$WORK_ROOT/llama-server-arm64"
+lipo -thin x86_64 "$RUNTIME" -output "$WORK_ROOT/llama-server-x86_64"
+
+stage "$WORK_ROOT/$APP_NAME-universal" "$RUNTIME" "$WORK_ROOT/stage-universal/$APP_NAME.app"
+stage "$WORK_ROOT/$APP_NAME-arm64" "$WORK_ROOT/llama-server-arm64" "$WORK_ROOT/stage-arm64/$APP_NAME.app"
+stage "$WORK_ROOT/$APP_NAME-x86_64" "$WORK_ROOT/llama-server-x86_64" "$WORK_ROOT/stage-x86_64/$APP_NAME.app"
 
 # The universal app is the primary artefact and is copied out as a real .app as
 # well as a zip, so a local reader can run it without unpacking anything. The
