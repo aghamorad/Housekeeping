@@ -135,8 +135,14 @@ struct HousekeepingApp: App {
         }
 
         Settings {
+            // Settings is a window of its own, opened by the system, so it is given
+            // the same two things every other window here is given by hand: the
+            // appearance, and the surface it is painted on.
+            let style = UIStyle.resolve(appState.currentTheme)
             SettingsView()
                 .environmentObject(appState)
+                .environment(\.uiStyle, style)
+                .housekeepingSurface(style)
         }
     }
 }
