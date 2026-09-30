@@ -17,8 +17,7 @@ struct ContentView: View {
 
         Screen()
             .environment(\.uiStyle, style)
-            .background(WindowBackground(isRetro: style.isRetro, color: style.windowBackground))
-            .preferredColorScheme(style.isRetro ? .light : nil)
+            .housekeepingSurface(style)
             .frame(minWidth: 1040, minHeight: 680)
             // Each sheet is given the appearance explicitly. A sheet is presented
             // in its own window, and one attached here — outside the
@@ -30,26 +29,31 @@ struct ContentView: View {
                 CleanupView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             .sheet(isPresented: $appState.showGuidedCleanup) {
                 GuidedCleanupView(items: appState.guidedCleanupItems)
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             .sheet(isPresented: $appState.showCleanupPreview) {
                 CleanupPreviewView(items: appState.recommendedCleanupItems)
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             .sheet(isPresented: $appState.showQuarantineManagement) {
                 QuarantineView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             .sheet(isPresented: $appState.showProtectionList) {
                 ProtectionView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             // The disk browser gets the appearance and nothing else. It is handed
             // no `appState` on purpose: it measures and navigates, it never acts on
@@ -57,6 +61,7 @@ struct ContentView: View {
             .sheet(isPresented: $appState.showDiskBrowser) {
                 DiskBrowserView()
                     .environment(\.uiStyle, style)
+                    .housekeepingSurface(style)
             }
             // Like the disk browser this is its own job, but unlike it this one
             // acts: it runs Homebrew, the store's tool, and swaps bundles. So it
@@ -66,6 +71,7 @@ struct ContentView: View {
                 UpdateView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             // The housekeeper gets the state because it has to know which finding
             // is on screen and what Housekeeping decided about it — that pairing is
@@ -74,6 +80,7 @@ struct ContentView: View {
                 HousekeeperView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
+                    .housekeepingSurface(style)
             }
             // Asked after the first screen is already drawn, not before it: the
             // answer is a line in a footer, and a launch should never wait on the
@@ -96,6 +103,33 @@ struct ContentView: View {
     }
 }
 
+/// Every surface Housekeeping opens — the window and each sheet alike.
+///
+/// A sheet is its own window, so it inherits neither the window's background nor
+/// its appearance: left alone, a red app opens grey panels, and in a light-mode
+/// system they would come up light with the app's own pale text on them. Both are
+/// fixed here, at each point a window is opened, rather than left to the system.
+///
+/// The colour is the icon's, so it does not follow the system either way. `tint`
+/// is what reaches the controls SwiftUI draws itself — toggles, progress bars,
+/// focus rings — which otherwise stay system blue inside a red app.
+struct HousekeepingSurface: ViewModifier {
+    let style: UIStyle
+
+    func body(content: Content) -> some View {
+        content
+            .background(WindowBackground(isRetro: style.isRetro, color: style.windowBackground))
+            .preferredColorScheme(style.isRetro ? .light : .dark)
+            .tint(style.accent)
+    }
+}
+
+extension View {
+    func housekeepingSurface(_ style: UIStyle) -> some View {
+        modifier(HousekeepingSurface(style: style))
+    }
+}
+
 private struct WindowBackground: View {
     let isRetro: Bool
     let color: Color
@@ -104,8 +138,12 @@ private struct WindowBackground: View {
         if isRetro {
             color
         } else {
+            // The wash is the icon's red rather than the system accent: it is the
+            // one place the surface is allowed to be more than flat, and it should
+            // be the same red the app is wearing, not a second colour arriving
+            // from System Settings.
             LinearGradient(
-                colors: [color, Color.accentColor.opacity(0.12), color],
+                colors: [color, HousekeepingInk.red.opacity(0.16), color],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

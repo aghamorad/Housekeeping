@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.uiStyle) private var style
 
     var body: some View {
         Form {
@@ -20,7 +21,7 @@ struct SettingsView: View {
 
                 Text(themeDescription)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -34,7 +35,7 @@ struct SettingsView: View {
                      ? "The deep sweep is on. It measures the folders where undeclared data collects — usually where the larger wins are, since nothing else reports them. It adds up to a minute to a scan, and anything it finds can only be cleaned after an extra typed confirmation."
                      : "The deep sweep is off. Housekeeping will only report what its list of \(RuleEngine.shared.applications.count) known applications and tools covers, so anything not on that list goes unmeasured.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -53,14 +54,14 @@ struct SettingsView: View {
                 if let note = appState.updateExceptionNote {
                     Text(note)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if appState.updateExceptionEntries.isEmpty {
                     Text("Nothing yet. Every application and package Housekeeping finds will be offered the next time you open Update Apps.")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     ForEach(appState.updateExceptionEntries) { entry in
@@ -70,7 +71,7 @@ struct SettingsView: View {
                                     .font(.callout)
                                 Text(entry.displayKey)
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(style.secondaryText)
                                     .textSelection(.enabled)
                             }
                             Spacer(minLength: 8)
@@ -93,7 +94,7 @@ struct SettingsView: View {
                      ? "That is the whole path. It is a normal folder at the top of your home folder, in plain sight — not hidden inside Library or an application support folder. Things can be dragged back out of it by hand, without Housekeeping."
                      : "That is where it will be. The folder does not exist yet because nothing has been quarantined; it is created the first time you clean something. It sits at the top of your home folder in plain sight — not hidden inside Library.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Button("Show Me the Folder") { CleanupEngine().revealQuarantine() }
@@ -109,6 +110,10 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        // The grouped form draws the system's own panel behind its sections.
+        // Left on, this window is grey cards on a red window; off, the surface
+        // the rest of the app wears comes through.
+        .scrollContentBackground(.hidden)
         .padding(20)
         .frame(width: 540, height: 560)
     }
@@ -135,7 +140,7 @@ struct SettingsView: View {
     private func safetyLine(_ text: String, icon: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: icon)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(style.secondaryText)
                 .frame(width: 16)
             Text(text)
                 .font(.callout)

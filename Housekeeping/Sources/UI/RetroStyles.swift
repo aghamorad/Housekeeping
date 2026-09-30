@@ -32,6 +32,43 @@ struct RetroColors {
     static let systemSelectedBackground = Color(NSColor.selectedControlColor)
 }
 
+// MARK: - The app's own colour
+
+/// The colour Housekeeping wears, taken from the octopus in its icon.
+///
+/// These are the icon's own pixels, weighted by how much of the tile each covers:
+/// the lit red of its face, the shaded red it rolls off into, and the deep maroon
+/// underneath both. The app wears them the way the icon does — the maroon is the
+/// surface everything sits on, the lit red is for what wants attention. Nothing
+/// here is a mood; it is the same red, from the same picture.
+struct HousekeepingInk {
+    /// The tile's lit face: what the icon is recognised by when it is small.
+    static let red = Color(red: 144/255, green: 32/255, blue: 24/255)
+    /// The same red lifted. For glyphs and links on maroon, where the tile's own
+    /// value would sink into the background instead of standing on it.
+    static let redLifted = Color(red: 205/255, green: 74/255, blue: 60/255)
+    /// The shaded part of the tile, and the app's hairlines.
+    static let redShaded = Color(red: 92/255, green: 15/255, blue: 10/255)
+    /// The line between one surface and the next.
+    static let hairline = Color(red: 122/255, green: 34/255, blue: 26/255)
+
+    /// The icon's deepest maroon: the surface the window is made of.
+    static let surface = Color(red: 40/255, green: 7/255, blue: 5/255)
+    /// A surface raised off that one — panels, cards, the grouping behind a list.
+    static let surfaceRaised = Color(red: 58/255, green: 12/255, blue: 9/255)
+
+    /// The icon's sheen, warmed: light enough to read a paragraph by.
+    static let text = Color(red: 242/255, green: 228/255, blue: 225/255)
+    static let secondaryText = Color(red: 201/255, green: 164/255, blue: 157/255)
+
+    // The three verdicts keep their usual meanings, but they have to be legible on
+    // maroon and they must not be mistaken for the app's own red — a warning that
+    // looks like the brand is a warning that does not read as one.
+    static let positive = Color(red: 111/255, green: 199/255, blue: 152/255)
+    static let caution = Color(red: 232/255, green: 168/255, blue: 79/255)
+    static let negative = Color(red: 255/255, green: 108/255, blue: 86/255)
+}
+
 // MARK: - Retro Typography
 
 struct RetroTypography {
@@ -309,19 +346,23 @@ struct UIStyle {
                 pathFont: Font.system(size: 11, weight: .regular, design: .monospaced)
             )
         case .liquidGlass:
+            // Housekeeping's own colour, not the system's. Text is stated rather
+            // than taken from `.labelColor` because these surfaces do not follow
+            // the system appearance — see `HousekeepingSurface`, which fixes this
+            // window to dark so the two can never disagree.
             return UIStyle(
                 theme: theme,
-                text: Color(nsColor: .labelColor),
-                secondaryText: Color(nsColor: .secondaryLabelColor),
-                accent: Color.accentColor,
-                border: Color(nsColor: .separatorColor),
-                rowSelection: Color.accentColor.opacity(0.14),
+                text: HousekeepingInk.text,
+                secondaryText: HousekeepingInk.secondaryText,
+                accent: HousekeepingInk.red,
+                border: HousekeepingInk.hairline,
+                rowSelection: HousekeepingInk.red.opacity(0.28),
                 rowBackground: Color.clear,
-                windowBackground: Color(nsColor: .windowBackgroundColor),
-                groupingBackground: Color(nsColor: .underPageBackgroundColor),
-                positive: Color.green,
-                caution: Color.orange,
-                negative: Color.red,
+                windowBackground: HousekeepingInk.surface,
+                groupingBackground: HousekeepingInk.surfaceRaised,
+                positive: HousekeepingInk.positive,
+                caution: HousekeepingInk.caution,
+                negative: HousekeepingInk.negative,
                 titleFont: .system(size: 26, weight: .semibold),
                 bodyFont: .system(size: 13),
                 smallFont: .system(size: 11),
