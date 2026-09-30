@@ -60,40 +60,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupAppearance() {
-        // Ensure the app doesn't appear in the dock
+        // A regular app: a window, a Dock tile, and the octopus in the menu bar.
         NSApp.setActivationPolicy(.regular)
 
-        // Let SwiftUI/macOS own the standard application menu.
-        // Housekeeping adds its actions through Scene commands instead of replacing
-        // Settings, Window, Help, keyboard navigation, and other native menus.
-    }
-
-    private func setupMenu() {
-        let mainMenu = NSMenu()
-
-        // App menu
-        let appMenu = NSMenu()
-
-        let aboutItem = NSMenuItem(title: "About Housekeeping", action: #selector(showAbout), keyEquivalent: "")
-        appMenu.addItem(aboutItem)
-        appMenu.addItem(NSMenuItem.separator())
-
-        let quitItem = NSMenuItem(title: "Quit Housekeeping", action: #selector(NSApp.terminate), keyEquivalent: "q")
-        appMenu.addItem(quitItem)
-
-        NSApp.mainMenu = mainMenu
-        let appMenuTitle = NSMenuItem()
-        appMenuTitle.submenu = appMenu
-        mainMenu.addItem(appMenuTitle)
-    }
-
-    @objc func showAbout() {
-        let alert = NSAlert()
-        alert.messageText = "Housekeeping"
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
-        alert.informativeText = "Version \(version)\n\nFind leftovers from apps you no longer use.\n\nBuilt with Swift and SwiftUI.\n© 2026"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        // The standard application menu is SwiftUI's, not this file's. Housekeeping
+        // contributes through Scene commands rather than replacing Settings, Window,
+        // Help, keyboard navigation, and the other native menus.
     }
 }
