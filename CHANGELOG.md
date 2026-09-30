@@ -18,6 +18,12 @@ something is, you ask it instead of reading a table.
   doing. The menu opens the app, opens the Housekeeper on its own, or starts a scan.
 - **Ask about this one.** The button sits directly under the verdict on any finding, which is where
   the question "but why?" actually arrives.
+- **The app wears the octopus's colour.** The icon is the octopus itself — the tile, not a picture
+  sitting inside one — and the app now wears the same red: the lit red of its face for anything that
+  wants attention, the shaded red it rolls off into for the hairlines, and the deep maroon underneath
+  both for the window and every panel in it. The three verdicts moved off the system's own orange and
+  red so that a warning can never be mistaken for the brand. *Mac OS 9 / Platinum* is unchanged, being
+  an authentic alternate appearance rather than a theme to be tinted.
 
 The housekeeper needs macOS 13 or later, as the app does. Its runtime is a single static binary
 inside the bundle, and on first use it downloads its model once and keeps it in Application Support.
