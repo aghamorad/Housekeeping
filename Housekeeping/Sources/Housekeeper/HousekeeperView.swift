@@ -43,6 +43,16 @@ struct HousekeeperView: View {
         .background(style.windowBackground)
         .frame(minWidth: 620, idealWidth: 680, minHeight: 540, idealHeight: 660)
         .onAppear {
+            // A screen that is not about a scanned path hands over its own topic
+            // as it opens the window, and it is taken rather than remembered: the
+            // next time the housekeeper is opened from somewhere else, the topic
+            // this one left behind is not still sitting on the strip.
+            if let topic = appState.housekeeperTopic {
+                appState.housekeeperTopic = nil
+                hasGrounding = true
+                housekeeper.open(topic: topic)
+                return
+            }
             hasGrounding = appState.inspectedItem != nil
                 || !(appState.scanResults?.foundItems.isEmpty ?? true)
             // Handing over the item that is on screen is what makes the sheet
@@ -129,6 +139,7 @@ struct HousekeeperView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     verdictStrip
+                    topicStrip
 
                     ForEach(housekeeper.turns) { turn in
                         TurnRow(turn: turn).id(turn.id)
@@ -191,6 +202,48 @@ struct HousekeeperView: View {
                         .foregroundStyle(style.secondaryText)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(style.rowSelection.opacity(0.4))
+        }
+    }
+
+    /// The same strip for a screen that is not about a scanned path. It carries no
+    /// verdict, because these screens have none to give — Housekeeping's own policy
+    /// is the only thing that can call a folder safe to remove, and a setup finding
+    /// is not that. What it carries is Housekeeping's account of the thing, and it
+    /// is the same account the model was handed, so the reader can see that the
+    /// prose below is standing on something.
+    @ViewBuilder
+    private var topicStrip: some View {
+        if let topic = housekeeper.topic {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: topic.tone.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(topic.tone.colour(in: style))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(topic.title)
+                            .font(style.labelFont)
+                            .foregroundStyle(topic.tone.colour(in: style))
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let label = topic.label {
+                            Text(label)
+                                .font(style.smallFont)
+                                .foregroundStyle(topic.tone.colour(in: style))
+                        }
+                    }
+                    ForEach(topic.facts, id: \.self) { fact in
+                        Text(fact)
+                            .font(style.bodyFont)
+                            .foregroundStyle(style.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -330,7 +383,12 @@ struct HousekeeperView: View {
     }
 
     private var placeholder: String {
-        housekeeper.subject == nil ? "Ask the Housekeeper…" : "Ask about this…"
+        // Both cases where something is actually in front of it — a picked-out
+        // folder, or a screen's own topic — read the same to the reader, because
+        // from the reader's side they are the same situation.
+        housekeeper.subject == nil && housekeeper.topic == nil
+            ? "Ask the Housekeeper…"
+            : "Ask about this…"
     }
 
     /// The model is here and not already busy. This is what the question field

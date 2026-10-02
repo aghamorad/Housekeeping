@@ -1,3 +1,58 @@
+# Housekeeping 0.10.0
+
+Housekeeping can now look at the tools that are already installed and say what is wrong with them —
+and, when you agree one at a time, put it right. It is the first part of the app that runs anything.
+
+- **The setup check.** A new screen reads the machine the way a person debugging a broken command
+  would: which program actually runs when you type a name, whether the link that reaches it leads
+  anywhere, whether what a package installed is linked and complete, whether a package manager has
+  been superseded, and whether something was put in place by hand rather than by the tool that
+  claims to own it. Each thing it finds is one row, said in a sentence.
+- **It runs, and that is new.** Until now Housekeeping measured and moved files and ran nothing.
+  This screen runs Homebrew's own commands and rewrites a line of shell configuration. The safety
+  model changes to match: nothing is ticked for you, nothing runs until you tick a row and press the
+  button, and every row states in advance what it will change and what would undo it before it is
+  offered.
+- **One finding, one action, one row.** A fix that is really a sequence is a script, and a script is
+  not a thing anyone can consent to. So a finding that would need two steps is reported as it is,
+  with the commands shown, and no button. Anything that does have a button changes exactly one
+  thing.
+- **Moves go through the same Quarantine.** A repair that takes something off the disk — a dead
+  symlink, a stray copy of a program shadowing the real one — moves it into the folder an ordinary
+  cleanup uses, recorded in the same manifest, listed on the same Manage Quarantine screen, put back
+  by the same Restore. There is one recovery screen, not two that can drift.
+- **A failure is that row's own news.** Repairing proceeds in the order given rather than stopping
+  at the first refusal, and each failure is reported against the row it belongs to, so one thing
+  needing an administrator does not hide the twelve that worked.
+- **Nothing that needs a password is run.** A few of the things the check can find — a Python
+  installed by hand, a superseded package manager — can only be removed as an administrator.
+  Housekeeping shows the command and does not run it, because it does not ask for your password.
+  A finding it cannot fix says so in as many words rather than offering a button that would fail.
+- **The whole Mac in one press.** "Look Everywhere" runs every reading the app has — the disk, the
+  setup, the update list — one after another, with the octopus visibly working while it goes, and
+  hands back a single account of what each one found. It is automated exactly as far as reading:
+  nothing is ticked, moved, installed or fixed, and each count on the screen it leaves behind is a
+  door to the screen that already asks before it changes anything. Stopping it stops the reading in
+  flight and nothing else, because nothing had been changed for the stop to undo.
+- **Every door is on the bar, in the order a reader wants them.** The row across the top no longer
+  carries some of the jobs and leaves the rest in the app menu: the setup check — which had a menu
+  item and no button anywhere in the window — and Settings are on it beside the others, and the row
+  is grouped rather than one flat run. What reads the Mac and changes nothing comes first; then the
+  two drawers holding what Housekeeping has already moved aside or been told to leave alone; and,
+  apart from both, the two things that are about the app itself: its settings, and the housekeeper.
+  The app menu still carries every one of them as a shortcut, so nothing here is the only way to
+  reach a job — only the way that is visible.
+- **The housekeeper is reachable from everywhere.** Every screen and every sheet now carries a way
+  to open it: the bar across the top of the main screen, the Quarantine screen and each item in it,
+  every update row, the disk browser on the folder you are standing in, the setup check, each
+  cleanup candidate, the Settings window, and the last confirmation before a move. What it is handed
+  is that screen's own subject, drawn from the same sentences the screen already prints, so the
+  reader and the model are looking at the identical account.
+- **A dead link is no longer mistaken for an empty space.** Restore and Undo asked whether anything
+  was at the original path by following the link, which answers *no* for a link whose target is
+  gone — exactly the items this app promises to hand back. They now check for the item itself, so a
+  broken symlink waiting at a path is seen and refused rather than quietly written over.
+
 # Housekeeping 0.9.0
 
 There is now someone in the house. An octopus sits in the menu bar, and when you want to know what

@@ -324,6 +324,11 @@ struct UpdateView: View {
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
             Spacer()
+            AskHousekeeperButton(
+                topic: overviewTopic,
+                closing: { appState.showUpdateList = false },
+                title: "Ask About This List"
+            )
             if appState.updateIsWorking {
                 ThemeButton(
                     title: "Stop",
@@ -470,6 +475,13 @@ struct UpdateView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                AskHousekeeperButton(
+                    topic: topic(for: row),
+                    closing: { appState.showUpdateList = false },
+                    title: "Ask about this one",
+                    help: "Opens the housekeeper on this row. It explains what was found and what updating it would involve; Housekeeping is the one that decides and the one that runs anything.",
+                    compact: true
+                )
                 Spacer()
                 if let actionLabel, row.canUpdate {
                     ThemeButton(
@@ -524,6 +536,98 @@ struct UpdateView: View {
         // looks for the thing that is not a button, and the ellipsis above is what
         // tells them there is one.
         .contextMenu { rowMenuItems(row) }
+    }
+
+    /// What the housekeeper is handed when it is opened from this screen. Every
+    /// fact here is a sentence this screen already says, so the model cannot be
+    /// told something the reader cannot see above it.
+    private var overviewTopic: HousekeeperTopic {
+        var facts: [String] = []
+
+        if appState.updateIsReading {
+            facts.append("Housekeeping is still reading the list. It walks the applications on this Mac, asks Homebrew what it knows, and reads the update feeds — so the counts are not final yet.")
+        } else if totalCount == 0 {
+            facts.append("Housekeeping found nothing to list. That will be either a filter hiding everything or a reading that did not return anything.")
+        } else {
+            facts.append("The list is showing \(totalCount) installed thing\(totalCount == 1 ? "" : "s"), of which \(noteworthyCount) need\(noteworthyCount == 1 ? "s" : "") attention — a newer version to be had, or a copy Housekeeping found something wrong with.")
+            facts.append(summaryLine)
+            for group in groups {
+                facts.append("- \(group.channel.title): \(group.rows.count). \(group.channel.method)")
+            }
+            if selectedCount > 0 {
+                facts.append("\(selectedCount) row\(selectedCount == 1 ? " is" : "s are") ticked, meaning Update All would act on them.")
+            } else {
+                facts.append("Nothing is ticked, so Update All would do nothing.")
+            }
+            facts.append("Update All never touches the Mac App Store, macOS itself, or anything whose origin Housekeeping could not establish — those groups say so instead.")
+        }
+
+        if let line = appState.updateSummaryLine {
+            facts.append(line)
+        }
+        for outcome in appState.updateOutcomes {
+            facts.append("- \(outcome.succeeded ? "Succeeded" : "Failed"): \(outcome.name) — \(outcome.message)")
+        }
+
+        return HousekeeperTopic(
+            id: "update-overview",
+            title: "Update Apps",
+            label: appState.updateIsReading ? "Still reading" : "\(noteworthyCount) need\(noteworthyCount == 1 ? "s" : "") attention",
+            tone: appState.updateIsReading ? .plain : (noteworthyCount > 0 ? .caution : .good),
+            facts: facts,
+            opener: appState.updateIsReading
+                ? "What is this screen doing while it reads?"
+                : "Go through this list with me — what actually needs updating, and what will you not touch?"
+        )
+    }
+
+    /// One row, as the housekeeper is handed it.
+    private func topic(for row: UpdateRow) -> HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("Installed: \(row.installedVersion.isEmpty ? "version unknown" : row.installedVersion). The check says: \(row.check.shortLabel).")
+        if let summary = row.summary { facts.append("What it is: \(summary)") }
+        facts.append(row.detail)
+        if case .available(let version, _) = row.check {
+            facts.append("A newer version exists: \(version).")
+        }
+        if case .unknown(let reason) = row.check {
+            facts.append("Housekeeping could not reach an answer: \(reason)")
+        }
+        if case .refused(let reason) = row.check {
+            facts.append("Housekeeping will not update this copy: \(reason)")
+        }
+        facts.append("It came from: \(row.channel.title). \(row.channel.method)")
+        if let said = explanation(row) { facts.append(said) }
+        if let actionLabel = rowActionLabel(row), row.canUpdate {
+            facts.append("What Housekeeping would run for this row: \(actionLabel.title). \(actionLabel.help)")
+        } else if row.isExcepted {
+            facts.append("This row is on the left-alone list, so Housekeeping does not offer it at all any more.")
+        } else {
+            facts.append("Housekeeping will not act on this row itself.")
+        }
+        if !row.evidence.isEmpty {
+            facts.append("What the check was worked out from:")
+            for item in row.evidence {
+                facts.append("  \(item.finding) — \(item.source)")
+            }
+        }
+        if let path = row.path { facts.append("On disk at: \(path)") }
+
+        return HousekeeperTopic(
+            id: "update-\(row.id)",
+            title: row.name,
+            label: row.check.shortLabel,
+            tone: {
+                if case .refused = row.check { return .broken }
+                if case .available = row.check { return .caution }
+                if case .unknown = row.check { return .caution }
+                return .plain
+            }(),
+            facts: facts,
+            opener: row.canUpdate
+                ? "What is this, why does it need updating, and what would you actually run?"
+                : "Why are you not updating this one?"
+        )
     }
 
     /// Everything a row can be asked to do that is not "update it". Written once

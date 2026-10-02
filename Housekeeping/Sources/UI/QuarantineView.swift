@@ -131,7 +131,130 @@ struct QuarantineView: View {
             ) { showingHistory = true }
 
             Spacer()
+
+            AskHousekeeperButton(
+                topic: screenTopic,
+                closing: { appState.showQuarantineManagement = false },
+                title: showingHistory ? "Ask About This History" : "Ask About Quarantine"
+            )
         }
+    }
+
+    // MARK: - What the housekeeper is handed
+
+    /// The half that is on screen, rather than both halves at once. The switcher
+    /// decides what the reader is looking at, and the housekeeper is told the same
+    /// thing — a question asked over the history should not be answered with a
+    /// list of what is still waiting.
+    private var screenTopic: HousekeeperTopic {
+        showingHistory ? historyTopic : waitingTopic
+    }
+
+    private var waitingTopic: HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("This is the Quarantine folder: \(engine.quarantineURL.homeAbbreviatedPath)")
+        facts.append("Nothing Housekeeping takes is deleted. It is moved here and stays until the reader decides.")
+
+        if entries.isEmpty {
+            facts.append("Nothing is waiting here right now. Either nothing has been cleaned yet, or everything that was here has already been put back or deleted.")
+        } else {
+            facts.append("\(entries.count) item\(entries.count == 1 ? "" : "s") are waiting here, \(entries.reduce(0) { $0 + $1.size }.sizeDescription) in total, none of it deleted.")
+            let shown = entries.prefix(20)
+            for entry in shown {
+                facts.append("- \(entry.originalPath) — \(entry.category), \(entry.size.humanReadable), moved on \(entry.date.formatted(date: .abbreviated, time: .omitted))")
+            }
+            if entries.count > shown.count {
+                facts.append("- and \(entries.count - shown.count) more, which are not listed here.")
+            }
+            facts.append("Every one of these can be put back to the exact path it came from, or deleted permanently — and deleting permanently is the one action here that cannot be undone.")
+        }
+
+        return HousekeeperTopic(
+            id: "quarantine-waiting",
+            title: "Quarantine",
+            label: entries.isEmpty ? "Empty" : "\(entries.count) waiting",
+            tone: entries.isEmpty ? .good : .plain,
+            facts: facts,
+            opener: entries.isEmpty
+                ? "How does Quarantine work, and what happens to things I clean?"
+                : "Walk me through what is sitting in Quarantine and what my choices are for it."
+        )
+    }
+
+    private var historyTopic: HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("This is Housekeeping's own record of every cleanup it has run on this Mac, including ones already put back or deleted.")
+        facts.append("The record is written next to the items in the Quarantine folder before a single file moves, so quitting or reinstalling Housekeeping does not lose it.")
+
+        if transactions.isEmpty {
+            facts.append("There are no cleanups recorded yet, so Housekeeping has not moved anything on this Mac.")
+        } else {
+            let moved = transactions.reduce(0) { $0 + $1.totalSize }
+            let waiting = transactions.reduce(0) { $0 + $1.waitingSize }
+            facts.append("\(transactions.count) cleanup\(transactions.count == 1 ? "" : "s") recorded, \(moved.sizeDescription) moved in total\(waiting > 0 ? ", of which \(waiting.sizeDescription) is still waiting in Quarantine" : ", none of it still waiting").")
+            for transaction in transactions.prefix(15) {
+                facts.append("- \(transaction.date.formatted(date: .abbreviated, time: .shortened)): \(transaction.items.count) item\(transaction.items.count == 1 ? "" : "s"), \(transaction.totalSize.humanReadable)")
+            }
+            if transactions.count > 15 {
+                facts.append("- and \(transactions.count - 15) more, which are not listed here.")
+            }
+            facts.append("An item's state is one of: waiting in Quarantine, put back, deleted permanently, gone from the folder by hand, or never moved because the cleanup stopped first.")
+        }
+
+        return HousekeeperTopic(
+            id: "quarantine-history",
+            title: "What Housekeeping has done",
+            label: transactions.isEmpty ? "Nothing yet" : "\(transactions.count) cleanup\(transactions.count == 1 ? "" : "s")",
+            tone: .plain,
+            facts: facts,
+            opener: "Go through what Housekeeping has cleaned on my Mac, and tell me how I read this."
+        )
+    }
+
+    /// One item still waiting, as the housekeeper is handed it.
+    private func topic(for entry: QuarantineEntry) -> HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("This item is waiting in Quarantine, so it has been moved but not deleted.")
+        facts.append("It came from: \(entry.originalPath)")
+        facts.append("It is stored now at: \(entry.quarantinePath)")
+        facts.append("Size: \(entry.size.humanReadable). Kind: \(entry.category). From: \(entry.appName ?? "an application Housekeeping cannot name"). Moved on \(entry.date.formatted(date: .abbreviated, time: .shortened)).")
+        facts.append("Putting it back returns it to the exact path it came from. Deleting it permanently is the one action in Quarantine that cannot be undone.")
+
+        return HousekeeperTopic(
+            id: "quarantine-entry-\(entry.quarantinePath)",
+            title: entry.originalPath,
+            label: "Waiting in Quarantine",
+            tone: .plain,
+            facts: facts,
+            opener: "What is this, and what happens if I put it back or delete it?"
+        )
+    }
+
+    /// One batch from the history.
+    private func topic(for transaction: CleanupTransaction) -> HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("This is one cleanup batch, run on \(transaction.date.formatted(date: .abbreviated, time: .shortened)).")
+        facts.append("It moved \(transaction.items.count) item\(transaction.items.count == 1 ? "" : "s"), \(transaction.totalSize.humanReadable) in total.")
+        if transaction.waitingCount > 0 {
+            facts.append("\(transaction.waitingCount) of them are still waiting in Quarantine, \(transaction.waitingSize.sizeDescription), and can be put back.")
+        } else {
+            facts.append("None of them are still waiting: each has been put back, deleted permanently, or is no longer in the folder.")
+        }
+        for item in transaction.items.prefix(15) {
+            facts.append("- \(item.name) — \(stateLabel(item.state)), \(item.size.humanReadable). \(stateExplanation(item.state))")
+        }
+        if transaction.items.count > 15 {
+            facts.append("- and \(transaction.items.count - 15) more, which are not listed here.")
+        }
+
+        return HousekeeperTopic(
+            id: "quarantine-batch-\(transaction.id)",
+            title: "Cleanup of \(transaction.date.formatted(date: .abbreviated, time: .omitted))",
+            label: "\(transaction.items.count) item\(transaction.items.count == 1 ? "" : "s")",
+            tone: transaction.canBePutBack ? .caution : .plain,
+            facts: facts,
+            opener: "What did this cleanup do, and can I get any of it back?"
+        )
     }
 
     private var footerSummary: String {
@@ -248,6 +371,13 @@ struct QuarantineView: View {
                             help: "Returns the \(transaction.waitingCount) item\(transaction.waitingCount == 1 ? "" : "s") from this batch that are still waiting, each to the exact path it came from. Anything already put back or deleted is left as it is."
                         ) { putBack(transaction) }
                     }
+                    AskHousekeeperButton(
+                        topic: topic(for: transaction),
+                        closing: { appState.showQuarantineManagement = false },
+                        title: "Ask about this cleanup",
+                        help: "Opens the housekeeper on this one batch. It explains what this cleanup moved and what each item's state means; Housekeeping is the one that decides.",
+                        compact: true
+                    )
                     Spacer()
                 }
             }
@@ -360,6 +490,13 @@ struct QuarantineView: View {
                     ) {
                         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: entry.quarantinePath)])
                     }
+                    AskHousekeeperButton(
+                        topic: topic(for: entry),
+                        closing: { appState.showQuarantineManagement = false },
+                        title: "Ask what this is",
+                        help: "Opens the housekeeper on this one item. It explains where it came from and what putting it back or deleting it would do; Housekeeping is the one that decides, and deleting for good is still yours to press.",
+                        compact: true
+                    )
                     ThemeButton(
                         title: "Put It Back",
                         systemImage: "arrow.uturn.backward",

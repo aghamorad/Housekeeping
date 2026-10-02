@@ -168,7 +168,7 @@ final class CleanupEngine {
         var movedCount = 0
         for source in transactions {
             let destination = quarantineURL.appendingPathComponent(source.lastPathComponent, isDirectory: true)
-            guard !fileManager.fileExists(atPath: destination.path) else { continue }
+            guard !itemExists(atPath: destination.path) else { continue }
 
             do {
                 try fileManager.moveItem(at: source, to: destination)
@@ -343,7 +343,7 @@ final class CleanupEngine {
                     at: destination.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
-                guard !fileManager.fileExists(atPath: destination.path) else {
+                guard !itemExists(atPath: destination.path) else {
                     throw CleanupError.restoreError("Quarantine destination already exists: \(destination.path)")
                 }
                 try fileManager.moveItem(at: item.path, to: destination)
@@ -367,6 +367,181 @@ final class CleanupEngine {
             failureCount: movedItems.filter(\.failed).count,
             usedTrash: false
         )
+    }
+
+    /// Moves paths that a setup repair has decided to take off the disk into the
+    /// same quarantine folder, recorded in the same manifest an ordinary cleanup
+    /// writes — so the same Manage Quarantine screen lists them and the same
+    /// Restore puts them back.
+    ///
+    /// It does not go through `cleanup(items:)`, and cannot. That method runs
+    /// every item through `CleanupSafetyPolicy`, which judges by the item's
+    /// *category* — what kind of file it is. A dangling symlink in `~/.local/bin`
+    /// classifies as a leftover and comes back refused, which is precisely the
+    /// item this needs to move; a stray copy of a program winning the search
+    /// path classifies as unknown and is refused too. Making those categories
+    /// approvable in order to let this through would loosen the cleaner's rules
+    /// for every ordinary sweep as well.
+    ///
+    /// So the guard here is a different one rather than a weaker one, short
+    /// enough to state in full. A path is skipped, with the refusal kept as the
+    /// row's message, when:
+    ///
+    ///   * nothing is there — neither a file nor a symlink, even a dead one;
+    ///   * it is the disk root, the home folder, or the quarantine folder;
+    ///   * it *contains* the home folder or the quarantine folder. This is the
+    ///     rule whose cost would be unrecoverable: a repair handed a bad path
+    ///     could otherwise take someone's whole home folder away in one move,
+    ///     leaving the app with nothing to put back.
+    ///
+    /// Everything else is the caller's judgement, since the caller is the only
+    /// party that knows why it is moving these paths, and the reason it gives is
+    /// written into the record — which is the sentence the reader needs when
+    /// deciding later whether to put the thing back.
+    func quarantineRepairs(
+        paths: [String],
+        category: String,
+        reason: String
+    ) async throws -> RepairMoveResult {
+        let recordID = UUID()
+        let date = Date()
+        let transactionURL = quarantineURL.appendingPathComponent(recordID.uuidString, isDirectory: true)
+        let itemsURL = transactionURL.appendingPathComponent("Items", isDirectory: true)
+        let manifestURL = transactionURL.appendingPathComponent("manifest.json", isDirectory: false)
+
+        let home = homeDirectory.standardizedFileURL.path
+        let quarantine = quarantineURL.standardizedFileURL.path
+
+        // `standardizedFileURL`, not `resolvingSymlinksInPath`: the link itself
+        // is the thing being moved, so following it would turn a dead link into
+        // whatever it fails to reach.
+        var accepted: [(path: String, id: UUID, size: Int64, destination: URL)] = []
+        var moves: [RepairMoveResult.RepairMove] = []
+
+        for path in paths {
+            let standard = URL(fileURLWithPath: path).standardizedFileURL.path
+            if let refusal = refusalToMove(standard, home: home, quarantine: quarantine) {
+                moves.append(RepairMoveResult.RepairMove(
+                    path: standard, quarantinePath: nil, succeeded: false, message: refusal
+                ))
+                continue
+            }
+            let id = UUID()
+            let destination = itemsURL
+                .appendingPathComponent(id.uuidString, isDirectory: true)
+                .appendingPathComponent((standard as NSString).lastPathComponent, isDirectory: false)
+            accepted.append((standard, id, sizeToRecord(atPath: standard), destination))
+        }
+
+        guard !accepted.isEmpty else {
+            return RepairMoveResult(
+                transactionID: recordID, date: date, manifestURL: manifestURL, moves: moves
+            )
+        }
+
+        // The manifest's `appName` slot is the free-text subtitle under a row in
+        // the Quarantine list. An ordinary cleanup puts the application it
+        // belongs to there; a setup repair has no application behind it, so the
+        // reason for the move goes there instead, and it is written as a whole
+        // sentence so the record still explains itself if it is ever read
+        // without this app.
+        var manifest = DurableManifest(
+            version: 3,
+            id: recordID,
+            date: date,
+            createdAtUnixNanoseconds: Int64(date.timeIntervalSince1970 * 1_000_000_000),
+            items: accepted.map { entry in
+                DurableItem(
+                    id: entry.id,
+                    originalPath: entry.path,
+                    quarantinePath: entry.destination.path,
+                    size: entry.size,
+                    category: category,
+                    appName: reason,
+                    state: .planned,
+                    errorMessage: nil
+                )
+            }
+        )
+
+        try fileManager.createDirectory(at: itemsURL, withIntermediateDirectories: true)
+        try save(manifest, to: manifestURL)
+        writeQuarantineGuide()
+
+        for index in manifest.items.indices {
+            try Task.checkCancellation()
+            let entry = accepted[index]
+            let destination = entry.destination
+
+            do {
+                try fileManager.createDirectory(
+                    at: destination.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                guard !itemExists(atPath: destination.path) else {
+                    throw CleanupError.restoreError("Quarantine destination already exists: \(destination.path)")
+                }
+                try fileManager.moveItem(at: URL(fileURLWithPath: entry.path), to: destination)
+                manifest.items[index].state = .moved
+                manifest.items[index].errorMessage = nil
+                moves.append(RepairMoveResult.RepairMove(
+                    path: entry.path, quarantinePath: destination.path, succeeded: true, message: nil
+                ))
+            } catch {
+                manifest.items[index].state = .failed
+                manifest.items[index].errorMessage = error.localizedDescription
+                moves.append(RepairMoveResult.RepairMove(
+                    path: entry.path, quarantinePath: nil, succeeded: false, message: error.localizedDescription
+                ))
+            }
+            try save(manifest, to: manifestURL)
+        }
+
+        return RepairMoveResult(
+            transactionID: recordID, date: date, manifestURL: manifestURL, moves: moves
+        )
+    }
+
+    /// Why this path will not be moved, or nil when it may be. The rules are
+    /// set out in `quarantineRepairs` above; this is only their wording.
+    private func refusalToMove(_ path: String, home: String, quarantine: String) -> String? {
+        // `fileExists` follows links, so it answers "is there something at the
+        // far end of this" — false for exactly the dead links this method exists
+        // to move. The link itself is checked for on its own.
+        let isLink = (try? fileManager.destinationOfSymbolicLink(atPath: path)) != nil
+        guard isLink || fileManager.fileExists(atPath: path) else {
+            return "Nothing is at this path any more, so there was nothing to move."
+        }
+        guard path != "/", path != home, path != quarantine else {
+            return "Housekeeping will not move this folder."
+        }
+        for protected in [home, quarantine] where protected.hasPrefix(path + "/") {
+            let what = protected == quarantine ? "the Quarantine folder" : "your home folder"
+            return "Moving this would take \(what) with it, so Housekeeping refused."
+        }
+        return nil
+    }
+
+    /// The size to record for a path. Only ever shown, never acted on, so a
+    /// symlink or something that disappears between being read and being
+    /// measured records nothing rather than failing over a number.
+    private func sizeToRecord(atPath path: String) -> Int64 {
+        (try? fileManager.attributesOfItem(atPath: path))?[.size] as? Int64 ?? 0
+    }
+
+    /// Whether an item is at this path *as itself* — a symlink counts even when
+    /// the file it points at is gone.
+    ///
+    /// `fileExists` follows links, so it answers "is anything at the far end of
+    /// this", which is the wrong question for the items this app promises to
+    /// hand back. A symlink whose target has already disappeared is exactly the
+    /// kind of thing Housekeeping quarantines, and following the link would call
+    /// that item missing at the moment the reader asks for it — the one answer
+    /// this app must never give wrongly. This check is made against the
+    /// directory entry, the same way `sizeToRecord` above measures a link rather
+    /// than its target.
+    private func itemExists(atPath path: String) -> Bool {
+        (try? fileManager.attributesOfItem(atPath: path)) != nil
     }
 
     func undoLastCleanup() async throws -> RestoreResult {
@@ -399,13 +574,13 @@ final class CleanupEngine {
             let destination = URL(fileURLWithPath: record.originalPath)
             let publicRecord = record.publicRecord
 
-            guard fileManager.fileExists(atPath: source.path) else {
+            guard itemExists(atPath: source.path) else {
                 manifest.items[index].errorMessage = "The quarantined item is missing."
                 restoredItems.append(.failed(publicRecord, "The quarantined item is missing."))
                 try save(manifest, to: manifestURL)
                 continue
             }
-            guard !fileManager.fileExists(atPath: destination.path) else {
+            guard !itemExists(atPath: destination.path) else {
                 let message = "Restore refused because the original path now exists. Nothing was overwritten."
                 manifest.items[index].errorMessage = message
                 restoredItems.append(.failed(publicRecord, message))
@@ -443,10 +618,10 @@ final class CleanupEngine {
         }
         let source = URL(fileURLWithPath: quarantinePath)
         let destination = URL(fileURLWithPath: originalPath)
-        guard fileManager.fileExists(atPath: source.path) else {
+        guard itemExists(atPath: source.path) else {
             throw CleanupError.restoreError("Item no longer exists in quarantine")
         }
-        guard !fileManager.fileExists(atPath: destination.path) else {
+        guard !itemExists(atPath: destination.path) else {
             throw CleanupError.restoreError("Restore refused because the original path exists. Nothing was overwritten.")
         }
         try fileManager.createDirectory(
@@ -465,7 +640,7 @@ final class CleanupEngine {
             }
             return manifest.items.compactMap { item in
                 guard item.state == .moved,
-                      fileManager.fileExists(atPath: item.quarantinePath) else { return nil }
+                      itemExists(atPath: item.quarantinePath) else { return nil }
                 return QuarantineEntry(
                     id: item.id,
                     date: manifest.date,
@@ -507,7 +682,7 @@ final class CleanupEngine {
                         state: {
                             switch item.state {
                             case .moved:
-                                return fileManager.fileExists(atPath: item.quarantinePath) ? .waiting : .gone
+                                return itemExists(atPath: item.quarantinePath) ? .waiting : .gone
                             case .restored:
                                 return .putBack
                             case .purged:
@@ -536,10 +711,10 @@ final class CleanupEngine {
         }
         let source = URL(fileURLWithPath: manifest.items[index].quarantinePath)
         let destination = URL(fileURLWithPath: manifest.items[index].originalPath)
-        guard fileManager.fileExists(atPath: source.path) else {
+        guard itemExists(atPath: source.path) else {
             throw CleanupError.restoreError("The quarantined item is missing.")
         }
-        guard !fileManager.fileExists(atPath: destination.path) else {
+        guard !itemExists(atPath: destination.path) else {
             throw CleanupError.restoreError("Restore refused because the original path exists. Nothing was overwritten.")
         }
         try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -567,7 +742,7 @@ final class CleanupEngine {
                 let rootComponents = quarantineURL.standardizedFileURL.pathComponents
                 guard source != quarantineURL.standardizedFileURL,
                       source.pathComponents.starts(with: rootComponents),
-                      fileManager.fileExists(atPath: source.path) else {
+                      itemExists(atPath: source.path) else {
                     throw CleanupError.restoreError("The quarantined item is missing or outside Housekeeping Quarantine.")
                 }
                 try fileManager.removeItem(at: source)
@@ -653,7 +828,7 @@ final class CleanupEngine {
         (try? allManifests().contains { manifest in
             manifest.items.contains { item in
                 item.state == .moved &&
-                fileManager.fileExists(atPath: item.quarantinePath)
+                itemExists(atPath: item.quarantinePath)
             }
         }) == true
     }
@@ -661,7 +836,7 @@ final class CleanupEngine {
     var quarantineTotalSize: Int64 {
         (try? allManifests().flatMap(\.items).filter { item in
             item.state == .moved &&
-            fileManager.fileExists(atPath: item.quarantinePath)
+            itemExists(atPath: item.quarantinePath)
         }.reduce(0) { $0 + $1.size }) ?? 0
     }
 
@@ -676,7 +851,7 @@ final class CleanupEngine {
                   let manifest = try? decoder.decode(DurableManifest.self, from: data),
                   manifest.items.contains(where: { item in
                       (item.state == .moved || item.state == .planned) &&
-                      fileManager.fileExists(atPath: item.quarantinePath)
+                      itemExists(atPath: item.quarantinePath)
                   }) else { return nil }
             return (url, manifest)
         }

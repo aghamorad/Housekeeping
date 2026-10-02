@@ -136,6 +136,12 @@ struct CleanupView: View {
                     appState.lastErrorMessage = nil
                     appState.showCleanupConfirmation = false
                 }
+                AskHousekeeperButton(
+                    topic: housekeeperTopic,
+                    closing: { appState.showCleanupConfirmation = false },
+                    title: "Ask About This Move"
+                )
+                Spacer()
                 ThemeButton(
                     title: "Move to Quarantine",
                     isPrimary: true,
@@ -148,6 +154,47 @@ struct CleanupView: View {
         .frame(minWidth: 620, minHeight: 520)
         .padding(16)
         .preferredColorScheme(style.isRetro ? .light : nil)
+    }
+
+    /// What the housekeeper is handed on the confirmation sheet. Every fact is a
+    /// sentence already on the sheet, so the model cannot be told something the
+    /// reader cannot see above the buttons.
+    private var housekeeperTopic: HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("The reader is about to move \(selectedItems.count) path\(selectedItems.count == 1 ? "" : "s") into Quarantine, \(totalSize.sizeDescription) in total. Nothing has moved yet: this is the last screen before it does, and pressing Cancel leaves the Mac exactly as it is.")
+        facts.append("Quarantine is a real folder at \(CleanupEngine().quarantineURL.path). Nothing here is deleted, each item keeps its full contents, and a written record of where it came from is put beside it, so any move can be put back by Housekeeping or by hand in Finder.")
+
+        if selectedItems.isEmpty {
+            facts.append("Nothing is ticked at the moment, so the move button is not available.")
+        } else {
+            facts.append("The list:")
+            for item in selectedItems.prefix(20) {
+                facts.append("- \(item.path.path) — \(item.size.sizeDescription). \(item.readerGuide.risk.rawValue) · \(item.readerGuide.necessity)")
+            }
+            if selectedItems.count > 20 {
+                facts.append("- and \(selectedItems.count - 20) more, which are not listed here.")
+            }
+        }
+
+        if !protectedItems.isEmpty {
+            facts.append("\(protectedItems.count) of them are projects or personal files, \(protectedItems.reduce(0) { $0 + $1.size }.sizeDescription) of the total. Moving those makes their original paths disappear until they are put back, which is why the reader has to type QUARANTINE before the move is allowed.")
+        }
+        if !blockedItems.isEmpty {
+            facts.append("\(blockedItems.count) of the ticked paths became blocked after the scan, so the move is refused until they are unticked and the scan is run again.")
+        }
+        if selectedItems.contains(where: { $0.category == .downloadedModels }) {
+            facts.append("Models are in this selection: the applications that use them will have to download them again if they are used later.")
+        }
+        facts.append("Housekeeping recommends this list, and the recommendation is not proof the reader does not need any of it. The decision is the reader's; Housekeeping only moves what is ticked.")
+
+        return HousekeeperTopic(
+            id: "cleanup-confirmation",
+            title: "Move \(selectedItems.count) item\(selectedItems.count == 1 ? "" : "s") to Quarantine",
+            label: canProceed ? "Ready to move" : "Cannot move yet",
+            tone: blockedItems.isEmpty ? (protectedItems.isEmpty ? .plain : .caution) : .broken,
+            facts: facts,
+            opener: "Go through what I am about to move, and tell me what happens if I do."
+        )
     }
 
     private func runCleanup() {
@@ -263,6 +310,12 @@ struct GuidedCleanupView: View {
                 appState.showGuidedCleanup = false
             }
 
+            AskHousekeeperButton(
+                topic: topic(for: item),
+                closing: { appState.showGuidedCleanup = false },
+                title: "Ask About This Item"
+            )
+
             Spacer()
 
             ThemeButton(
@@ -301,11 +354,64 @@ struct GuidedCleanupView: View {
                 .foregroundColor(style.secondaryText)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            ThemeButton(title: "Done", isPrimary: true, help: "Closes the guided review.") {
-                appState.showGuidedCleanup = false
+            HStack(spacing: 12) {
+                AskHousekeeperButton(
+                    topic: completionTopic,
+                    closing: { appState.showGuidedCleanup = false },
+                    title: "Ask About What Moved"
+                )
+                ThemeButton(title: "Done", isPrimary: true, help: "Closes the guided review.") {
+                    appState.showGuidedCleanup = false
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// One candidate, as the housekeeper is handed it. This is the same reading
+    /// the panel shows, sentence for sentence — the model explains the item, it
+    /// does not get to have an opinion about whether to move it.
+    private func topic(for item: FoundItem) -> HousekeeperTopic {
+        let guide = item.readerGuide
+        var facts: [String] = []
+        facts.append("This is candidate \(currentIndex + 1) of \(items.count) in a guided review. The reader decides on each one before Housekeeping touches it; nothing has moved for this one yet.")
+        facts.append("Exact path: \(item.path.path)")
+        facts.append("Measured size: \(item.size.sizeDescription)")
+        facts.append("What this is: \(guide.whatItIs)")
+        facts.append("Why it is there: \(guide.whyItExists)")
+        facts.append("Is it necessary? \(guide.necessity)")
+        facts.append("Risk if quarantined: \(guide.risk.rawValue). \(guide.riskExplanation)")
+        if let app = item.primaryApplication?.name {
+            facts.append("The application that owns it is \(app). Housekeeping refuses to move an item while its application is open.")
+        }
+        facts.append("If the reader moves it, only this one path goes into Quarantine at \(CleanupEngine().quarantineURL.path), keeping its full contents and a written record of where it came from. Nothing goes to the Trash, and it can be put back.")
+
+        return HousekeeperTopic(
+            id: "guided-\(item.id)",
+            title: item.path.lastPathComponent,
+            label: "\(currentIndex + 1) of \(items.count)",
+            tone: guide.risk == .low ? .plain : .caution,
+            facts: facts,
+            opener: "What is this, and should I move it or keep it?"
+        )
+    }
+
+    /// The guided review once every candidate has been decided.
+    private var completionTopic: HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("The guided review is finished. Every candidate has been decided one way or the other.")
+        facts.append("Moved into Quarantine: \(cleanedCount) item\(cleanedCount == 1 ? "" : "s"), \(cleanedSize.humanReadable).")
+        facts.append("Kept in place: \(keptCount) item\(keptCount == 1 ? "" : "s").")
+        facts.append("Nothing was deleted. The moved items are in \(CleanupEngine().quarantineURL.path), each keeping its full contents and a record of where it came from, so any of them can be put back exactly where it was.")
+
+        return HousekeeperTopic(
+            id: "guided-complete",
+            title: "Guided review finished",
+            label: cleanedCount == 0 ? "Nothing moved" : "\(cleanedCount) moved",
+            tone: .good,
+            facts: facts,
+            opener: "What did this do, and how do I get any of it back if I want it?"
+        )
     }
 
     private func explanation(_ label: String, _ value: String) -> some View {
@@ -490,6 +596,12 @@ struct CleanupPreviewView: View {
                 ) { Task { await check() } }
                     .keyboardShortcut("r", modifiers: .command)
 
+                AskHousekeeperButton(
+                    topic: housekeeperTopic,
+                    closing: { appState.showCleanupPreview = false },
+                    title: "Ask About This Rehearsal"
+                )
+
                 Spacer()
 
                 // Escape as well as the button. A read-only sheet is the last
@@ -558,6 +670,42 @@ struct CleanupPreviewView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// What the housekeeper is handed on the rehearsal. It is a rehearsal: the
+    /// facts are what the screen has worked out, and the model is told plainly
+    /// that nothing has moved and nothing here decides anything.
+    private var housekeeperTopic: HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("This is a rehearsal, not a cleanup. Nothing has moved and nothing is ticked: Housekeeping read the \(items.count) items it recommends cleaning, \(totalSize.sizeDescription) in total, and wrote down what it would do with each. Closing this window leaves the Mac exactly as it was.")
+        facts.append("The list, item by item:")
+        for item in items.prefix(20) {
+            let blocked = blockedItems.contains { $0.id == item.id }
+            facts.append("- \(item.path.lastPathComponent) — \(item.size.sizeDescription). \(item.safetyLevel.rawValue)\(item.lastUsedDate == nil ? ", no dates recorded" : ", last used \(item.lastUsedDescription)")\(blocked ? ". Its application is open, so Housekeeping would skip this one." : "")")
+        }
+        if items.count > 20 {
+            facts.append("- and \(items.count - 20) more, which are not listed here.")
+        }
+        if hasChecked { facts.append(checkSummary) }
+        if heldBack.isEmpty {
+            facts.append("Everything measured in this scan is on the list. Nothing was held back.")
+        } else {
+            facts.append("What Housekeeping would leave alone, and why:")
+            for held in heldBack.prefix(8) {
+                facts.append("- \(held.reason) — \(held.count) item(s), \(held.size.sizeDescription)")
+            }
+            facts.append("Housekeeping holds these back on its own. The reader can still tick any of them by hand, but it will never tick them, and it says this again before it moves them.")
+        }
+        facts.append("If the reader went ahead, \(totalSize.sizeDescription) would be sitting in \(CleanupEngine().quarantineURL.path) — a normal folder, not a hidden one — each item keeping its full contents and a written record of where it came from, so it can be put back by Housekeeping or by hand in Finder.")
+
+        return HousekeeperTopic(
+            id: "cleanup-preview",
+            title: "What would happen",
+            label: runningApps.isEmpty ? "\(items.count) item\(items.count == 1 ? "" : "s")" : "\(blockedItems.count) would be skipped",
+            tone: runningApps.isEmpty ? .plain : .caution,
+            facts: facts,
+            opener: "Walk me through what this cleanup would do, and what it would leave alone."
+        )
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
