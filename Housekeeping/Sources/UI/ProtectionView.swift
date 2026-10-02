@@ -86,6 +86,7 @@ struct ProtectionView: View {
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
                 Spacer()
+                AskHousekeeperButton(topic: housekeeperTopic, closing: { appState.showProtectionList = false })
                 if entries.count > 1 {
                     ThemeButton(
                         title: "Offer Everything Again",
@@ -143,6 +144,40 @@ struct ProtectionView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    /// What the housekeeper is handed when it is opened from this screen. Every
+    /// fact here is a sentence this screen already says, so the model cannot be
+    /// told something the reader cannot see above it.
+    private var housekeeperTopic: HousekeeperTopic {
+        var facts: [String] = []
+
+        if entries.isEmpty {
+            facts.append("Nothing is on the left-alone list, so Housekeeping is holding nothing back from the reader.")
+        } else {
+            facts.append("\(entries.count) path\(entries.count == 1 ? " is" : "s are") on the left-alone list — the list of paths the reader has told Housekeeping never to offer them.")
+            let shown = entries.prefix(20)
+            for entry in shown {
+                facts.append("- \(entry.name) — \(entry.displayPath)\(entry.stillExists ? "" : " (no longer at that path)")")
+            }
+            if entries.count > shown.count {
+                facts.append("- and \(entries.count - shown.count) more, which are not listed here.")
+            }
+        }
+
+        facts.append("Protecting a path covers everything inside it, which is why one entry can quiet a great many findings.")
+        facts.append("Nothing on this list has been moved, deleted, or touched. Taking a path off the list does not expose it to cleanup by itself — it becomes an ordinary finding again, judged the same way as everything else.")
+
+        return HousekeeperTopic(
+            id: "protection",
+            title: "Your Left Alone list",
+            label: entries.isEmpty ? nil : "\(entries.count) path\(entries.count == 1 ? "" : "s")",
+            tone: .plain,
+            facts: facts,
+            opener: entries.isEmpty
+                ? "What is the Left Alone list for?"
+                : "What is on my Left Alone list, and what does protecting a path actually stop you doing?"
+        )
     }
 
     /// A file that does not exist yet is worth opening the folder of rather than

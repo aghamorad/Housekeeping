@@ -12,6 +12,11 @@ import SwiftUI
 struct DiskBrowserView: View {
     @Environment(\.uiStyle) private var style
     @Environment(\.dismiss) private var dismiss
+    // Nothing here acts on what it finds, and it still takes no cleanup state: the
+    // only thing it reads off `appState` is the slot the housekeeper's subject goes
+    // in, because the housekeeper is a sheet on the main window and this screen is
+    // the one asking for it.
+    @EnvironmentObject private var appState: AppState
     @StateObject private var model = DiskBrowserModel()
 
     @State private var rootChoice: DiskBrowserModel.RootChoice = .home
@@ -99,6 +104,12 @@ struct DiskBrowserView: View {
                     model.forgetSnapshot()
                 }
             }
+
+            AskHousekeeperButton(
+                topic: housekeeperTopic,
+                closing: { appState.showDiskBrowser = false },
+                title: "Ask About This Folder"
+            )
 
             ThemeButton(title: "Done", help: "Close the disk browser.") {
                 dismiss()
@@ -433,6 +444,73 @@ struct DiskBrowserView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    // MARK: - What the housekeeper is handed
+
+    /// The folder that is on screen and how the measurement got to it. Every fact
+    /// is a number this screen already prints, so the model cannot be told
+    /// something the reader cannot see — the sizes it explains are the sizes in
+    /// the rows above it.
+    private var housekeeperTopic: HousekeeperTopic {
+        var facts: [String] = []
+
+        guard let snapshot = model.snapshot else {
+            facts.append("Nothing has been measured yet, so there is nothing on this screen but the controls. Housekeeping reads the disk once, from the chosen folder down, and then everything after that is moving around a held result, which costs nothing.")
+            facts.append("It measures the \(rootChoice.title) folder: \(rootChoice.url.path)")
+            return HousekeeperTopic(
+                id: "disk-browser-empty",
+                title: "Browsing the disk",
+                label: model.isScanning ? "Measuring now" : "Nothing measured yet",
+                tone: .plain,
+                facts: facts,
+                opener: "What does this screen do, and what is it about to read?"
+            )
+        }
+
+        if let description = model.measurementDescription { facts.append(description) }
+        facts.append("It measured \(snapshot.rootNode?.path ?? rootChoice.url.path) once, and everything since has been moving around that held result.")
+
+        if let node = model.currentNode {
+            facts.append("The folder on screen is \(node.path).")
+            facts.append("It holds \(node.size.sizeDescription)\(node.isPartial ? " at least — part of it could not be read, so this is a floor rather than the whole answer" : "").")
+            facts.append(model.summary(for: node))
+            let share = model.shareOfParent(node)
+            if share > 0 {
+                facts.append("That is \(Int((share * 100).rounded()))% of the folder that contains it.")
+            }
+        }
+
+        let children = model.visibleChildren
+        if !children.isEmpty {
+            facts.append("Inside it, largest first:")
+            for child in children.prefix(10) {
+                facts.append("- \(child.name) — \(child.size.sizeDescription)\(child.isPartial ? ", at least" : "")")
+            }
+            if children.count > 10 {
+                facts.append("- and \(children.count - 10) more in this folder.")
+            }
+            facts.append("These are apparent sizes: the sum of what the filesystem reports for the files, which is not the same as what the volume gives up for them — APFS clones and hard links share blocks, so deleting something can free less than its apparent size.")
+        } else {
+            facts.append("This folder has no rows of its own, so there is nothing below it worth listing.")
+        }
+
+        if !model.limits.isEmpty {
+            facts.append("The measurement left some things out deliberately:")
+            for limit in model.limits.prefix(8) { facts.append("- \(limit)") }
+        }
+        if let note = model.note { facts.append(note) }
+
+        facts.append("This screen measures and navigates only. Nothing here deletes, moves, or cleans anything.")
+
+        return HousekeeperTopic(
+            id: "disk-browser-\(model.currentPath.isEmpty ? "root" : model.currentPath)",
+            title: model.currentNode?.name ?? "Browsing the disk",
+            label: model.currentNode.map { $0.size.sizeDescription },
+            tone: .plain,
+            facts: facts,
+            opener: "What is in this folder, and where has the space gone?"
+        )
     }
 
     // MARK: - Doing it

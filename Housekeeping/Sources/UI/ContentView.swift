@@ -18,7 +18,12 @@ struct ContentView: View {
         Screen()
             .environment(\.uiStyle, style)
             .housekeepingSurface(style)
-            .frame(minWidth: 1040, minHeight: 680)
+            // 1100 rather than the 1040 this window used to open at: the job bar
+            // is the width of the window at its narrowest, and eight labelled
+            // buttons crowded into 1040 would either wrap or start truncating
+            // their own names — which is the opposite of the point of putting
+            // them there.
+            .frame(minWidth: 1100, minHeight: 680)
             // Each sheet is given the appearance explicitly. A sheet is presented
             // in its own window, and one attached here — outside the
             // `.environment(\.uiStyle, …)` call above — does not inherit it: the
@@ -55,12 +60,15 @@ struct ContentView: View {
                     .environmentObject(appState)
                     .housekeepingSurface(style)
             }
-            // The disk browser gets the appearance and nothing else. It is handed
-            // no `appState` on purpose: it measures and navigates, it never acts on
-            // what it finds, so it has no business holding the cleanup state.
+            // The disk browser measures and navigates, and it never acts on what it
+            // finds, so it holds none of the cleanup state. It is handed `appState`
+            // for one thing only: the housekeeper's subject slot, because the
+            // housekeeper is a sheet on this window and this screen is a sheet too,
+            // so it is the one that has to step aside and ask.
             .sheet(isPresented: $appState.showDiskBrowser) {
                 DiskBrowserView()
                     .environment(\.uiStyle, style)
+                    .environmentObject(appState)
                     .housekeepingSurface(style)
             }
             // Like the disk browser this is its own job, but unlike it this one
@@ -69,6 +77,15 @@ struct ContentView: View {
             // rows from a scan that was about something else entirely.
             .sheet(isPresented: $appState.showUpdateList) {
                 UpdateView()
+                    .environment(\.uiStyle, style)
+                    .environmentObject(appState)
+                    .housekeepingSurface(style)
+            }
+            // The setup check gets the state for the update feature's reason: it
+            // reads the machine and then acts on it, so the ticks and the list
+            // they are ticks on have to outlive the sheet being redrawn.
+            .sheet(isPresented: $appState.showSetupCheck) {
+                EnvironmentView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
                     .housekeepingSurface(style)
@@ -156,6 +173,19 @@ private struct Screen: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
+        // The sweep sits above the scan's own six screens rather than beside
+        // them: while it runs it owns the window, and the results it leaves
+        // behind are its own screen, not the scan summary. Checking it first
+        // means no scan state has to be taught about the sweep.
+        if appState.isSweeping || appState.showSweepResults {
+            SweepScreen()
+        } else {
+            scanScreen
+        }
+    }
+
+    @ViewBuilder
+    private var scanScreen: some View {
         switch appState.scanState {
         case .idle: WelcomeScreen()
         case .scanning: ScanningScreen()
@@ -172,7 +202,11 @@ private struct Screen: View {
 
 /// Every screen hangs off this so the two appearances differ in exactly one
 /// place: Platinum draws a title bar, Liquid Glass sits on its own background.
-private struct ScreenChrome<Content: View>: View {
+///
+/// Not private to this file: the sweep screen is its own file, and it hangs off
+/// this for the same reason every screen here does. Two chromes would be two
+/// places for the appearances to drift apart.
+struct ScreenChrome<Content: View>: View {
     @Environment(\.uiStyle) private var style
     let title: String
     let subtitle: String?
@@ -197,14 +231,23 @@ private struct ScreenChrome<Content: View>: View {
     }
 }
 
-/// The four jobs that are not the scan, on screen rather than only in the menu.
+/// Every door the app has, on every screen, in the order a reader needs them.
 ///
-/// They were reachable from the app menu alone, which meant a reader who never
-/// opened that menu would never learn Housekeeping does anything besides clean —
-/// and the screen they were removed from even said so in a comment, as though
-/// the menu were an interface. It is not: it is where a thing goes to be hidden.
-/// The bar hangs off `ScreenChrome`, so every screen carries it in both
+/// These jobs were reachable from the app menu alone, which meant a reader who
+/// never opened that menu would never learn Housekeeping does anything besides
+/// clean — and the screen they were removed from even said so in a comment, as
+/// though the menu were an interface. It is not: it is where a thing goes to be
+/// hidden. The bar hangs off `ScreenChrome`, so every screen carries it in both
 /// appearances, and no appearance can quietly lose a button the other has.
+///
+/// The row is three zones, and the zones are the point — a run of seven buttons
+/// with no shape to it is a list to be read, while two of these are the same kind
+/// of thing. On the left, what looks at the Mac and changes nothing: the sweep
+/// first, because it is every reading at once, then the same readings one at a
+/// time. In the middle, behind the rule, the two drawers holding what
+/// Housekeeping has already done to the Mac. On the right, apart from both,
+/// the two things that are about the app itself rather than the Mac: its
+/// settings, and the housekeeper you can ask.
 ///
 /// Quiet by construction: secondary buttons, never the default action, so
 /// nothing here can be hit by pressing Return on a screen that was asking
@@ -214,6 +257,85 @@ private struct JobBar: View {
     @Environment(\.uiStyle) private var style
 
     var body: some View {
+        HStack(spacing: 8) {
+            readingJobs
+
+            rule
+
+            holdingJobs
+
+            Spacer(minLength: 16)
+
+            settingsButton
+
+            // The scan itself had no way to reach the housekeeper from here: the
+            // findings carry one each, but the screen that is about to produce
+            // them did not. This sits on the bar every screen already carries, so
+            // whatever is behind it — an empty first screen, a running scan, the
+            // summary, the list, the last confirmation — is what it opens on.
+            AskHousekeeperButton(
+                topic: housekeeperTopic,
+                title: "Ask About This"
+            )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(style.rowBackground)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(style.border)
+                .frame(height: 1)
+        }
+    }
+
+    /// What reads the Mac, and only reads.
+    ///
+    /// The sweep stands first and alone in its weight — one press for all three
+    /// readings — and the three behind it are the same work done singly, for a
+    /// reader who wants one answer rather than the whole account. Check My Setup
+    /// was the one job with no button anywhere in the window; it had a menu item
+    /// and nothing else.
+    private var readingJobs: some View {
+        HStack(spacing: 8) {
+            ThemeButton(
+                title: "Look Everywhere",
+                systemImage: "sparkle.magnifyingglass",
+                isEnabled: !appState.isSweeping,
+                help: appState.isSweeping
+                    ? "This is the sweep that is running now. It is stopped from its own screen, where Stop sits."
+                    : "Read everything Housekeeping can read — the disk, the setup, and which of your apps and packages have updates — and come back with one list of what it found. It only reads: nothing is ticked, moved, installed or changed, and every screen it hands you still asks before anything happens."
+            ) {
+                appState.startSweep()
+            }
+
+            ThemeButton(
+                title: "Browse the Disk",
+                systemImage: "internaldrive",
+                help: "Measure the whole disk and walk around it yourself. This only reads — it changes nothing, offers nothing, and removes nothing."
+            ) {
+                appState.showDiskBrowser = true
+            }
+
+            ThemeButton(
+                title: "Check My Setup",
+                systemImage: "wrench.and.screwdriver",
+                help: "Look at the tools and commands Housekeeping itself depends on: which one a command really runs, whether a link leads anywhere, whether something installed is properly in reach. Every finding says what it would change before you can agree to it."
+            ) {
+                appState.showSetupCheck = true
+            }
+
+            ThemeButton(
+                title: "Update Apps",
+                systemImage: "arrow.triangle.2.circlepath",
+                help: "What is installed, where each thing came from, and whether any of it is out of date — grouped by where its updates actually come from."
+            ) {
+                appState.showUpdateList = true
+            }
+        }
+    }
+
+    /// What Housekeeping has already done, and where the doing can be taken back.
+    private var holdingJobs: some View {
         HStack(spacing: 8) {
             ThemeButton(
                 title: "Quarantine",
@@ -230,32 +352,160 @@ private struct JobBar: View {
             ) {
                 appState.showProtectionList = true
             }
-
-            ThemeButton(
-                title: "Browse the Disk",
-                systemImage: "internaldrive",
-                help: "Measure the whole disk and walk around it yourself. This only reads — it changes nothing, offers nothing, and removes nothing."
-            ) {
-                appState.showDiskBrowser = true
-            }
-
-            ThemeButton(
-                title: "Update Apps",
-                systemImage: "arrow.down.circle",
-                help: "What is installed, where each thing came from, and whether any of it is out of date — grouped by where its updates actually come from."
-            ) {
-                appState.showUpdateList = true
-            }
-
-            Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(style.rowBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(style.border)
-                .frame(height: 1)
+    }
+
+    /// The theme, the deep sweep, and the list of updates told to stay put all
+    /// live one window away, behind the standard macOS Settings item — which is
+    /// a place a reader only looks if they already know what is in there. The
+    /// gear puts the same window on the bar, so the appearance of the app is
+    /// reachable from the app.
+    private var settingsButton: some View {
+        ThemeButton(
+            title: "Settings",
+            systemImage: "gearshape",
+            help: "Appearance, how far a scan reaches, and the updates you have told Housekeeping to leave alone."
+        ) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
+    }
+
+    private var rule: some View {
+        Rectangle()
+            .fill(style.border)
+            .frame(width: 1, height: 20)
+            .padding(.horizontal, 3)
+    }
+
+    // MARK: - What the housekeeper is handed from the bar
+
+    /// The scan has six screens and one bar, so the bar cannot have one subject.
+    /// This follows the screen behind it: before a scan there is nothing to
+    /// describe but what a scan is about to read, during one there is the folder
+    /// being audited, and after one there is the total that screen is showing.
+    /// The facts are the sentences those screens already print.
+    private var housekeeperTopic: HousekeeperTopic {
+        // A sweep says nothing about `scanState`: its disk reading has finished,
+        // so the scan switch below would describe a summary that is not on the
+        // screen. Asked first, for the same reason the window asks first.
+        if appState.isSweeping || appState.showSweepResults {
+            return appState.sweepHousekeeperTopic
+        }
+
+        switch appState.scanState {
+        case .idle:
+            var facts: [String] = []
+            facts.append("Nothing has been read yet. This is the screen Housekeeping opens on, and no scan has been run in this sitting.")
+            facts.append("What a scan reads: ~/Library — application data, caches, logs, preferences and containers; tool caches and hidden folders in the home folder, such as cache, .npm, .ollama and similar; housekeeping files left behind on the Desktop by Office and similar apps; and your Applications folders, to work out which apps are still installed.")
+            facts.append("Measuring is all it does. Nothing is moved, changed or deleted until an item is ticked and the move is confirmed, and once moved everything can be put back.")
+            facts.append(appState.deepSweep
+                         ? "The deep sweep is on, so it also measures the folders it cannot name, where the larger wins usually hide, at the cost of up to a minute more reading."
+                         : "The deep sweep is off, so it only reports what its list of \(RuleEngine.shared.applications.count) known applications and tools covers, and anything not on that list goes unmeasured.")
+            return HousekeeperTopic(
+                id: "scan-idle",
+                title: "Housekeeping, before a scan",
+                label: "Nothing read yet",
+                tone: .plain,
+                facts: facts,
+                opener: "What is a scan about to look at, and what does it do with what it finds?"
+            )
+
+        case .scanning:
+            var facts: [String] = []
+            facts.append("A scan is running now. It is reading the disk; it has not changed anything, and it cannot — measuring and moving are separate steps.")
+            facts.append("Right now it is: \(appState.scanProgress.title)")
+            facts.append(appState.deepSweep
+                         ? "The deep sweep is on for this run, so the folders Housekeeping cannot name are being measured too, and up to a minute of extra reading is normal."
+                         : "The deep sweep is off for this run, so it is reading only what its list of \(RuleEngine.shared.applications.count) known applications and tools covers.")
+            facts.append("A scan can be stopped at any point. Stopping keeps whatever was measured so far; it throws nothing away and it changes nothing.")
+            return HousekeeperTopic(
+                id: "scan-running",
+                title: "A scan is running",
+                label: appState.scanProgress.title,
+                tone: .plain,
+                facts: facts,
+                opener: "What is it doing right now, and what will it do when it finishes?"
+            )
+
+        case .complete:
+            switch appState.flowStep {
+            case .summary:
+                var facts: [String] = []
+                if let results = appState.scanResults {
+                    let items = results.foundItems
+                    facts.append("The scan is finished. It read the disk and stopped there — nothing has been moved, and nothing will be until a move is confirmed.")
+                    facts.append("It found \(items.count) item\(items.count == 1 ? "" : "s") worth \(items.reduce(0) { $0 + $1.size }.sizeDescription).")
+                    if let biggest = items.max(by: { $0.size < $1.size }) {
+                        facts.append("The largest single thing is \(biggest.path.lastPathComponent) at \(biggest.size.sizeDescription)\(biggest.primaryApplication.map { ", belonging to \($0.name)" } ?? "").")
+                    }
+                    if results.summary.remnantsFound > 0 || results.summary.sharedResourcesFound > 0 {
+                        facts.append("Of those, \(results.summary.remnantsFound) look like leftovers from apps that are gone, and \(results.summary.sharedResourcesFound) are shared resources, which are the ones to be most careful about because more than one thing may rely on them.")
+                    }
+                } else {
+                    facts.append("The scan finished, but its results are not being held, so this screen has nothing to show. Running it again is the answer, and running it again changes nothing.")
+                }
+                facts.append("This screen only reports. Reading the list changes nothing — it is a list, and it can be walked away from.")
+                return HousekeeperTopic(
+                    id: "scan-summary",
+                    title: "The scan's summary",
+                    label: appState.scanResults.map { $0.foundItems.reduce(0) { $0 + $1.size }.sizeDescription },
+                    tone: .plain,
+                    facts: facts,
+                    opener: "What did the scan find, and where is the space actually going?"
+                )
+
+            case .review:
+                let selected = appState.activeCleanupItems
+                var facts: [String] = []
+                facts.append("This is the list of what the scan found, one row at a time. Reading it changes nothing; every tick on it is a tick a person made, because Housekeeping never ticks anything itself.")
+                if let results = appState.scanResults {
+                    facts.append("There are \(results.foundItems.count) items in total, worth \(results.foundItems.reduce(0) { $0 + $1.size }.sizeDescription).")
+                }
+                facts.append("\(selected.count) \(selected.count == 1 ? "is" : "are") ticked, worth \(appState.totalReclaimable.sizeDescription). Ticking decides what gets offered to be moved; it moves nothing by itself.")
+                facts.append("The recommended ones are recommended on Housekeeping's own rules and its reading of each file. A recommendation is not proof that nothing needs it.")
+                return HousekeeperTopic(
+                    id: "scan-review",
+                    title: "The list of findings",
+                    label: "\(selected.count) ticked · \(appState.totalReclaimable.sizeDescription)",
+                    tone: .plain,
+                    facts: facts,
+                    opener: "How should I read this list, and what do the ticks mean?"
+                )
+
+            case .confirm:
+                let moving = appState.activeCleanupItems
+                var facts: [String] = []
+                facts.append("This is the last question before anything moves: the ticked items, named one by one, and one button that moves them.")
+                facts.append("\(moving.count) item\(moving.count == 1 ? "" : "s") will move, worth \(appState.totalReclaimable.sizeDescription).")
+                for item in moving.prefix(10) {
+                    facts.append("- \(item.path.homeAbbreviatedPath) — \(item.size.sizeDescription)")
+                }
+                if moving.count > 10 { facts.append("- and \(moving.count - 10) more.") }
+                facts.append("Moving means the items go into Quarantine — a normal folder at the top of the home folder, in plain sight. Nothing is deleted, and everything moved can be put back.")
+                facts.append("Backing out here costs nothing. Nothing has moved yet, and the ticks are still there afterwards.")
+                return HousekeeperTopic(
+                    id: "scan-confirm",
+                    title: "About to move \(moving.count) item\(moving.count == 1 ? "" : "s")",
+                    label: appState.totalReclaimable.sizeDescription,
+                    tone: moving.isEmpty ? .plain : .caution,
+                    facts: facts,
+                    opener: "What exactly is about to happen, and can it be undone?"
+                )
+            }
+
+        case .error:
+            var facts: [String] = []
+            facts.append("The last scan did not finish. This is what it said: \(appState.lastErrorMessage ?? "no reason was recorded").")
+            facts.append("A failed scan is a failed read. Nothing was moved, changed or deleted by it — a scan that cannot read something simply stops, and the disk is as it was.")
+            facts.append("Running it again is safe and is usually the answer. If it fails the same way twice, the reason above is what to look at.")
+            return HousekeeperTopic(
+                id: "scan-error",
+                title: "The scan did not finish",
+                label: "Stopped",
+                tone: .broken,
+                facts: facts,
+                opener: "Why did the scan stop, and does anything need putting right?"
+            )
         }
     }
 }
@@ -445,20 +695,32 @@ private struct WelcomeScreen: View {
 
     private var scanControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // One button here, because on this screen there is one thing to do.
-            // The other jobs are not gone — they are in the bar above, which is
-            // where they can be seen rather than merely available.
+            // Two ways in, and they differ only in how much is read. The sweep is
+            // the default because it is the one that answers the question a
+            // reader arrives with — what is on this Mac — and it is safe to make
+            // the default precisely because it decides nothing: it reads the
+            // disk, the setup and the update list and hands back one account of
+            // what it found.
+            ThemeButton(
+                title: "Look Everywhere",
+                systemImage: "sparkle.magnifyingglass",
+                isPrimary: true,
+                help: "Read everything Housekeeping can read — the disk, the setup, and which of your apps and packages have updates — and come back with one list of what it found. It only reads: nothing is ticked, moved, installed or changed, and every screen it hands you still asks before anything happens."
+            ) {
+                appState.startSweep()
+            }
+            .keyboardShortcut(.defaultAction)
+
             ThemeButton(
                 title: "Scan My Mac",
                 systemImage: "magnifyingglass",
-                isPrimary: true,
+                isPrimary: false,
                 help: appState.deepSweep
-                    ? "Measure the storage locations Housekeeping knows about, and also sweep the folders where undeclared data collects. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
-                    : "Measure the storage locations Housekeeping knows about. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
+                    ? "Measure only the storage locations Housekeeping knows about, and also sweep the folders where undeclared data collects. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
+                    : "Measure only the storage locations Housekeeping knows about. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
             ) {
                 appState.startScan()
             }
-            .keyboardShortcut(.defaultAction)
 
             Divider()
 

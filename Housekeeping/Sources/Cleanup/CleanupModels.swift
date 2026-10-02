@@ -186,6 +186,35 @@ struct MovedItemRecord: Codable {
     }
 }
 
+/// What a setup repair's quarantine run did, one row per path it was handed.
+///
+/// Deliberately not a `CleanupResult`, which is built out of `MovedItem`s and
+/// those carry a `FoundItem` — a classified, measured thing the sweep found.
+/// A setup repair has no such subject: what it moves is a dead symlink or a
+/// stray program the reader was told about by name, and inventing a
+/// classification for it would put an item on the cleanup screens that the
+/// cleaner never found. The quarantine record itself is exactly the same either
+/// way, which is what matters: the same manifest, the same Restore.
+struct RepairMoveResult {
+    let transactionID: UUID
+    let date: Date
+    /// The record of this run, so the reader can be sent to the same Restore
+    /// screen an ordinary cleanup uses rather than a second one built here.
+    let manifestURL: URL
+    let moves: [RepairMove]
+
+    var movedPaths: [String] { moves.filter(\.succeeded).map(\.path) }
+    var succeededCount: Int { moves.filter(\.succeeded).count }
+    var failedCount: Int { moves.count - succeededCount }
+
+    struct RepairMove: Equatable {
+        let path: String
+        let quarantinePath: String?
+        let succeeded: Bool
+        let message: String?
+    }
+}
+
 enum CleanupError: LocalizedError {
     case applicationsRunning([ApplicationRef])
     case trashError(String)

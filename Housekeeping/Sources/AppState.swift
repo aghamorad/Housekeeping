@@ -4,6 +4,49 @@ import Foundation
 import SwiftUI
 import Combine
 
+/// The three readings a sweep runs, in the order it runs them.
+///
+/// It is a type rather than three booleans because the working screen has to say
+/// what the octopus is at, and "the disk, then the setup, then updates" said as
+/// one value cannot drift out of step with the order the readings actually
+/// happen in.
+enum SweepStage: Int, CaseIterable, Equatable {
+    case disk
+    case setup
+    case updates
+
+    var title: String {
+        switch self {
+        case .disk: return "Reading the disk"
+        case .setup: return "Checking the setup"
+        case .updates: return "Asking about updates"
+        }
+    }
+
+    /// One line under the title, saying what the octopus is doing right now.
+    /// Each is a plain description of the reading behind it, not a promise about
+    /// what will be found — nothing is known until the reading comes back.
+    var detail: String {
+        switch self {
+        case .disk:
+            return "Walking your home folder and measuring what each application has left behind."
+        case .setup:
+            return "Working out which command actually runs when you type a name, and whether the link that reaches it leads anywhere."
+        case .updates:
+            return "Listing what is installed, where each thing came from, and which of it is behind."
+        }
+    }
+
+    /// The name it goes by in the list of three on the working screen.
+    var shortTitle: String {
+        switch self {
+        case .disk: return "The disk"
+        case .setup: return "The setup"
+        case .updates: return "Updates"
+        }
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var scanState: ScanState = .idle
@@ -42,6 +85,12 @@ final class AppState: ObservableObject {
     /// the sheet, so opening it from the menu bar the second time does not lose
     /// what was said the first.
     @Published var showHousekeeper = false
+    /// What the housekeeper's window should be about, when the screen opening it
+    /// is not about a scanned path. A screen that wants the housekeeper sets this
+    /// and flips `showHousekeeper` in the same turn; the sheet takes it as it
+    /// appears and clears the slot, so a topic cannot outlive the visit that
+    /// created it.
+    @Published var housekeeperTopic: HousekeeperTopic?
     /// What GitHub says about this copy's age, once it has been asked. Starts as
     /// `.checking` rather than "nothing newer" so the screen can tell an answer
     /// that has not arrived from an answer that says this is the newest release.
@@ -88,6 +137,56 @@ final class AppState: ObservableObject {
     /// it; the program already running is left to finish, because stopping `brew`
     /// or a bundle swap halfway is the one way this could leave a Mac worse off.
     var updateStopRequested = false
+
+    // MARK: - Checking the setup
+
+    /// Whether the setup sheet is open.
+    @Published var showSetupCheck = false
+    /// What the last reading found, in the order the sheet draws it. Rebuilt
+    /// whole by each reading rather than merged into, so the list can never hold
+    /// a row whose subject has since been fixed by hand.
+    @Published var environmentFindings: [EnvironmentFinding] = []
+    /// Things the reading noticed but did not turn into a finding: where the
+    /// search path was assembled from, a command that was missing, a file that
+    /// could not be read.
+    @Published var environmentNotes: [String] = []
+    @Published var environmentIsReading = false
+    @Published var environmentIsWorking = false
+    /// The one line above the outcomes, e.g. "3 done, 1 not — each row says why".
+    @Published var environmentSummaryLine: String?
+    @Published var environmentOutcomes: [EnvironmentOutcome] = []
+    /// Whether a reading has finished at least once. The sheet opens on the list
+    /// from the last reading rather than reading again — see
+    /// `beginSetupCheckIfNeeded` — so this is the flag that tells a list nobody
+    /// has asked for yet from one that came back empty.
+    @Published var environmentHasRead = false
+
+    /// Stored here for the same reason the update feature's are: an extension
+    /// cannot hold storage, and the bridge that uses these lives in its own file.
+    var environmentTask: Task<Void, Never>?
+    var environmentRunner: ProcessRunner?
+    /// Held while a run is going so the sheet's Stop can reach the process in
+    /// flight. Nil the rest of the time, which is also how the run knows it is
+    /// the only one.
+    var environmentFixer: EnvironmentFixer?
+
+    // MARK: - The sweep
+
+    /// True from the moment the housekeeper is set to work until the last of the
+    /// three readings is back. While it is on, the window shows the working
+    /// screen; afterwards, the same screen shows what came of it.
+    @Published var isSweeping = false
+    /// Which reading is in flight. Nil between them and when no sweep is running,
+    /// which is what the working screen reads to say what the octopus is at.
+    @Published var sweepStage: SweepStage?
+    /// Set when a sweep finishes. Kept apart from `isSweeping` so the results
+    /// stay on screen after the work has stopped, and can be dismissed by the
+    /// reader rather than blinking away on their own.
+    @Published var showSweepResults = false
+    /// When the sweep began, so the working screen can say how long it has been
+    /// going without owning a timer of its own.
+    @Published var sweepStartedAt: Date?
+    private var sweepTask: Task<Void, Never>?
 
     let protectionList: ProtectionList
     /// Rebuilt only when the list changes, and only ever read. Caching it here
@@ -349,7 +448,10 @@ final class AppState: ObservableObject {
         removeSuccessfullyMovedItems(result.movedItems)
     }
 
-    func startScan() {
+    /// Starts a scan and hands back the task doing it, so the one caller that has
+    /// to wait for it — the sweep — can, without the others having to care.
+    @discardableResult
+    func startScan() -> Task<Void, Never>? {
         scanTask?.cancel()
         lastErrorMessage = nil
         // A scan is the moment the disk is read again, so anything the policy
@@ -400,6 +502,7 @@ final class AppState: ObservableObject {
             self.scanTask = nil
             self.scanWorkerTask = nil
         }
+        return scanTask
     }
 
     func cancelScan() {
@@ -409,6 +512,87 @@ final class AppState: ObservableObject {
         scanTask = nil
         scanProgress = .idle
         scanState = .idle
+    }
+
+    // MARK: - The sweep
+
+    /// Every reading the app has, run in one go, and then one screen saying what
+    /// came of it.
+    ///
+    /// This is the app's automated version, and it is automated exactly as far as
+    /// reading. It measures the disk, checks the setup, and asks about updates,
+    /// then hands back a single account of all three. It ticks nothing, moves
+    /// nothing, installs nothing, and fixes nothing. That is not caution bolted
+    /// on afterwards — a sweep that also acted would be the cleaner this app
+    /// exists not to be, and each of the three readings already ends at a screen
+    /// that asks per item before it changes anything.
+    ///
+    /// The three run in sequence rather than at once. Two of them drive Homebrew,
+    /// which takes a lock, and the disk reading is the one whose screen the other
+    /// two are reached from, so it goes first and the reader has a result to look
+    /// at while the rest is still being read.
+    func startSweep() {
+        sweepTask?.cancel()
+        lastErrorMessage = nil
+        showSweepResults = false
+        sweepStartedAt = Date()
+        sweepStage = .disk
+        isSweeping = true
+
+        sweepTask = Task { [weak self] in
+            guard let self else { return }
+
+            await self.startScan()?.value
+            guard !Task.isCancelled else { return }
+
+            self.sweepStage = .setup
+            await self.beginSetupReading()?.value
+            guard !Task.isCancelled else { return }
+
+            self.sweepStage = .updates
+            await self.beginUpdateReading()?.value
+            guard !Task.isCancelled else { return }
+
+            self.sweepStage = nil
+            self.sweepStartedAt = nil
+            self.isSweeping = false
+            self.sweepTask = nil
+            self.showSweepResults = true
+        }
+    }
+
+    /// Stops the sweep where it stands, and the reading in flight with it.
+    ///
+    /// Nothing survives the stop. The scan is cancelled like any other — which
+    /// takes the window back to the opening screen rather than leaving a partial
+    /// list behind — and the setup and update readings are dropped the same way.
+    /// That is safe because nothing was ever changed: a sweep only reads, so a
+    /// stopped sweep has nothing to undo, and the reader can simply start it
+    /// again. The Stop button's wording says exactly this.
+    func cancelSweep() {
+        sweepTask?.cancel()
+        sweepTask = nil
+        cancelScan()
+        cancelEnvironmentWork()
+        if updateIsReading {
+            updateTask?.cancel()
+            updateRunner?.cancel()
+            updateRunner = nil
+            updateIsReading = false
+        }
+        sweepStage = nil
+        sweepStartedAt = nil
+        isSweeping = false
+    }
+
+    /// Leaves the sweep's results screen without running anything, which is the
+    /// only way off it that is not one of the three job buttons. The scan is
+    /// still complete underneath, so the window falls back to the summary the
+    /// disk reading produced.
+    func dismissSweepResults() {
+        showSweepResults = false
+        sweepStage = nil
+        sweepStartedAt = nil
     }
 
     func inspectItem(_ id: UUID) {

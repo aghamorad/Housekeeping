@@ -30,7 +30,10 @@ extension AppState {
     /// The reading itself, with no cancelling of anything. Kept separate because
     /// it is also what a finished run calls to bring the list up to date, and a run
     /// that cancelled itself on the way out would stop the reading it just asked for.
-    func beginUpdateReading() {
+    /// Hands back the task doing the reading, so the sweep can wait for the list
+    /// rather than poll the flags it sets on the way.
+    @discardableResult
+    func beginUpdateReading() -> Task<Void, Never>? {
         updateRows = []
         updateNotes = []
         updateStopRequested = false
@@ -96,6 +99,7 @@ extension AppState {
                 self.updateRunner = nil
             }
         }
+        return updateTask
     }
 
     /// Stops whatever is happening. Reading stops at once and costs nothing.

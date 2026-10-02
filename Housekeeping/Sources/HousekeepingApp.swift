@@ -111,6 +111,16 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
 
+                // The other half of the same question. Updating asks whether what
+                // is installed is current; this asks whether what is installed is
+                // the thing that runs when you type its name — which is a
+                // different bug with the same symptom, and the one that made a
+                // stale yt-dlp run for months without anything announcing it.
+                Button("Check My Setup…") {
+                    appState.showSetupCheck = true
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+
                 Divider()
 
                 // Opens on whatever is picked out in the list, and introduces

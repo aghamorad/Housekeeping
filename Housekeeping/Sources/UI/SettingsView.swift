@@ -101,6 +101,18 @@ struct SettingsView: View {
                     .help("Open Housekeeping's Quarantine in the Finder. It is an ordinary folder you can browse, and files can be dragged back out of it by hand without the app.")
             }
 
+            Section("Housekeeper") {
+                Text("The housekeeper is the reader that explains what Housekeeping is showing you. It is a small model running on this Mac, and it explains; Housekeeping is the one that decides and the one that runs anything.")
+                    .font(.callout)
+                    .foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                AskHousekeeperButton(
+                    topic: housekeeperTopic,
+                    title: "Ask About Housekeeping"
+                )
+            }
+
             Section("About") {
                 LabeledContent("App", value: "Housekeeping")
                 LabeledContent("Version", value: AppState.currentVersion.isEmpty ? "Unknown" : AppState.currentVersion)
@@ -146,6 +158,39 @@ struct SettingsView: View {
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// What the housekeeper is handed when it is opened from Settings. This screen
+    /// is in a window of its own, so the button routes through `WindowOpener`
+    /// rather than stepping a sheet aside — there is no sheet here to step aside.
+    private var housekeeperTopic: HousekeeperTopic {
+        var facts: [String] = []
+        facts.append("These are Housekeeping's own settings. Nothing on this screen cleans anything or changes anything on disk; every switch here changes how Housekeeping behaves and nothing else.")
+        facts.append("Theme: \(appState.currentTheme.displayName). \(themeDescription)")
+        facts.append(appState.deepSweep
+                     ? "The deep sweep is on, so Housekeeping also measures the folders where undeclared data collects. That adds up to a minute to a scan, and anything found that way needs an extra typed confirmation before it can be cleaned."
+                     : "The deep sweep is off, so Housekeeping only reports what its list of \(RuleEngine.shared.applications.count) known applications and tools covers.")
+        facts.append("The safety promises are: Housekeeping never ticks anything on the reader's behalf; cleaning moves items into Quarantine and deletes nothing, and everything moved can be put back; and anything it cannot prove is replaceable is shown but locked, with the reason stated.")
+        facts.append("Quarantine is at \(CleanupEngine().quarantineURL.path), a normal folder in plain sight at the top of the home folder\(CleanupEngine().quarantineExists ? "" : " — it does not exist yet because nothing has been quarantined, and it is created the first time something is")")
+        if appState.updateExceptionEntries.isEmpty {
+            facts.append("Nothing has been told to leave alone in the update list, so every application and package found will be offered next time.")
+        } else {
+            facts.append("Told to leave alone in the update list: \(appState.updateExceptionEntries.count).")
+            for entry in appState.updateExceptionEntries.prefix(15) {
+                facts.append("- \(entry.name) — \(entry.displayKey)")
+            }
+            facts.append("“Offer Again” puts one back in the list. It installs nothing; it only stops Housekeeping from hiding it.")
+        }
+        facts.append("This is Housekeeping \(AppState.currentVersion.isEmpty ? "of unknown version" : AppState.currentVersion), with \(RuleEngine.shared.applications.count) rules loaded.")
+
+        return HousekeeperTopic(
+            id: "settings",
+            title: "Housekeeping's settings",
+            label: appState.currentTheme.displayName,
+            tone: .plain,
+            facts: facts,
+            opener: "What do these settings change, and what does Housekeeping never do?"
+        )
     }
 
     private var themeDescription: String {

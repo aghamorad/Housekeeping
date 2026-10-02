@@ -36,6 +36,12 @@ final class Housekeeper: ObservableObject {
     @Published private(set) var subject: FoundItem?
     @Published private(set) var subjectDecision: CleanupSafetyPolicy.Decision?
     @Published private(set) var subjectReason: String?
+    /// What the conversation is about when it is not about a scanned path — an
+    /// app that is out of date, a command that runs the wrong copy, a folder the
+    /// disk browser is standing in. Mutually exclusive with `subject`: a window
+    /// opened about a setup finding must not keep showing the cleanup verdict of
+    /// whatever was picked out on the main screen before it.
+    @Published private(set) var topic: HousekeeperTopic?
 
     let weights = HousekeeperWeights.shared
     let server = LlamaServer()
@@ -86,10 +92,50 @@ final class Housekeeper: ObservableObject {
                 || turns.isEmpty {
                 begin(on: item, assessment: assessment)
             }
-        } else if turns.isEmpty {
-            briefing = browsing
-            turns = [Turn(speaker: .housekeeper, text: Self.greeting)]
+        } else if topic != nil || subject != nil || turns.isEmpty {
+            // Nothing is picked out, so the window is not about anything in
+            // particular — including not about whatever it was about last. A
+            // strip left over from a screen the reader has since left would be
+            // the app claiming the model is talking about something it is not.
+            beginBrowsing(browsing)
+        }
+
+        wake()
+    }
+
+    /// The conversation with no subject: the housekeeper introduces itself and is
+    /// handed the shape of what Housekeeping is holding, so that a question asked
+    /// from here has something true to stand on.
+    private func beginBrowsing(_ browsing: String?) {
+        subject = nil
+        subjectDecision = nil
+        subjectReason = nil
+        topic = nil
+        briefing = browsing
+        history = []
+        problem = nil
+        turns = [Turn(speaker: .housekeeper, text: Self.greeting)]
+    }
+
+    /// Opens the housekeeper about something that is not a scanned path.
+    ///
+    /// Kept beside `open(focusing:)` rather than folded into it because the two
+    /// carry different things: that one carries a finding and the app's verdict
+    /// on it, and this one carries a title and Housekeeping's own facts. The
+    /// shared part is the rule both obey — a subject that has changed restarts
+    /// the conversation, and one that has not is left alone, so reopening the
+    /// window does not throw away what the reader has already asked.
+    func open(topic newTopic: HousekeeperTopic) {
+        if topic?.id != newTopic.id || turns.isEmpty {
+            subject = nil
+            subjectDecision = nil
+            subjectReason = nil
+            topic = newTopic
+            briefing = newTopic.briefing
+            history = []
             problem = nil
+            turns = [Turn(speaker: .housekeeper, text: newTopic.openingLine)]
+            Task { await send(newTopic.opener, showingAsReader: false) }
         }
 
         wake()
@@ -99,6 +145,7 @@ final class Housekeeper: ObservableObject {
         subject = item
         subjectDecision = assessment.decision
         subjectReason = assessment.reason
+        topic = nil
         briefing = Self.briefing(for: item, assessment: assessment)
         history = []
         problem = nil
@@ -122,6 +169,7 @@ final class Housekeeper: ObservableObject {
         subject = nil
         subjectDecision = nil
         subjectReason = nil
+        topic = nil
         problem = nil
         turns = [Turn(speaker: .housekeeper, text: Self.greeting)]
     }
