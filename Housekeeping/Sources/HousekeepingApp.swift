@@ -103,6 +103,16 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
 
+                // The question a backup raises and a disk measurement cannot
+                // answer: are these two folders actually the same? It belongs
+                // beside browsing because it is the same kind of thing — a
+                // reading you go and ask for — with one difference, that it can
+                // copy a missing file across once you have said so.
+                Button("Compare Two Folders…") {
+                    appState.showReconcile = true
+                }
+                .keyboardShortcut("y", modifiers: [.command, .shift])
+
                 // The other half of looking after a Mac: what is installed and
                 // whether any of it is out of date. Kept off the cleanup screens
                 // because it changes things rather than removing them.
