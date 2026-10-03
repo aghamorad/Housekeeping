@@ -57,6 +57,25 @@
 		A1000059 /* UpdateExceptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000059; };
 		A1000060 /* UpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000060; };
 		A1000061 /* UpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000061; };
+		A1000062 /* ReconcileModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000062; };
+		A1000063 /* ContentIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000063; };
+		A1000064 /* ReconcileEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000064; };
+		A1000065 /* ReconcileModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000065; };
+		A1000066 /* ReconcileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000066; };
+		A1000067 /* EnvironmentAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000067; };
+		A1000068 /* EnvironmentBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000068; };
+		A1000069 /* EnvironmentFixer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000069; };
+		A1000070 /* EnvironmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000070; };
+		A1000071 /* EnvironmentShellPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000071; };
+		A1000072 /* EnvironmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000072; };
+		A1000073 /* Housekeeper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000073; };
+		A1000074 /* HousekeeperTopic.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000074; };
+		A1000075 /* HousekeeperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000075; };
+		A1000076 /* HousekeeperWeights.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000076; };
+		A1000077 /* LlamaServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000077; };
+		A1000078 /* OctopusMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000078; };
+		A1000079 /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000079; };
+		A1000080 /* SweepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000080; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -110,6 +129,25 @@
 		A2000059 /* UpdateExceptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateExceptions.swift; sourceTree = "<group>"; };
 		A2000060 /* UpdateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateModels.swift; sourceTree = "<group>"; };
 		A2000061 /* UpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Update/UpdateView.swift; sourceTree = "<group>"; };
+		A2000062 /* ReconcileModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Reconcile/ReconcileModels.swift; sourceTree = "<group>"; };
+		A2000063 /* ContentIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Reconcile/ContentIdentity.swift; sourceTree = "<group>"; };
+		A2000064 /* ReconcileEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Reconcile/ReconcileEngine.swift; sourceTree = "<group>"; };
+		A2000065 /* ReconcileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Reconcile/ReconcileModel.swift; sourceTree = "<group>"; };
+		A2000066 /* ReconcileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/ReconcileView.swift; sourceTree = "<group>"; };
+		A2000067 /* EnvironmentAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentAudit.swift; sourceTree = "<group>"; };
+		A2000068 /* EnvironmentBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentBridge.swift; sourceTree = "<group>"; };
+		A2000069 /* EnvironmentFixer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentFixer.swift; sourceTree = "<group>"; };
+		A2000070 /* EnvironmentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentModels.swift; sourceTree = "<group>"; };
+		A2000071 /* EnvironmentShellPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentShellPath.swift; sourceTree = "<group>"; };
+		A2000072 /* EnvironmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentView.swift; sourceTree = "<group>"; };
+		A2000073 /* Housekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/Housekeeper.swift; sourceTree = "<group>"; };
+		A2000074 /* HousekeeperTopic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperTopic.swift; sourceTree = "<group>"; };
+		A2000075 /* HousekeeperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperView.swift; sourceTree = "<group>"; };
+		A2000076 /* HousekeeperWeights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperWeights.swift; sourceTree = "<group>"; };
+		A2000077 /* LlamaServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/LlamaServer.swift; sourceTree = "<group>"; };
+		A2000078 /* OctopusMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/OctopusMark.swift; sourceTree = "<group>"; };
+		A2000079 /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/StatusItemController.swift; sourceTree = "<group>"; };
+		A2000080 /* SweepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/SweepView.swift; sourceTree = "<group>"; };
 		A3000001 /* Housekeeping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housekeeping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -187,6 +225,25 @@
 				A2000059,
 				A2000060,
 				A2000061,
+				A2000062,
+				A2000063,
+				A2000064,
+				A2000065,
+				A2000066,
+				A2000067,
+				A2000068,
+				A2000069,
+				A2000070,
+				A2000071,
+				A2000072,
+				A2000073,
+				A2000074,
+				A2000075,
+				A2000076,
+				A2000077,
+				A2000078,
+				A2000079,
+				A2000080,
 			);
 			path = Housekeeping;
 			sourceTree = "<group>";
@@ -278,6 +335,25 @@
 				A1000059,
 				A1000060,
 				A1000061,
+				A1000062,
+				A1000063,
+				A1000064,
+				A1000065,
+				A1000066,
+				A1000067,
+				A1000068,
+				A1000069,
+				A1000070,
+				A1000071,
+				A1000072,
+				A1000073,
+				A1000074,
+				A1000075,
+				A1000076,
+				A1000077,
+				A1000078,
+				A1000079,
+				A1000080,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -80,6 +80,11 @@ final class AppState: ObservableObject {
     /// is on screen and what the measurement found belong to `DiskBrowserModel`,
     /// so that walking around the disk cannot disturb the scan or the quarantine.
     @Published var showDiskBrowser = false
+    /// Whether the two-folder comparison is open. Only the flag lives here, for
+    /// the same reason as the disk browser: which pair is on screen and what the
+    /// comparison found belong to `ReconcileModel`, so that reading two libraries
+    /// cannot disturb the scan, the disk measurements, or the quarantine.
+    @Published var showReconcile = false
     /// Whether the housekeeper sheet is open. Only the flag lives here; the
     /// conversation belongs to `Housekeeper` and is shared rather than owned by
     /// the sheet, so opening it from the menu bar the second time does not lose

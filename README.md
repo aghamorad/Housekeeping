@@ -19,10 +19,13 @@ The interface looks like an old Mac utility because I miss the peculiar honesty 
 5. Use **Clean Up Unnecessary Stuff…** to go through eligible low-risk caches and logs individually. Housekeeping asks again before each move.
 6. If you change your mind, use **Undo Last Quarantine**. Restore will refuse to overwrite anything already occupying the original path.
 7. If Housekeeping keeps offering you something you actually want, press **Leave It Alone** on that item. It goes on a list and stops being offered — on this scan and every later one — until you take it off again.
+8. If you keep a library and a backup of it, open **Two Folders** (⇧⌘Y), pick the pair, and press **Compare** to see what is on one side and not the other.
 
 ## What this version can and cannot claim
 
-Housekeeping 0.10.0 audits a defined set of known application locations and reports what it can establish from local evidence. It performs a rule-backed audit of those locations, reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Housekeeping says so in its results rather than reporting a clean Mac.
+Housekeeping 0.11.0 adds **Two Folders**: comparing two folders that are meant to hold the same things — a library and its backup, a working drive and the archive it was written to — reporting what is on one side and not the other, and copying the missing piece into place when you tick the row and press the button. It matches by content rather than by path, reads a file's bytes only when its size and date disagree, and refuses a destination that resolves outside the pair's writable side. A side that is not mounted is reported as unreachable rather than as an empty library, so a drive sitting in a drawer can never be mistaken for a library that has gone missing. This is the first part of the app that writes a copy rather than moving a file; anything that has to come *off* a disk still goes through the same Quarantine, and every run leaves a record of what it did.
+
+0.10.0 audits a defined set of known application locations and reports what it can establish from local evidence. It performs a rule-backed audit of those locations, reports likely remnants of applications that are no longer installed, including the sandbox containers macOS gives each application and leaves behind when the application goes. It also checks Microsoft Office's own add-in folders and settings, where an add-in removed from the disk leaves an entry behind that makes the application complain on every launch, and it explains what each application will do next rather than only naming the file. It does not claim to understand every file on your Mac, and it does not infer that two large model files are duplicates merely because their names look similar. Some folders may also be inaccessible because of macOS permissions, and where that is the case Housekeeping says so in its results rather than reporting a clean Mac.
 
 0.10.0 adds a second kind of reading: a **setup check** on the tools already installed. It looks at which program actually runs when you type a name, whether the link reaching it leads anywhere, whether what a package installed is linked and complete, whether one package manager has been superseded by another, and whether something was placed by hand rather than by the tool that owns it — the class of problem where a command breaks for a reason no one can see from the file itself. This is the one screen in Housekeeping that runs the system's own tools, and it is consent-gated per finding: nothing is ticked for you, nothing runs until you tick a row and press the button, and each row states what it will change before it is offered. Anything a repair takes off the disk goes into the same Quarantine an ordinary cleanup uses, so there is one place to put it back. A finding that would need more than one step, or that needs an administrator, is shown with its command and no button — Housekeeping does not ask for your password.
 
@@ -147,6 +150,32 @@ Two honest limits. The search goes three levels deep, so a repository buried dee
 
 This one is a cue taken from [Mole](https://github.com/tw93/mole), whose purge step declines to touch directories containing deployment keypair files, nested Git repositories, or Git-tracked files, on exactly this reasoning: the cost of being wrong is not measured in gigabytes.
 
+### Two folders
+
+A library and its backup are supposed to hold the same things. **Two Folders** (⇧⌘Y) holds them up against each other and says what is on one side and not the other — then copies the missing piece to where it belongs, if you tell it to.
+
+It matches by **content**, not by path, and there are five things it can say about a file:
+
+- **the same on both sides** — nothing to do
+- **missing from B** — A has it, B does not; this is the copy it can make
+- **missing from A** — B has it and A does not
+- **the same name, different bytes** — the one case where the two sides genuinely disagree, and neither is trusted automatically
+- **moved or renamed** — it is in both, under different paths, so nothing is missing at all
+
+Matching by content rather than by path is the whole design. Compare two folders by path and every past reorganisation reads as a library deleted and rewritten, which is both wrong and the most dangerous possible thing to be wrong about here.
+
+Reading is kept as small as it can be. Size and a modified date are enough to call two files the same almost every time, so that is what is read first; a file is only opened and hashed when those two disagree, and that is capped so a very large pair reports what it could establish instead of running all night.
+
+Three things a pair can be told, each of which exists because of a way a backup drive is actually used:
+
+- **A closed side.** A pair can mark one side as frozen — the archive that is not being added to any more — and then the direction switch is off rather than merely discouraged. It still compares, because knowing what a closed archive is missing is worth knowing. What stops is the writing.
+- **Absent on purpose.** A path can be marked as existing on one side by design, so its absence is not counted as a gap. It is still compared if it happens to be on both sides. Photos that only ever lived on the working drive are the case this was built for.
+- **Only one of a kind.** The libraries that have no second copy anywhere are named on the screen, so nothing offers to compare them against nothing.
+
+Two rules hold over everything else. If a side is not mounted, Housekeeping reports **that** and finds nothing — it never announces a whole library missing because a drive is in a drawer, which is the mistake that ends with a good archive written over a good one. And nothing is ticked for you: copies are one button, anything a run would move aside is a separate one, and every row says what it will do before it can be pressed.
+
+Copying is the one thing this screen can do that nothing else in Housekeeping can; until now the app only ever moved files into Quarantine. A copy goes only into a pair's own writable side, and a destination that resolves outside that side is refused rather than executed. Nothing is ever deleted to make room — anything that has to come off a disk goes through the same Quarantine, listed on the same screen and put back by the same Restore. Every run writes a record of what it did, one line per change, naming where each file went.
+
 ### Architecture
 
 ```
@@ -198,9 +227,24 @@ Housekeeping/Sources/
 │
 ├── Housekeeper/             The local model, kept strictly in its place
 │   ├── Housekeeper.swift        The conversation, and what the model is told
+│   ├── HousekeeperTopic.swift   What the housekeeper is talking about
 │   ├── HousekeeperView.swift    The chat bubble (⌘K)
 │   ├── HousekeeperWeights.swift The model download, resumable
 │   └── LlamaServer.swift        The bundled llama-server, supervised
+│
+├── Environment/             The setup check: installed tools, and what is wrong
+│   ├── EnvironmentAudit.swift      Reading the shape of a Mac
+│   ├── EnvironmentShellPath.swift  What your shell's search path actually is
+│   ├── EnvironmentFixer.swift      Doing the fixes the screen offers
+│   ├── EnvironmentBridge.swift     The check, wired to AppState
+│   ├── EnvironmentModels.swift     What it found, and what can be done about it
+│   └── EnvironmentView.swift       Check My Setup
+│
+├── Reconcile/               Two folders meant to hold the same thing
+│   ├── ContentIdentity.swift    Deciding whether two files are the same file
+│   ├── ReconcileModels.swift    What a pair is, and what comparing one found
+│   ├── ReconcileEngine.swift    The comparison, the plan, and the copy
+│   └── ReconcileModel.swift     The screen's side of it
 │
 └── UI/
     ├── ContentView.swift       Main navigation (Welcome → Scan → Results)
@@ -208,6 +252,8 @@ Housekeeping/Sources/
     ├── ProtectionView.swift    The left-alone list
     ├── RetroStyles.swift       Mac OS 9 visual system
     ├── CleanupView.swift       Cleanup confirmation
+    ├── ReconcileView.swift     Compare Two Folders
+    ├── SweepView.swift         Look Everywhere
     └── SettingsView.swift      Preferences
 ```
 
@@ -295,6 +341,8 @@ The Mac OS 9 interface is a deliberate choice. Utilities such as Norton Utilitie
 - **Always reversible:** eligible cleanup goes to recoverable quarantine, and restore refuses to overwrite an existing path
 
 ## Version
+
+**Housekeeping 0.11.0:** **Two Folders** — compare a library against its backup and see what is on one side and not the other, matched by content rather than by path, with a frozen side for an archive that is not written to any more, paths marked absent on purpose, an unmounted drive reported as unreachable rather than empty, and the missing copy written into place only when you tick the row and press the button — plus the app's first copy, its run record, and an Xcode project that names every source file again
 
 **Housekeeping 0.10.0:** The setup check — a reading of the tools already installed, one finding to a row, with the fixes it can state in one step offered as consent-gated buttons and everything else shown as the command it would take — plus the housekeeper opened from every screen and sheet in the app, **Look Everywhere**, one press for all three readings with each count a door to the screen that asks, and a top bar carrying every job the app has rather than four of them
 

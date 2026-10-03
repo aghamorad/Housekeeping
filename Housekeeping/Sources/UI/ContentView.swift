@@ -75,6 +75,15 @@ struct ContentView: View {
             // acts: it runs Homebrew, the store's tool, and swaps bundles. So it
             // gets the state, and it starts its own reading rather than showing
             // rows from a scan that was about something else entirely.
+            // Comparing two folders reads both libraries and can then write to
+            // one of them, so it is its own sheet with its own model. It is the
+            // only screen in the app that copies anything, which is why it keeps
+            // its own state rather than borrowing the cleanup list's.
+            .sheet(isPresented: $appState.showReconcile) {
+                ReconcileView()
+                    .environment(\.uiStyle, style)
+                    .housekeepingSurface(style)
+            }
             .sheet(isPresented: $appState.showUpdateList) {
                 UpdateView()
                     .environment(\.uiStyle, style)
@@ -314,6 +323,14 @@ private struct JobBar: View {
                 help: "Measure the whole disk and walk around it yourself. This only reads — it changes nothing, offers nothing, and removes nothing."
             ) {
                 appState.showDiskBrowser = true
+            }
+
+            ThemeButton(
+                title: "Two Folders",
+                systemImage: "arrow.left.arrow.right",
+                help: "Compare two folders that are meant to hold the same things — a library and its backup — and see what is on one side and not the other. Reading changes nothing; a copy happens only when you tick the row and press the button."
+            ) {
+                appState.showReconcile = true
             }
 
             ThemeButton(

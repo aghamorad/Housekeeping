@@ -1,3 +1,53 @@
+# Housekeeping 0.11.0
+
+Housekeeping can now hold two folders that are supposed to be the same thing up against each other — a
+library and its backup — say what is on one side and not the other, and put the missing piece where it
+belongs. It is the first part of the app that copies anything.
+
+- **Two folders.** A new screen compares a pair — a library against its backup, a working drive against
+  the archive — and reports the difference in both directions: what B has that A has not, what A has
+  that B has not, what the two sides call the same name but hold different bytes, and what moved or was
+  renamed rather than lost. Matching is by **content**, never by path. This matters more than it sounds:
+  compare by path and every past reorganisation reads as a library deleted and rewritten, which is the
+  one answer that would make this screen useless and dangerous at the same time.
+- **Reading a file only when it has to.** Size and a modified date are enough to call two files the same
+  almost every time, so that is what is read first, and the file itself is opened and hashed only when
+  those two disagree. The one place a hash is unavoidable — working out that a file is missing from A
+  because it is sitting under a different name in B — is capped, so a pair with hundreds of thousands of
+  files reports what it could establish rather than running all night.
+- **An unmounted drive is not an empty drive.** If a side is not there, Housekeeping says so and reports
+  no findings at all. It never announces that the whole library is missing because a drive is in a
+  drawer, which is the failure that would tempt somebody into 'restoring' a perfectly good archive over
+  a good one.
+- **A side can be closed.** A pair can name one side as frozen — the archived drive that is not being
+  added to any more — and the direction switch is then unavailable rather than merely discouraged. The
+  comparison still runs, because knowing what a closed archive is missing is worth knowing; what stops
+  is the writing. When the plan is empty for that reason the screen says so in a sentence, so an empty
+  plan never reads as 'nothing is missing'.
+- **Some things are absent on purpose.** A path can be marked as existing on one side by design, and
+  then its absence is not counted as a gap — but it is still compared if it *is* present on both sides.
+  Photos that only ever lived on the working drive are the case this was built for.
+- **Copy is the one new thing it does.** Until now Housekeeping only ever moved a file into Quarantine.
+  Reconciling has to be able to write the missing copy into place, so that capability was added, and it
+  is deliberately the narrowest version of it: a copy goes only into a pair's own writable side, a
+  destination that resolves outside that side is refused rather than executed, and nothing is ever
+  deleted to make room. Anything that has to come *off* a disk still goes through the same Quarantine,
+  listed on the same screen and put back by the same Restore.
+- **Every run leaves a record.** What was copied, what was moved aside, where each one went and what
+  came of it, written as one line per change to a file you can open. An undo needs to know where a file
+  went, so the record names the destination rather than only the source — and the screen can take you
+  straight to it.
+- **Nothing is ever ticked for you.** The plan arrives with no row selected; copies are one button, and
+  everything a run would move aside is a separate, deliberate one. Every row states what it will do
+  before it can be pressed.
+- **What exists in only one place is named, not measured.** The record already holds libraries that have
+  no second copy anywhere — the music library, the Iranian TV archive — and the screen says so in as
+  many words rather than offering to compare them against nothing.
+- **The Xcode project names every source file again.** The project file had stopped listing the app's
+  setup-check, housekeeper and menu-bar sources, so building it in Xcode or through `build_and_run.sh`
+  had been failing on files that were sitting right there. It lists them now, and the app builds and
+  runs from Xcode as it did before.
+
 # Housekeeping 0.10.0
 
 Housekeeping can now look at the tools that are already installed and say what is wrong with them —

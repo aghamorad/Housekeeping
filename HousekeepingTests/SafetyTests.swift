@@ -905,7 +905,290 @@ struct SafetyTests {
             "A Mac without Office must produce no caveats at all."
         )
 
-        print("Housekeeping safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, and office-add-in-audit tests passed: \(assertionCount) assertions")
+        // MARK: - Comparing two folders and closing the distance
+
+        // Everything below runs against folders under `testRoot` and a quarantine
+        // under the same, so a bug in the reconcile cannot move a real file. The
+        // engine takes both by injection for exactly this reason.
+        let pairRoot = testRoot.appendingPathComponent("Pair", isDirectory: true)
+        let sideA = pairRoot.appendingPathComponent("Library", isDirectory: true)
+        let sideB = pairRoot.appendingPathComponent("Backup", isDirectory: true)
+        let reconcileHome = testRoot.appendingPathComponent("ReconcileHome", isDirectory: true)
+        let reconcileQuarantine = CleanupEngine.quarantineURL(homeDirectory: reconcileHome)
+        let reconcileEngine = ReconcileEngine(
+            cleanupEngine: CleanupEngine(
+                homeDirectory: reconcileHome,
+                quarantineRoot: reconcileQuarantine,
+                fileManager: fileManager
+            ),
+            supportDirectory: testRoot.appendingPathComponent("Support", isDirectory: true),
+            fileManager: fileManager
+        )
+        let quiet: (ReconcileProgress) -> Void = { _ in }
+        let neverCancelled: () -> Bool = { false }
+
+        // A fixed date, so "the same file" and "the same name, different file"
+        // are decided by the fixtures rather than by how long the test took.
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+
+        try writeFile("same", at: "both/same.txt", in: sideA, modified: base, fileManager: fileManager)
+        try writeFile("same", at: "both/same.txt", in: sideB, modified: base, fileManager: fileManager)
+        try writeFile("only-a", at: "gap/fromA.txt", in: sideA, modified: base, fileManager: fileManager)
+        try writeFile("only-b", at: "gap/fromB.txt", in: sideB, modified: base, fileManager: fileManager)
+        // Same length, different bytes, and a different date so the cheap key
+        // cannot answer — which is the band that has to fall through to hashing.
+        try writeFile("AAAA", at: "clash/collide.txt", in: sideA, modified: base, fileManager: fileManager)
+        try writeFile("BBBB", at: "clash/collide.txt", in: sideB, modified: base.addingTimeInterval(-3600), fileManager: fileManager)
+
+        let pair = makePair(label: "Synthetic", a: sideA, b: sideB)
+        let report = reconcileEngine.compare(pair: pair, progress: quiet, isCancelled: neverCancelled)
+
+        try expect(report.unreachableSide == nil, "Both sides exist, so the comparison should have run.")
+        try expect(report.isComplete, "Nothing about this pair is unreadable, so the comparison should call itself complete.")
+        try expect(
+            report.identicalCount == 1,
+            "The one file present on both sides with the same length and the same timestamp is identical and must be read no further."
+        )
+        try expect(
+            report.missingFromB.map(\.relativePath) == ["gap/fromA.txt"],
+            "A file on the library side and not on the backup side is a gap the backup side is missing."
+        )
+        try expect(
+            report.missingFromA.map(\.relativePath) == ["gap/fromB.txt"],
+            "A file only on the backup side is reported as the other direction, not folded into the same list."
+        )
+        try expect(
+            report.collisions.map(\.relativePath) == ["clash/collide.txt"],
+            "Same name, same length, different contents on the two sides must be reported as a collision rather than as identical."
+        )
+        try expect(
+            report.collisions.first?.otherSize == 4,
+            "A collision has to carry both sizes, because the two numbers are the whole reason a person is being asked."
+        )
+        try expect(report.moves.isEmpty, "No file was moved between the two sides here, so nothing should be reported as moved.")
+
+        // A drive that is not there must stop the comparison, never shape it.
+        // Read the other way round this is the most destructive result the app
+        // could produce: a whole library "missing" because it was unplugged.
+        let absentPair = makePair(
+            label: "One Side Gone",
+            a: sideA,
+            b: pairRoot.appendingPathComponent("NotMounted", isDirectory: true)
+        )
+        let absent = reconcileEngine.compare(pair: absentPair, progress: quiet, isCancelled: neverCancelled)
+        try expect(absent.unreachableSide == .b, "A side that is not mounted must be named as the unreachable one.")
+        try expect(absent.findings.isEmpty, "An unreachable side must produce no findings at all, not a library's worth of gaps.")
+        try expect(absent.gapCount == 0, "Nothing may be counted as missing when one of the two sides was never read.")
+        try expect(
+            reconcileEngine.plan(for: absent, pair: absentPair).isEmpty,
+            "An unreachable side must produce no proposals, so there is nothing for anyone to tick by accident."
+        )
+
+        // An exclusion suppresses absence and nothing else: a file present on
+        // both sides under an excluded prefix is still compared.
+        try writeFile("marjan", at: "Other Photos/Marjan's Photos/m.txt", in: sideA, modified: base, fileManager: fileManager)
+        try writeFile("MARJAN", at: "Other Photos/Marjan's Photos/m.txt", in: sideB, modified: base.addingTimeInterval(-60), fileManager: fileManager)
+        let photosPair = makePair(
+            label: "Photos", a: sideA, b: sideB,
+            exclusions: ReconcileConventions.photosOneSidedPaths
+        )
+        let photosReport = reconcileEngine.compare(pair: photosPair, progress: quiet, isCancelled: neverCancelled)
+        try expect(
+            !photosReport.missingFromB.contains { $0.relativePath.contains("Marjan") },
+            "A path that is deliberately one-sided must never be reported as a gap, however loudly the two trees disagree about it."
+        )
+        try expect(
+            photosReport.collisions.contains { $0.relativePath.contains("Marjan") },
+            "An exclusion must suppress absence only — the same path on both sides is still compared."
+        )
+
+        let videoPair = makePair(label: "Video", a: sideA, b: sideB, includedExtensions: ["mp4"])
+        try writeFile("movie", at: "reel/movie.mp4", in: sideA, modified: base, fileManager: fileManager)
+        try writeFile("clip", at: "reel/clip.mov", in: sideA, modified: base, fileManager: fileManager)
+        let videoReport = reconcileEngine.compare(pair: videoPair, progress: quiet, isCancelled: neverCancelled)
+        try expect(
+            videoReport.missingFromB.map(\.relativePath) == ["reel/movie.mp4"],
+            "When a pair names the extensions it covers, everything else must be left out of the comparison entirely."
+        )
+
+        // What to do about it.
+        let plan = reconcileEngine.plan(for: report, pair: pair)
+        let copies = plan.filter { $0.action == .copy }
+        try expect(copies.count == 1, "Exactly the one gap in the copy direction should be proposed as a copy.")
+        try expect(copies.first?.relativePath == "gap/fromA.txt", "The copy should be the file the backup side is missing.")
+        try expect(
+            copies.first?.isSelected == true,
+            "A copy comes out ticked, because a copy is what the pair was declared for and nothing runs until the button is pressed."
+        )
+        try expect(
+            copies.first?.sourcePath == sideA.appendingPathComponent("gap/fromA.txt").path
+                && copies.first?.destinationPath == sideB.appendingPathComponent("gap/fromA.txt").path,
+            "A copy has to read from the library side and write to the backup side, in that direction and no other."
+        )
+        try expect(
+            plan.filter { $0.action == .quarantine }.isEmpty,
+            "Nothing here is a stray copy, so nothing should be proposed to be taken out."
+        )
+        try expect(
+            plan.filter { $0.action == .decide }.count == 2,
+            "The collision and the file that exists only on the backup side both need a person, and neither comes out ticked."
+        )
+        try expect(
+            plan.filter { $0.action == .decide }.allSatisfy { !$0.isSelected },
+            "Housekeeping must never choose between two files that differ, so nothing it cannot decide may come out ticked."
+        )
+
+        // A closed archive is still worth comparing, but it must say why nothing
+        // is proposed rather than presenting an empty plan as good news.
+        let frozenPair = makePair(label: "Frozen", a: sideA, b: sideB, frozenSide: .b)
+        let frozenPlan = reconcileEngine.plan(for: report, pair: frozenPair)
+        try expect(
+            frozenPlan.filter { $0.action == .copy }.isEmpty,
+            "A frozen side must never be copied into."
+        )
+        let frozenRow = frozenPlan.first { $0.reason.contains("which is closed") }
+        try expect(frozenRow != nil, "A frozen side with gaps must say so, because a silent empty plan reads as nothing being missing.")
+        try expect(
+            frozenRow?.action == .decide && frozenRow?.isSelected == false,
+            "The frozen-side row is an explanation, not an action, so it must not be ticked and must not be carried out."
+        )
+        try expect(
+            frozenRow?.reason.contains("1 file ") == true,
+            "The frozen-side row must count the files that would have been copied across."
+        )
+
+        // Nothing ticked means nothing happens and no record is opened.
+        var unticked = copies
+        unticked[0].isSelected = false
+        let idle = try await reconcileEngine.apply(unticked, pair: pair, progress: quiet)
+        try expect(
+            !idle.didAnything && idle.journalURL == nil,
+            "With nothing ticked, apply must do nothing at all — no copy, no move, and not even a run record."
+        )
+
+        // Doing the copy.
+        let applied = try await reconcileEngine.apply(copies, pair: pair, progress: quiet)
+        try expect(applied.copied == 1, "The ticked copy should have been made.")
+        let copiedURL = sideB.appendingPathComponent("gap/fromA.txt")
+        try expect(fileManager.fileExists(atPath: copiedURL.path), "The file should now be on the backup side.")
+        let copiedText = try String(contentsOf: copiedURL, encoding: .utf8)
+        try expect(copiedText == "only-a", "The copy must carry the original's contents.")
+        try expect(applied.failures.isEmpty, "A copy into an empty destination should not fail.")
+
+        // A real copy, never a link. Writing to the new name with a plain
+        // truncating write would reach back into the original through a shared
+        // inode, which is the corruption this app must never cause.
+        try Data("changed".utf8).write(to: copiedURL)
+        let originalText = try String(contentsOf: sideA.appendingPathComponent("gap/fromA.txt"), encoding: .utf8)
+        try expect(
+            originalText == "only-a",
+            "Writing to the copy must not touch the original — a hardlink here would have corrupted the library side."
+        )
+
+        guard let journalURL = applied.journalURL else {
+            throw TestFailure.assertion("A run that changed something must leave a record behind.")
+        }
+        try expect(fileManager.fileExists(atPath: journalURL.path), "The record must exist on disk, not only in the returned value.")
+        let journalText = try String(contentsOf: journalURL, encoding: .utf8)
+        // Read back rather than string-matched: the record is JSON, and a JSON
+        // encoder is free to spell a path differently from the way it was typed.
+        let journalDecoder = JSONDecoder()
+        journalDecoder.dateDecodingStrategy = .iso8601
+        let entries = journalText
+            .split(separator: "\n")
+            .compactMap { try? journalDecoder.decode(ReconcileJournalEntry.self, from: Data($0.utf8)) }
+        try expect(
+            entries.contains { $0.action == "copy" && $0.destination == copiedURL.path && $0.outcome == "copied" },
+            "The record must name where the file went, which is the whole of what an undo needs."
+        )
+        try expect(
+            journalText.contains("planned"),
+            "The record must hold the plan, not only the outcome, so a run interrupted half-way can be read back."
+        )
+        try expect(
+            journalURL.path.hasPrefix(testRoot.path + "/"),
+            "The record belongs in the support folder the engine was built with, so a test never writes into the reader's own run history."
+        )
+
+        // A proposal pointing outside the pair must be refused rather than
+        // trusted, because the plan is data and data can be wrong.
+        let escapedPath = testRoot.appendingPathComponent("escaped.txt").path
+        let rogue = ReconcileProposal(
+            id: "rogue", action: .copy, relativePath: "escaped.txt",
+            sourcePath: sideA.appendingPathComponent("gap/fromA.txt").path,
+            destinationPath: escapedPath,
+            size: 6, reason: "test", isSelected: true
+        )
+        let refused = try await reconcileEngine.apply([rogue], pair: pair, progress: quiet)
+        try expect(refused.copied == 0, "A destination outside the pair must never be written to.")
+        try expect(refused.failures.count == 1, "A refused copy has to be reported, not silently dropped.")
+        try expect(
+            !fileManager.fileExists(atPath: escapedPath),
+            "Nothing may have been written outside the two folders the pair covers."
+        )
+
+        // The same file at two paths: the extra copy is the stray, and taking it
+        // out must go through Quarantine rather than through a deletion.
+        let moveRoot = testRoot.appendingPathComponent("MovePair", isDirectory: true)
+        let moveA = moveRoot.appendingPathComponent("Library", isDirectory: true)
+        let moveB = moveRoot.appendingPathComponent("Backup", isDirectory: true)
+        try writeFile("relocated", at: "archive/old-name.txt", in: moveA, modified: base, fileManager: fileManager)
+        try writeFile("relocated", at: "current/new-name.txt", in: moveB, modified: base, fileManager: fileManager)
+        let movePair = makePair(label: "Moved", a: moveA, b: moveB)
+        let moveReport = reconcileEngine.compare(pair: movePair, progress: quiet, isCancelled: neverCancelled)
+        try expect(
+            moveReport.moves.count == 1,
+            "A file at a different path on each side but with the same contents is a move, not one gap in each direction."
+        )
+        try expect(
+            moveReport.moves.first?.relativePath == "archive/old-name.txt"
+                && moveReport.moves.first?.otherRelativePath == "current/new-name.txt",
+            "A move has to name both paths, because the pair of them is what says which copy is the spare."
+        )
+        try expect(
+            moveReport.gapCount == 0,
+            "A recognised move is not a gap — counting it as one would report a tidy-up as data loss."
+        )
+
+        let movePlan = reconcileEngine.plan(for: moveReport, pair: movePair)
+        let strays = movePlan.filter { $0.action == .quarantine }
+        try expect(strays.count == 1, "The stray copy is the one thing worth proposing, and it must be proposed once.")
+        try expect(
+            strays.first?.sourcePath == moveB.appendingPathComponent("current/new-name.txt").path,
+            "The stray is the copy on the side that gets written to — the library's placement is what is taken as the truth."
+        )
+        try expect(
+            strays.first?.isSelected == false,
+            "A removal never comes out ticked, however sure the comparison is."
+        )
+
+        var tickedStrays = strays
+        tickedStrays[0].isSelected = true
+        let movedResult = try await reconcileEngine.apply(tickedStrays, pair: movePair, progress: quiet)
+        try expect(movedResult.movedAside == 1, "The ticked stray should have been moved aside.")
+        try expect(
+            !fileManager.fileExists(atPath: moveB.appendingPathComponent("current/new-name.txt").path),
+            "The stray should no longer be sitting in the backup tree."
+        )
+        try expect(
+            fileManager.fileExists(atPath: moveA.appendingPathComponent("archive/old-name.txt").path),
+            "The library's own copy is the one being kept, so it must still be exactly where it was."
+        )
+
+        // The invariant the whole app rests on: nothing is deleted. The stray is
+        // gone from the tree and is findable under Quarantine, which is the
+        // difference between taken out of the way and destroyed.
+        let quarantined = allFiles(under: reconcileQuarantine, fileManager: fileManager)
+        try expect(
+            quarantined.contains { (try? String(contentsOf: $0, encoding: .utf8)) == "relocated" },
+            "Everything that left a tree must be sitting in Quarantine, where it can be put back."
+        )
+        try expect(
+            !quarantined.isEmpty,
+            "A reconcile that moved a file aside must have left a Quarantine record behind it."
+        )
+
+        print("Housekeeping safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, office-add-in-audit, and two-folder-reconcile tests passed: \(assertionCount) assertions")
     }
 
     private static func item(
@@ -926,6 +1209,61 @@ struct SafetyTests {
     private static func writeFixture(_ text: String, in directory: URL, fileManager: FileManager) throws {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         try Data(text.utf8).write(to: directory.appendingPathComponent("fixture.txt"), options: .atomic)
+    }
+
+    /// A file at a named relative path, with its date set rather than left to the
+    /// clock. A comparison that reads dates at all has to be told what they are,
+    /// or the fixtures decide the answer instead of the test.
+    private static func writeFile(
+        _ text: String,
+        at relative: String,
+        in root: URL,
+        modified: Date,
+        fileManager: FileManager
+    ) throws {
+        let url = root.appendingPathComponent(relative)
+        try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(text.utf8).write(to: url)
+        try fileManager.setAttributes([.modificationDate: modified], ofItemAtPath: url.path)
+    }
+
+    /// A pair built for a test, with the descriptive fields filled in so the
+    /// assertions can be about the comparison rather than about boilerplate.
+    private static func makePair(
+        label: String,
+        a: URL,
+        b: URL,
+        direction: ReconcileDirection = .aToB,
+        exclusions: [String] = [],
+        ignoredExtensions: [String] = [],
+        includedExtensions: [String] = [],
+        frozenSide: ReconcileSide? = nil
+    ) -> FolderPair {
+        FolderPair(
+            id: "test|\(label)",
+            label: label,
+            summary: "A pair made by the tests.",
+            sideAPath: a.path,
+            sideBPath: b.path,
+            sideAName: "Library",
+            sideBName: "Backup",
+            direction: direction,
+            exclusions: exclusions,
+            ignoredExtensions: ignoredExtensions,
+            includedExtensions: includedExtensions,
+            frozenSide: frozenSide,
+            isBuiltIn: false
+        )
+    }
+
+    private static func allFiles(under root: URL, fileManager: FileManager) -> [URL] {
+        guard let enumerator = fileManager.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: []
+        ) else { return [] }
+        return enumerator.compactMap { $0 as? URL }
+            .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true }
     }
 
     /// Counted rather than written down. A typed-in total drifts: this suite went
