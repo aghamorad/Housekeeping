@@ -22,13 +22,30 @@ class RuleEngine {
         let cwd = FileManager.default.currentDirectoryPath
         let cwdURL = URL(fileURLWithPath: cwd)
 
-        // 1. Bundle resources (for .app bundle)
+        // 1. Somewhere named on purpose.
+        //
+        // The command line runs this same engine, and a program calling it is
+        // allowed to say which rules it should be judged by — an app asking about
+        // its own folders wants its own answers, not the ones the shipped set
+        // happens to give. A path named in the environment is therefore taken
+        // before anything Housekeeping would have chosen for itself.
+        if let named = ProcessInfo.processInfo.environment["HOUSEKEEPING_RULES"], !named.isEmpty {
+            candidates.append(URL(fileURLWithPath: (named as NSString).expandingTildeInPath))
+        }
+
+        // 2. Bundle resources (for .app bundle)
         if let bundleURL = Bundle.main.resourceURL {
             candidates.append(bundleURL)
             candidates.append(bundleURL.appendingPathComponent("Rules"))
         }
 
-        // 2. Relative to executable: ../Resources/Rules
+        // 3. The reader's own copy, for a binary living somewhere else entirely.
+        candidates.append(
+            URL(fileURLWithPath: NSHomeDirectory())
+                .appendingPathComponent("Library/Application Support/Housekeeping/Rules")
+        )
+
+        // 4. Relative to executable: ../Resources/Rules
         if let execPath = ProcessInfo.processInfo.arguments.first {
             let execDir = URL(fileURLWithPath: execPath).deletingLastPathComponent()
             // From executable dir: up 1 = Contents, up 2 = .app root
@@ -46,14 +63,14 @@ class RuleEngine {
             candidates.append(projectResources)
         }
 
-        // 3. Relative to current working directory
+        // 5. Relative to current working directory
         candidates.append(cwdURL.appendingPathComponent("Housekeeping.app/Contents/Resources/Rules"))
         candidates.append(cwdURL.appendingPathComponent("Housekeeping/Resources/Rules"))
 
-        // 4. Home directory
+        // 6. Home directory
         candidates.append(cwdURL.parent().appendingPathComponent("Housekeeping/Resources/Rules"))
 
-        // 5. Direct paths
+        // 7. Direct paths
         candidates.append(URL(fileURLWithPath: "/Applications/Housekeeping.app/Contents/Resources/Rules"))
 
         for rulesDir in candidates {
@@ -63,22 +80,35 @@ class RuleEngine {
             let fileCount = (try? FileManager.default.contentsOfDirectory(at: rulesDir, includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "json" }.count ?? 0
             if fileCount > 0 {
                 loadRules(from: rulesDir)
-                print("⚙️ RuleEngine: loaded \(applications.count) rules from \(rulesDir.path)")
+                announce("⚙️ RuleEngine: loaded \(applications.count) rules from \(rulesDir.path)")
                 break
             }
         }
 
         if applications.isEmpty {
-            print("⚠️ RuleEngine: no JSON rule files found in any search location")
-            print("  Searched:")
+            announce("⚠️ RuleEngine: no JSON rule files found in any search location")
+            announce("  Searched:")
             for c in candidates {
                 let exists = FileManager.default.fileExists(atPath: c.path) ? "YES" : "no"
-                print("    - \(c.path) (\(exists))")
+                announce("    - \(c.path) (\(exists))")
             }
         }
 
         buildIndex()
-        print("⚙️ RuleEngine: \(applications.count) application rules loaded and indexed")
+        announce("⚙️ RuleEngine: \(applications.count) application rules loaded and indexed")
+    }
+
+    /// Loading rules says so out loud, on **stderr** and never on stdout.
+    ///
+    /// The command line prints its answer on stdout, and a program reading that
+    /// answer is entitled to expect nothing there but the answer — one emoji
+    /// banner in the middle of a JSON document is a parse failure at the far end,
+    /// blamed on the calling code rather than on this line. Diagnostics are still
+    /// said, because "which ruleset am I being judged by" is the first question
+    /// worth asking when a verdict looks wrong; they are just said on the channel
+    /// that means "not the answer".
+    private func announce(_ text: String) {
+        FileHandle.standardError.write(Data((text + "\n").utf8))
     }
 
     private func loadRules(from directory: URL) {

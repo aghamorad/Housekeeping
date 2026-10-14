@@ -130,7 +130,7 @@ struct CleanupSafetyPolicy {
         if isInsideGuardedUserPath(source) {
             return Assessment(
                 decision: .reviewOnly,
-                reason: "This is protected user data. It can enter reversible quarantine only after the additional typed confirmation."
+                reason: "This is protected user data of your own. It goes to Quarantine only after you type an extra confirmation, and Quarantine never deletes — it only moves, and you can put it back."
             )
         }
 
@@ -140,14 +140,14 @@ struct CleanupSafetyPolicy {
         if item.isUndeclared {
             return Assessment(
                 decision: .reviewOnly,
-                reason: "Housekeeping has nothing on file for this path; it was found by sweeping the folders where undeclared data collects. It can enter reversible quarantine only after the additional typed confirmation."
+                reason: "Housekeeping has no record of this path. It was found in a folder that belongs to no known app, so Housekeeping cannot say what is inside it. It goes to Quarantine only after you type an extra confirmation."
             )
         }
 
         guard item.category == .cache || item.category == .logs else {
             return Assessment(
                 decision: .reviewOnly,
-                reason: "This is not disposable cache or log data. It can enter reversible quarantine only after the additional typed confirmation."
+                reason: "This is not a cache or a log, so Housekeeping will not treat it as disposable. It goes to Quarantine only after you type an extra confirmation."
             )
         }
         guard item.safetyLevel == .safeToReplace || item.safetyLevel == .usuallySafe else {

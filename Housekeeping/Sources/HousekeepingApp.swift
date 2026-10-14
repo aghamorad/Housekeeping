@@ -1,8 +1,13 @@
 // Housekeeping - App Entry Point
+//
+// Not `@main`. The program starts in `main.swift`, which decides between the
+// window and the command line before either has begun — a decision that has to
+// be made before AppKit is up, and so cannot be made from inside the app itself.
+// `main.swift` calls `HousekeepingApp.main()` when there was nothing to do but
+// show a window, which is every launch but one.
 
 import SwiftUI
 
-@main
 struct HousekeepingApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
@@ -149,7 +154,7 @@ struct HousekeepingApp: App {
                 // Opens on whatever is picked out in the list, and introduces
                 // itself when nothing is. It is deliberately not gated on a scan
                 // having run: "what is this app" is a fair question at any moment.
-                Button("Ask the Housekeeper") {
+                Button("Talk to the Housekeeper") {
                     appState.showHousekeeper = true
                 }
                 .keyboardShortcut("k", modifiers: .command)

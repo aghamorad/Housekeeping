@@ -127,8 +127,16 @@ final class StatusItemController: NSObject {
     private func buildFrames() -> [NSImage] {
         (0..<Self.frameCount).map { index in
             let renderer = ImageRenderer(
-                content: OctopusMark(time: Double(index) * Self.frameInterval, color: .black)
-                    .frame(width: Self.markSize, height: Self.markSize)
+                content: OctopusMark(
+                    time: Double(index) * Self.frameInterval,
+                    color: .black,
+                    // The menu bar gets a template image — one tint, decided by
+                    // whether the bar is light or dark. Anything drawn in a second
+                    // colour would come out as the first, so she is handed over as
+                    // a cut-paper silhouette instead.
+                    rendering: .singleColour
+                )
+                .frame(width: Self.markSize, height: Self.markSize)
             )
             // Two, so the mark is sharp on every Mac this app runs on. The renderer
             // carries the scale; the status item picks the right representation.
@@ -154,7 +162,7 @@ final class StatusItemController: NSObject {
         let menu = NSMenu()
 
         menu.addItem(entry("Open Housekeeping", #selector(openMainWindow)))
-        menu.addItem(entry("Ask the Housekeeper", #selector(askTheHousekeeper)))
+        menu.addItem(entry("Talk to the Housekeeper", #selector(askTheHousekeeper)))
         menu.addItem(.separator())
         menu.addItem(entry("Scan My Mac", #selector(scanNow)))
         menu.addItem(.separator())

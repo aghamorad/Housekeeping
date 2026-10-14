@@ -1,3 +1,40 @@
+# Housekeeping 0.13.0
+
+Housekeeping gets a face, a way to update itself, and a command line other apps can call. The engine
+underneath is the one that has been reading disks since the first release; what changed is how much of
+it a reader can see, and how little of it now has to be reached through the window.
+
+- **She is drawn, not pasted.** The housekeeper — the octopus — is the app's mark, and she is built
+  from paths rather than shipped as a picture. That is what lets her stay sharp at eighteen points in
+  the menu bar and at a hundred and four on the sweep screen from one set of coordinates, and it is
+  what lets her move: she breathes, her hands swing while she is working, and her eyes follow the room.
+  When she is not working she settles to a slow breath rather than stopping, because a mark that has
+  gone still reads as a window that has stopped. The one place she is not drawn is the app icon, which
+  has to survive being shrunk by the Dock and rendered on a plinth by a system that is not asked first.
+- **The navigation is a rail, not a row of tabs.** The sections sit down the left as coloured discs set
+  into sockets, each with its own colour and depth, each arriving as the window opens. A flat row of
+  words asks a reader to read; a rail of shapes is scanned once and then known, and the shape is
+  remembered before the word is. The section a reader is in is the one lit up, so the rail also answers
+  where they are without a title repeating it.
+- **The update check reads commits, not release pages.** Housekeeping updates itself from the folder it
+  was built from: it asks GitHub how far behind the local copy is, fast-forwards the tree, builds a new
+  copy beside the old one, verifies it, and only then hands over — so a failed build never replaces a
+  working app. Releases are published by hand and lag behind `main`, which is why the check compares
+  commits: a reader running the newest code would otherwise be told there was nothing new. It refuses
+  to update over changes that are not committed rather than reconciling two histories, it never
+  downloads a build, and it says which of those two it hit.
+- **A command line.** `housekeeping` reads the same disk the window reads and prints in one line what
+  the window shows in a panel — `scan`, `explain`, `where`, `quarantine list` and `quarantine restore`,
+  plus `version` and `help`. It exists so other tools can ask what is taking space without a window
+  having to open, and it is deliberately the same engine: nothing the command line can do is something
+  the window cannot, and nothing it does moves a file without being told to.
+- **The copy was rewritten for someone who does not already know the words.** "Also measure folders
+  that belong to no known app" replaced a line about unclaimed paths; the door to the question box is
+  called "Talk to the Housekeeper" instead of "Ask about this". The app knows what sixteen apps and
+  tools keep their files, and it now says it in those words. Where a thing cannot be explained in
+  plain words — what is inside a folder nobody claims — it says what it does not know instead of
+  sounding as if it does.
+
 # Housekeeping 0.12.0
 
 Housekeeping can now test the routes a VPN client offers and say which of them actually carry traffic.

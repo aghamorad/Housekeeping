@@ -26,10 +26,12 @@ fi
 # build failure at packaging time rather than at commit time — which is exactly
 # how ProtectionList.swift went missing from this script.
 SOURCES=(
+  "$ROOT_DIR/Housekeeping/Sources/main.swift"
   "$ROOT_DIR/Housekeeping/Sources/AppDelegate.swift"
   "$ROOT_DIR/Housekeeping/Sources/AppState.swift"
   "$ROOT_DIR/Housekeeping/Sources/HousekeepingApp.swift"
   "$ROOT_DIR"/Housekeeping/Sources/Core/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/CLI/*.swift
   "$ROOT_DIR/Housekeeping/Sources/Scanner/ScanModels.swift"
   "$ROOT_DIR/Housekeeping/Sources/Scanner/BoundedScanner.swift"
   "$ROOT_DIR/Housekeeping/Sources/Scanner/OfficeAddInAudit.swift"
@@ -41,6 +43,7 @@ SOURCES=(
   "$ROOT_DIR"/Housekeeping/Sources/Disk/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Reconcile/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/SelfUpdate/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Environment/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift
@@ -99,6 +102,24 @@ stage() {
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/Rules"
   cp "$binary" "$app/Contents/MacOS/$APP_NAME"
   cp "$ROOT_DIR/Housekeeping/Info.plist" "$app/Contents/Info.plist"
+
+  # The staged copy records the commit it was built from, so the app can ask a
+  # newer copy of itself to do the same and compare the two. Stamped into the
+  # copy, never into the source Info.plist: that file is tracked, and a build
+  # that rewrote it would leave every source folder permanently dirty — which is
+  # precisely the condition the self-update refuses to run in.
+  local plist="$app/Contents/Info.plist"
+  local commit branch built
+  commit="$(/usr/bin/git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || true)"
+  branch="$(/usr/bin/git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  built="$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
+  for pair in "HousekeepingSourceCommit:$commit" "HousekeepingSourceBranch:$branch" "HousekeepingBuildDate:$built"; do
+    key="${pair%%:*}"
+    value="${pair#*:}"
+    [[ -n "$value" ]] || continue
+    /usr/libexec/PlistBuddy -c "Delete :$key" "$plist" >/dev/null 2>&1 || true
+    /usr/libexec/PlistBuddy -c "Add :$key string $value" "$plist"
+  done
   cp "$ROOT_DIR/Housekeeping/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
   ditto "$ROOT_DIR/Housekeeping/Resources/Rules" "$app/Contents/Resources/Rules"
 
