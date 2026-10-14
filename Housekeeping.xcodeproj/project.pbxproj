@@ -76,6 +76,15 @@
 		A1000078 /* OctopusMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000078; };
 		A1000079 /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000079; };
 		A1000080 /* SweepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000080; };
+		A1000081 /* RouteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000081; };
+		A1000082 /* RouteProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000082; };
+		A1000083 /* RouteProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000083; };
+		A1000084 /* RouteProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000084; };
+		A1000085 /* RouteEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000085; };
+		A1000086 /* RouteLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000086; };
+		A1000087 /* RoutesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000087; };
+		A1000088 /* RoutesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000088; };
+		A1000089 /* locations.json in Resources */ = {isa = PBXBuildFile; fileRef = A2000089; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -148,6 +157,15 @@
 		A2000078 /* OctopusMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/OctopusMark.swift; sourceTree = "<group>"; };
 		A2000079 /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/StatusItemController.swift; sourceTree = "<group>"; };
 		A2000080 /* SweepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/SweepView.swift; sourceTree = "<group>"; };
+		A2000081 /* RouteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteModels.swift; sourceTree = "<group>"; };
+		A2000082 /* RouteProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteProviders.swift; sourceTree = "<group>"; };
+		A2000083 /* RouteProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteProbes.swift; sourceTree = "<group>"; };
+		A2000084 /* RouteProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteProcess.swift; sourceTree = "<group>"; };
+		A2000085 /* RouteEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteEngine.swift; sourceTree = "<group>"; };
+		A2000086 /* RouteLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteLog.swift; sourceTree = "<group>"; };
+		A2000087 /* RoutesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RoutesModel.swift; sourceTree = "<group>"; };
+		A2000088 /* RoutesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/RoutesView.swift; sourceTree = "<group>"; };
+		A2000089 /* locations.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/locations.json; sourceTree = "<group>"; };
 		A3000001 /* Housekeeping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housekeeping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -244,6 +262,15 @@
 				A2000078,
 				A2000079,
 				A2000080,
+				A2000081,
+				A2000082,
+				A2000083,
+				A2000084,
+				A2000085,
+				A2000086,
+				A2000087,
+				A2000088,
+				A2000089,
 			);
 			path = Housekeeping;
 			sourceTree = "<group>";
@@ -354,6 +381,14 @@
 				A1000078,
 				A1000079,
 				A1000080,
+				A1000081,
+				A1000082,
+				A1000083,
+				A1000084,
+				A1000085,
+				A1000086,
+				A1000087,
+				A1000088,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -378,6 +413,7 @@
 				A1000042,
 				A1000043,
 				A1000028,
+				A1000089,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

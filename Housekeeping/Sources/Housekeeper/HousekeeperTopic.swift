@@ -100,6 +100,56 @@ struct HousekeeperTopic: Identifiable, Equatable {
     }
 }
 
+extension HousekeeperTopic {
+
+    /// The Routes screen's subject.
+    ///
+    /// Routes is the one screen here that changes the state of the machine while
+    /// it is open: it connects and disconnects a VPN client over and over to see
+    /// which of its routes actually carries traffic. So the facts lead with what
+    /// it does to the connection rather than with what it measures — a reader who
+    /// watches their connection drop and come back needs to be told that this is
+    /// the test working, not something going wrong. The last fact is about what
+    /// is left behind, because on this screen the answer is that almost nothing
+    /// is: a file, and only when asked.
+    ///
+    /// The counts are handed in rather than read from a model, so this file stays
+    /// data and the screen stays the one that knows how far along it is.
+    static func routes(
+        provider: String,
+        running: Bool,
+        tested: Int,
+        total: Int,
+        reachable: Int
+    ) -> HousekeeperTopic {
+        var facts: [String] = [
+            "This screen tries the servers, protocols and ports a VPN client offers, one route at a time, and measures how well each one carries traffic.",
+            "The interesting choice is usually the protocol and the port, which most clients make silently and never show. This screen tries the combinations instead of trusting the default.",
+            "Trying one route at a time means the connection drops and comes back repeatedly while it runs. That is the test working, not a fault, and the client is left disconnected when it ends.",
+            "It changes nothing else on the machine. It connects and disconnects the client and takes measurements. The one thing it can leave behind is a markdown log, and only if the reader turned that on.",
+        ]
+
+        if running {
+            facts.append("A run is in progress against \(provider): \(tested) of \(total) routes tried so far, and \(reachable) of them carried traffic.")
+        } else if tested > 0 {
+            facts.append("The last run against \(provider) tried \(tested) routes, and \(reachable) of them carried traffic.")
+        } else {
+            facts.append("Nothing has been tried yet this visit. The client in use is \(provider).")
+        }
+
+        return HousekeeperTopic(
+            id: running ? "routes-running" : "routes",
+            title: running ? "The route test, running" : "Trying routes",
+            label: running ? "\(tested) of \(total)" : nil,
+            tone: .plain,
+            facts: facts,
+            opener: running
+                ? "What is it doing to my connection right now, and will it leave the VPN on a server I did not pick?"
+                : "What does this screen do, and what does it change on my Mac?"
+        )
+    }
+}
+
 /// The one button every screen in Housekeeping uses to reach the housekeeper.
 ///
 /// It exists rather than each screen setting the two properties itself because

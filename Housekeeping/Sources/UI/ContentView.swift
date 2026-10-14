@@ -18,12 +18,16 @@ struct ContentView: View {
         Screen()
             .environment(\.uiStyle, style)
             .housekeepingSurface(style)
-            // 1100 rather than the 1040 this window used to open at: the job bar
-            // is the width of the window at its narrowest, and eight labelled
-            // buttons crowded into 1040 would either wrap or start truncating
-            // their own names — which is the opposite of the point of putting
-            // them there.
-            .frame(minWidth: 1100, minHeight: 680)
+            // The job bar is the width of the window at its narrowest, so this
+            // number is set by it and not by the content below. It has been
+            // raised twice now — 1040, then 1100, now here — and both times
+            // because a button was added rather than because the readings
+            // needed the room. Widening is the right answer over the two
+            // alternatives: a horizontal scroller would hide whole buttons off
+            // the end with nothing on screen to say so, and shortening the
+            // labels to fit — "Updates", "Setup" — would take away the one
+            // thing the bar is for, which is naming each job in full.
+            .frame(minWidth: 1420, minHeight: 680)
             // Each sheet is given the appearance explicitly. A sheet is presented
             // in its own window, and one attached here — outside the
             // `.environment(\.uiStyle, …)` call above — does not inherit it: the
@@ -104,6 +108,18 @@ struct ContentView: View {
             // the whole of what it explains.
             .sheet(isPresented: $appState.showHousekeeper) {
                 HousekeeperView()
+                    .environment(\.uiStyle, style)
+                    .environmentObject(appState)
+                    .housekeepingSurface(style)
+            }
+            // The one sheet that goes out to the network rather than the disk,
+            // and the only one that drives its own model. Keeping the run, its
+            // settings and its results out of `AppState` is what stops a route
+            // test from disturbing the scan, the disk measurements or the
+            // quarantine — the run keeps going while it has anything left to
+            // try, and it puts the machine back to disconnected when it stops.
+            .sheet(isPresented: $appState.showRoutes) {
+                RoutesView()
                     .environment(\.uiStyle, style)
                     .environmentObject(appState)
                     .housekeepingSurface(style)
@@ -249,14 +265,16 @@ struct ScreenChrome<Content: View>: View {
 /// hidden. The bar hangs off `ScreenChrome`, so every screen carries it in both
 /// appearances, and no appearance can quietly lose a button the other has.
 ///
-/// The row is three zones, and the zones are the point — a run of seven buttons
-/// with no shape to it is a list to be read, while two of these are the same kind
+/// The row is four zones, and the zones are the point — a flat run of buttons
+/// with no shape to it is a list to be read, while each of these is the same kind
 /// of thing. On the left, what looks at the Mac and changes nothing: the sweep
 /// first, because it is every reading at once, then the same readings one at a
-/// time. In the middle, behind the rule, the two drawers holding what
-/// Housekeeping has already done to the Mac. On the right, apart from both,
-/// the two things that are about the app itself rather than the Mac: its
-/// settings, and the housekeeper you can ask.
+/// time. Behind the first rule, the one job that is about the network rather than
+/// the disk, and the only button here that changes the machine while it works.
+/// Behind the second rule, the two drawers holding what Housekeeping has already
+/// done to the Mac. On the right, apart from all of it, the two things that are
+/// about the app itself rather than the Mac: its settings, and the housekeeper
+/// you can ask.
 ///
 /// Quiet by construction: secondary buttons, never the default action, so
 /// nothing here can be hit by pressing Return on a screen that was asking
@@ -268,6 +286,10 @@ private struct JobBar: View {
     var body: some View {
         HStack(spacing: 8) {
             readingJobs
+
+            rule
+
+            routesJobs
 
             rule
 
@@ -348,6 +370,23 @@ private struct JobBar: View {
             ) {
                 appState.showUpdateList = true
             }
+        }
+    }
+
+    /// The one job on the bar that is about the network rather than the disk.
+    ///
+    /// It sits in its own zone because it belongs to neither of the other two:
+    /// it is not a reading, since it changes the state of the machine, and it is
+    /// not a drawer of things already done, since nothing is kept. What it does
+    /// leave behind is a decision — which route to use from now on — and that is
+    /// the reason the warning in its help text is not a formality.
+    private var routesJobs: some View {
+        ThemeButton(
+            title: "Test Routes",
+            systemImage: "network",
+            help: "Try each server, protocol and port your VPN client offers, one at a time, and see which of them actually carry traffic. The client's own window lists the servers but says nothing about which of their settings this line will carry. Your connection will drop and come back over and over while it runs — that is the test working, not a fault — and it leaves the VPN disconnected when it finishes, never on a server you did not choose."
+        ) {
+            appState.showRoutes = true
         }
     }
 

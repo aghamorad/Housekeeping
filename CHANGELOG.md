@@ -1,3 +1,41 @@
+# Housekeeping 0.12.0
+
+Housekeeping can now test the routes a VPN client offers and say which of them actually carry traffic.
+It is the first part of the app that is about the network rather than the disk, and the first that
+changes the state of the machine while it is open.
+
+- **One server, one setting, one at a time.** A VPN client holds a single tunnel, so a route can only be
+  tried alone: connect, measure, disconnect, next. That is the whole design, and it is also the reason
+  the screen warns before it starts rather than after — for the length of a run the connection drops and
+  comes back over and over. That is the test working, not a fault.
+- **What it measures.** Time to connect, round-trip time, jitter, packet loss, and — on the deeper
+  passes — a real page fetched through the tunnel. A route that connects but returns nothing is failed,
+  not merely slow, which is the failure a ping alone cannot see. Before any of it, it measures the same
+  things with the VPN off, so every result has something to be compared against, and each route is
+  sorted into Excellent, Good, Usable, Poor or Failed.
+- **Servers, protocols and ports are all tried.** A client's own window lists its servers but says
+  nothing about which of their settings this line will carry, and the answer is rarely the same for all
+  of them. Windscribe and ExpressVPN are read directly from their command-line tools, each with the
+  protocols and ports that provider actually offers — ExpressVPN has no port axis, so it is not asked
+  for one.
+- **Two ways in, one engine underneath.** Simple asks which countries to cover, offers three depths —
+  Quick for a first look, Thorough for every datacenter over both TCP and UDP, Careful for the real page
+  load that catches a route which connects but carries nothing — and explains the result in plain words.
+  Advanced exposes every control, including the timeouts and the probes. Both drive the same run, so
+  there is one behaviour with two doors.
+- **It leaves the machine disconnected.** Always, including when stopped early. It never connects to a
+  server that was not on the list it was given, and it never leaves the tunnel up on the last one it
+  tried as a convenience. A run in progress also holds the sheet open, because a test that vanished
+  behind a stray Escape would take its result — and its Stop button — with it.
+- **A client it cannot drive is said so, not worked around.** If the command-line tool is missing or not
+  signed in, the screen says that and offers nothing else. Anything the provider needs fixed first — a
+  daemon that is not running, for instance — is shown as an advisory to act on, never repaired on your
+  behalf.
+- **A log, if you want one.** At the end of a run it asks whether to keep a record, and if you say yes it
+  appends a section to `~/Documents/Housekeeping/route-log.md`: the date and time, the provider, and
+  which country, city, protocol and port carried traffic and which did not. One file rather than one per
+  run, so a month of results can be read in a single place. The question is asked, never assumed.
+
 # Housekeeping 0.11.0
 
 Housekeeping can now hold two folders that are supposed to be the same thing up against each other — a
