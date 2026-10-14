@@ -26,14 +26,14 @@ struct SettingsView: View {
             }
 
             Section("Scanning") {
-                Toggle("Also measure folders Housekeeping can't name", isOn: Binding(
+                Toggle("Also measure folders that belong to no known app", isOn: Binding(
                     get: { appState.deepSweep },
                     set: { appState.setDeepSweep($0) }
                 ))
 
                 Text(appState.deepSweep
-                     ? "The deep sweep is on. It measures the folders where undeclared data collects — usually where the larger wins are, since nothing else reports them. It adds up to a minute to a scan, and anything it finds can only be cleaned after an extra typed confirmation."
-                     : "The deep sweep is off. Housekeeping will only report what its list of \(RuleEngine.shared.applications.count) known applications and tools covers, so anything not on that list goes unmeasured.")
+                     ? "This is on. Housekeeping measures the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows, and the folders that belong to none of them as well — often where the space is, since nothing else reports it. It adds up to a minute to a scan, and what it finds is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside."
+                     : "This is off. Housekeeping measures only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows, so a scan stays quick — and any space held by folders it does not recognise will not appear in the results.")
                     .font(.callout)
                     .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -133,19 +133,37 @@ struct SettingsView: View {
     /// Four states, said four ways. "Could not check" is not "up to date", and a
     /// row that claimed the second while holding the first would be telling
     /// someone on an old copy to sit still.
+    ///
+    /// The button opens the update screen rather than starting anything. This
+    /// window is not where a reader would expect their app to be replaced, and the
+    /// screen says what replacing it involves before it offers to.
     @ViewBuilder
     private var updateRow: some View {
-        switch appState.updateStatus {
-        case .checking:
-            LabeledContent("Newer release", value: "Checking…")
-        case .current:
-            LabeledContent("Newer release", value: "None — this is the newest")
-        case .newer(let available):
-            LabeledContent("Newer release") {
-                Link("Get \(available)", destination: AppState.releasesURL)
+        switch appState.selfUpdateState {
+        case .idle, .checking:
+            LabeledContent("Source", value: "Asking the repository…")
+
+        case .upToDate(let report):
+            LabeledContent("Source") {
+                Text(SelfUpdateView.behindSentence(report))
             }
-        case .unknown:
-            LabeledContent("Newer release", value: "Could not check")
+
+        case .available(let report):
+            LabeledContent("Source") {
+                Button {
+                    WindowOpener.shared.withWindow { appState.showSelfUpdate = true }
+                } label: {
+                    Text(SelfUpdateView.behindSentence(report))
+                }
+                .buttonStyle(.link)
+            }
+
+        case .unknown(let reason, _):
+            LabeledContent("Source") {
+                Text(reason)
+                    .multilineTextAlignment(.trailing)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -168,8 +186,8 @@ struct SettingsView: View {
         facts.append("These are Housekeeping's own settings. Nothing on this screen cleans anything or changes anything on disk; every switch here changes how Housekeeping behaves and nothing else.")
         facts.append("Theme: \(appState.currentTheme.displayName). \(themeDescription)")
         facts.append(appState.deepSweep
-                     ? "The deep sweep is on, so Housekeeping also measures the folders where undeclared data collects. That adds up to a minute to a scan, and anything found that way needs an extra typed confirmation before it can be cleaned."
-                     : "The deep sweep is off, so Housekeeping only reports what its list of \(RuleEngine.shared.applications.count) known applications and tools covers.")
+                     ? "It is also measuring the folders that belong to no known app, not just the \(RuleEngine.shared.applications.count) apps and tools it knows. That is where the space usually is, and it is why a scan takes up to a minute longer. Anything found that way is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside."
+                     : "It is measuring only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows. Folders belonging to anything else are left alone, so a scan stays quick and any space they hold does not appear in the results.")
         facts.append("The safety promises are: Housekeeping never ticks anything on the reader's behalf; cleaning moves items into Quarantine and deletes nothing, and everything moved can be put back; and anything it cannot prove is replaceable is shown but locked, with the reason stated.")
         facts.append("Quarantine is at \(CleanupEngine().quarantineURL.path), a normal folder in plain sight at the top of the home folder\(CleanupEngine().quarantineExists ? "" : " — it does not exist yet because nothing has been quarantined, and it is created the first time something is")")
         if appState.updateExceptionEntries.isEmpty {
@@ -196,9 +214,9 @@ struct SettingsView: View {
     private var themeDescription: String {
         switch appState.currentTheme {
         case .classic9:
-            return "Mac OS 9 / Platinum is the original retro interface: monospaced type, drawn buttons, light appearance. Every screen and button in Housekeeping is identical to the other theme — only the look changes."
+            return "Mac OS 9 is the original look: monospaced type, drawn buttons, a light background. Both themes run the same screens, so nothing changes but the appearance — except for where the jobs are. Here they run across the top of the window."
         case .liquidGlass:
-            return "Liquid Glass uses native macOS navigation, materials, and controls, with real Liquid Glass surfaces on macOS 26 and later. Every screen and button in Housekeeping is identical to the other theme — only the look changes."
+            return "Liquid Glass uses the Mac's own modern materials and controls. Both themes run the same screens, so nothing changes but the appearance — except for where the jobs are. Here they run down the left side as a column of coloured buttons."
         }
     }
 }

@@ -69,8 +69,8 @@ final class Scanner {
         let rootTargets = buildTargets(installedApplicationNames: installedApplicationNames)
         let targets = dedupeInventory(expandInventoryTargets(rootTargets))
         progressHandler(.phase(deepSweep
-            ? "Auditing \(targets.count) storage locations, including undeclared ones..."
-            : "Auditing \(targets.count) known storage locations..."))
+            ? "Measuring \(targets.count) storage locations, including folders that belong to no known app..."
+            : "Measuring \(targets.count) storage locations Housekeeping knows..."))
 
         var undeclaredCount = 0
         var undeclaredSize: Int64 = 0
@@ -115,13 +115,13 @@ final class Scanner {
             scanNotes.append(.init(
                 phase: "Sweep",
                 message: undeclaredCount == 0
-                    ? "No undeclared folder over \(Self.minimumUndeclaredSize.humanReadable) was found outside the rule database."
-                    : "Found \(undeclaredCount) folders totaling \(undeclaredSize.humanReadable) that Housekeeping has nothing on file for."
+                    ? "No folder over \(Self.minimumUndeclaredSize.humanReadable) was found that belongs to no known app."
+                    : "Found \(undeclaredCount) folders totalling \(undeclaredSize.humanReadable) that belong to no known app."
             ))
             if suppressedCount > 0 {
                 scanNotes.append(.init(
                     phase: "Sweep",
-                    message: "\(suppressedCount) undeclared folders under \(Self.minimumUndeclaredSize.humanReadable) (\(suppressedSize.humanReadable) combined) were measured but left out of the list to keep it readable."
+                    message: "\(suppressedCount) smaller folders (\(suppressedSize.humanReadable) combined) were measured but left off the list to keep it readable. Each one is under \(Self.minimumUndeclaredSize.humanReadable)."
                 ))
             }
         }

@@ -104,10 +104,27 @@ final class AppState: ObservableObject {
     /// appears and clears the slot, so a topic cannot outlive the visit that
     /// created it.
     @Published var housekeeperTopic: HousekeeperTopic?
-    /// What GitHub says about this copy's age, once it has been asked. Starts as
-    /// `.checking` rather than "nothing newer" so the screen can tell an answer
-    /// that has not arrived from an answer that says this is the newest release.
-    @Published private(set) var updateStatus: UpdateStatus = .checking
+    // MARK: - Is a newer Housekeeping out
+
+    /// Whether the sheet that checks this copy's own age is open.
+    @Published var showSelfUpdate = false
+    /// What the last check found. Starts `.idle` rather than `.checking`: nothing
+    /// has been asked yet, and a screen that showed a spinner before the question
+    /// was put would be animating a lie.
+    @Published private(set) var selfUpdateState: SelfUpdateState = .idle
+    /// The folder this copy was built from, once one has been found or chosen.
+    /// `nil` is a real answer — the app may have been built on another machine —
+    /// and the sheet says so rather than offering a button that would fail.
+    @Published var selfUpdateSource: SelfUpdateSource?
+    /// One entry per step while an update runs, so a failure can say exactly how
+    /// far it got rather than only that it stopped.
+    @Published private(set) var selfUpdateSteps: [SelfUpdateStep: SelfUpdateStepState] = [:]
+    @Published private(set) var selfUpdateIsRunning = false
+    /// Set once the new copy is built, signed, and the swap has been handed to a
+    /// helper. The app still has to quit for that helper to run, which is the
+    /// only thing left and belongs to the screen.
+    @Published private(set) var selfUpdateIsHandedOff = false
+    @Published private(set) var selfUpdateFailure: SelfUpdateFailure?
 
     // MARK: - Updating the applications
 
@@ -304,11 +321,10 @@ final class AppState: ObservableObject {
 
     // MARK: - Is a newer Housekeeping out?
 
-    /// Where a reader of an older copy is sent: the newest release, whatever it
-    /// turns out to be. Read here and by the two screens that mention it.
-    static let releasesURL = URL(string: "https://github.com/aghamorad/Housekeeping/releases/latest")!
-
-    private static let updateFeed = URL(string: "https://api.github.com/repos/aghamorad/Housekeeping/releases/latest")!
+    /// Where a reader of a copy that cannot update itself is sent: the repository
+    /// itself. Not the release page, which is the address this used to hand out
+    /// and which lags far enough behind `main` to be misleading.
+    static let repositoryURL = SelfUpdateChecker.repositoryURL
 
     /// The version this copy was built from. Read from the bundle rather than
     /// written here, because this number, the one in Settings, and Info.plist all
@@ -317,65 +333,82 @@ final class AppState: ObservableObject {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 
-    /// What the one question to GitHub came back with.
-    enum UpdateStatus: Equatable {
-        /// Asked, not answered yet.
-        case checking
-        /// Answered: this is the newest release.
-        case current
-        /// Answered: a newer release exists. Carries its number.
-        case newer(String)
-        /// Not answered — offline, throttled, behind a proxy that eats it, or
-        /// rate-limited on a shared address. Deliberately not `current`: a screen
-        /// that said "up to date" here would be asserting something it was never
-        /// told, and wrong in the direction that leaves a reader on an old copy.
-        case unknown
-    }
+    /// Which commit this copy was built from, read once at launch. Absent on a
+    /// copy built by Xcode rather than by the release script, and the sheet says
+    /// so instead of guessing a version-to-commit mapping that does not exist.
+    let selfUpdateProvenance = BuildProvenance.current()
 
     /// Asks GitHub once, in the background, after the window is already drawn.
-    /// Nothing is downloaded and nothing is installed — the answer only decides
-    /// whether the footer and the About section mention that a newer cut exists.
-    /// Safe to call from more than one place; only the first call reaches the network.
-    func startUpdateCheck() async {
+    /// Nothing is downloaded and nothing is installed here — the answer only
+    /// decides whether the footer mentions that a newer commit exists. Safe to
+    /// call from more than one place; only the first call reaches the network.
+    func startSelfUpdateCheck() async {
         guard !updateCheckStarted else { return }
         updateCheckStarted = true
-
-        let mine = AppState.currentVersion
-        guard !mine.isEmpty else {
-            updateStatus = .unknown
-            return
-        }
-
-        var request = URLRequest(url: AppState.updateFeed)
-        // GitHub answers 403 to a request that carries no User-Agent at all.
-        request.setValue("Housekeeping", forHTTPHeaderField: "User-Agent")
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        // Long enough for a slow link, short enough that a dead one is not noticed.
-        request.timeoutInterval = 9
-        // A cached answer is the one thing that could make this say the wrong thing.
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                updateStatus = .unknown
-                return
-            }
-            let release = try JSONDecoder().decode(LatestRelease.self, from: data)
-            let latest = AppState.normalize(release.tagName)
-            updateStatus = AppState.isNewer(latest, than: mine) ? .newer(latest) : .current
-        } catch {
-            // Offline, blocked, throttled, or a body that is not JSON. All the same
-            // answer, and never `current` — see `UpdateStatus.unknown`.
-            updateStatus = .unknown
-        }
+        await refreshSelfUpdate()
     }
 
-    private struct LatestRelease: Decodable {
-        let tagName: String
+    /// Asks again on purpose, which is what the sheet's own Check button does.
+    /// Unlike the launch check this one always reaches the network, because a
+    /// person who pressed a button is asking a question and deserves a live
+    /// answer rather than the one from this morning.
+    func refreshSelfUpdate() async {
+        if selfUpdateSource == nil {
+            selfUpdateSource = SourceTreeLocator.locate()
+        }
+        selfUpdateFailure = nil
+        selfUpdateState = .checking
+        selfUpdateState = await SelfUpdateChecker().check(provenance: selfUpdateProvenance)
+    }
 
-        enum CodingKeys: String, CodingKey {
-            case tagName = "tag_name"
+    /// Records a folder the reader chose by hand, so the next launch does not
+    /// have to ask and the next check does not have to guess.
+    func adoptSelfUpdateSource(_ tree: URL) {
+        SourceTreeLocator.remember(tree)
+        selfUpdateSource = SelfUpdateSource(
+            tree: tree,
+            remoteMatches: SourceTreeLocator.remoteMatches(tree),
+            destination: Bundle.main.bundleURL
+        )
+        Task { await refreshSelfUpdate() }
+    }
+
+    /// Runs the update the sheet has just described, step by step.
+    ///
+    /// The plan shown to the reader and the plan executed here are the same
+    /// values, deliberately: a screen that described one thing and ran another
+    /// would be worse than no screen at all on the one action that replaces the
+    /// app you are looking at.
+    func runSelfUpdate() async {
+        guard !selfUpdateIsRunning,
+              let source = selfUpdateSource,
+              case .available(let report) = selfUpdateState else { return }
+
+        let plan = SelfUpdateEngine.Plan(
+            source: source,
+            behindBy: report.behindBy,
+            remoteCommit: report.remoteCommit,
+            version: selfUpdateProvenance.version
+        )
+
+        selfUpdateIsRunning = true
+        selfUpdateIsHandedOff = false
+        selfUpdateFailure = nil
+        selfUpdateSteps = Dictionary(uniqueKeysWithValues: SelfUpdateStep.allCases.map { ($0, .pending) })
+
+        do {
+            _ = try await SelfUpdateEngine().perform(plan: plan) { [weak self] step, state in
+                self?.selfUpdateSteps[step] = state
+            }
+            // The swap is written and the helper is running. All that is left is
+            // for this process to end, which the screen does after saying so.
+            selfUpdateIsHandedOff = true
+        } catch let failure as SelfUpdateFailure {
+            selfUpdateFailure = failure
+            selfUpdateIsRunning = false
+        } catch {
+            selfUpdateFailure = .cancelled
+            selfUpdateIsRunning = false
         }
     }
 

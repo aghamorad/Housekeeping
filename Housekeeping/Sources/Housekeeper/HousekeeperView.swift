@@ -277,7 +277,7 @@ struct HousekeeperView: View {
                 // when it is asked about something it cannot see.
                 if !hasGrounding {
                     note(
-                        "Housekeeping has not found anything yet, so there is nothing in front of me. Ask anyway — but if your question is about a particular folder, point it out on screen with Ask About This, so that I can actually see it.",
+                        "Housekeeping has not found anything yet, so there is nothing in front of me. Ask anyway — but if your question is about a particular folder, point it out on screen with Talk to the Housekeeper, so that I can actually see it.",
                         colour: style.secondaryText
                     )
                 }
@@ -387,7 +387,7 @@ struct HousekeeperView: View {
         // folder, or a screen's own topic — read the same to the reader, because
         // from the reader's side they are the same situation.
         housekeeper.subject == nil && housekeeper.topic == nil
-            ? "Ask the Housekeeper…"
+            ? "Talk to the Housekeeper…"
             : "Ask about this…"
     }
 

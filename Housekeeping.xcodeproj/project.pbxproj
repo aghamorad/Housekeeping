@@ -85,6 +85,14 @@
 		A1000087 /* RoutesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000087; };
 		A1000088 /* RoutesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000088; };
 		A1000089 /* locations.json in Resources */ = {isa = PBXBuildFile; fileRef = A2000089; };
+		A1000096 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000096; };
+		A1000097 /* HousekeepingCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000097; };
+		A1000090 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000090; };
+		A1000091 /* ModernChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000091; };
+		A1000092 /* SelfUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000092; };
+		A1000093 /* SelfUpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000093; };
+		A1000094 /* SelfUpdateCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000094; };
+		A1000095 /* SelfUpdateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000095; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -166,6 +174,14 @@
 		A2000087 /* RoutesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RoutesModel.swift; sourceTree = "<group>"; };
 		A2000088 /* RoutesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/RoutesView.swift; sourceTree = "<group>"; };
 		A2000089 /* locations.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/locations.json; sourceTree = "<group>"; };
+		A2000090 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/Motion.swift; sourceTree = "<group>"; };
+		A2000091 /* ModernChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/ModernChrome.swift; sourceTree = "<group>"; };
+		A2000092 /* SelfUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/SelfUpdateView.swift; sourceTree = "<group>"; };
+		A2000093 /* SelfUpdateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/SelfUpdate/SelfUpdateModels.swift; sourceTree = "<group>"; };
+		A2000094 /* SelfUpdateCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/SelfUpdate/SelfUpdateCheck.swift; sourceTree = "<group>"; };
+		A2000095 /* SelfUpdateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/SelfUpdate/SelfUpdateEngine.swift; sourceTree = "<group>"; };
+		A2000096 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/main.swift; sourceTree = "<group>"; };
+		A2000097 /* HousekeepingCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/CLI/HousekeepingCLI.swift; sourceTree = "<group>"; };
 		A3000001 /* Housekeeping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housekeeping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -271,6 +287,14 @@
 				A2000087,
 				A2000088,
 				A2000089,
+				A2000090,
+				A2000091,
+				A2000092,
+				A2000093,
+				A2000094,
+				A2000095,
+				A2000096,
+				A2000097,
 			);
 			path = Housekeeping;
 			sourceTree = "<group>";
@@ -389,6 +413,14 @@
 				A1000086,
 				A1000087,
 				A1000088,
+				A1000090,
+				A1000091,
+				A1000092,
+				A1000093,
+				A1000094,
+				A1000095,
+				A1000096,
+				A1000097,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

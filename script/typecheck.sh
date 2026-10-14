@@ -27,10 +27,12 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   -sdk "$SDK" \
   -target arm64-apple-macosx13.0 \
   -module-cache-path "$BUILD_DIR/ModuleCache" \
+  "$ROOT_DIR/Housekeeping/Sources/main.swift" \
   "$ROOT_DIR/Housekeeping/Sources/AppDelegate.swift" \
   "$ROOT_DIR/Housekeeping/Sources/AppState.swift" \
   "$ROOT_DIR/Housekeeping/Sources/HousekeepingApp.swift" \
   "$ROOT_DIR"/Housekeeping/Sources/Core/*.swift \
+  "$ROOT_DIR"/Housekeeping/Sources/CLI/*.swift \
   "$ROOT_DIR/Housekeeping/Sources/Scanner/ScanModels.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Scanner/BoundedScanner.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Scanner/OfficeAddInAudit.swift" \
@@ -42,6 +44,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR"/Housekeeping/Sources/Disk/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Reconcile/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift \
+  "$ROOT_DIR"/Housekeeping/Sources/SelfUpdate/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Environment/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift \

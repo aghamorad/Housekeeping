@@ -179,7 +179,7 @@ struct AskHousekeeperButton: View {
     /// drawn. Nil from a screen that is not a sheet on the main window.
     var closing: (() -> Void)?
 
-    var title: String = "Ask the Housekeeper"
+    var title: String = "Talk to the Housekeeper"
     var isPrimary: Bool = false
     var help: String = "Opens the housekeeper on what is on this screen. It explains; Housekeeping is the one that decides."
 
@@ -188,8 +188,35 @@ struct AskHousekeeperButton: View {
     /// in the same voice as the row's other quiet links.
     var compact: Bool = false
 
+    /// For the navigation rail, where every other door is a coloured disc and a
+    /// drawn pill would be the one thing on the edge that is not. It is still
+    /// this button that opens the housekeeper, rather than the rail setting the
+    /// two properties itself, because the invariant above is exactly the one
+    /// that must not be re-implemented somewhere else.
+    var railTint: Color? = nil
+
+    /// Where this door falls in the rail's arrival, so the housekeeper queues up
+    /// behind the ten jobs rather than appearing underneath them while they are
+    /// still flying in.
+    var railDelay: Double = 0
+
     var body: some View {
-        if compact {
+        if let railTint {
+            RailButton(
+                title: title,
+                systemImage: "bubble.left.and.text.bubble.right",
+                tint: railTint,
+                help: help,
+                delay: railDelay,
+                // The rail draws the character rather than the glyph. The symbol
+                // above is still passed because every other door has one and the
+                // button takes it unconditionally — the rail simply chooses not to
+                // draw it. The door keeps the label as its accessibility label, so
+                // nothing is lost by the disc being a drawing.
+                showsOctopus: true,
+                action: open
+            )
+        } else if compact {
             Button(action: open) {
                 Text(title)
                     .font(style.smallFont)

@@ -52,7 +52,7 @@ enum FindingKind: String, CaseIterable {
     /// means, in their terms rather than Housekeeping's.
     var tagline: String {
         switch self {
-        case .undeclared: return "Real folders Housekeeping can't name"
+        case .undeclared: return "Real folders that belong to no known app"
         case .aiAppData: return "Belongs to an AI app you still have installed"
         case .aiLeftover: return "Belongs to an AI app Housekeeping cannot find installed"
         case .applicationLeftover: return "Looks like residue from an app that is no longer installed"
@@ -68,7 +68,7 @@ enum FindingKind: String, CaseIterable {
     /// finish the sentence "Most of it is …".
     var plainName: String {
         switch self {
-        case .undeclared: return "in folders it can't name"
+        case .undeclared: return "in folders that belong to no known app"
         case .aiAppData: return "inside the AI apps you still use"
         case .aiLeftover: return "AI leftovers"
         case .applicationLeftover: return "app leftovers"
@@ -93,7 +93,7 @@ enum FindingKind: String, CaseIterable {
     var explanation: String {
         switch self {
         case .undeclared:
-            return "Housekeeping measured this folder while sweeping the places where unclaimed data collects, but it has no entry that says what this one is. Nothing here is a judgment about whether the contents matter — only that this is real, measured storage Housekeeping cannot put a name to."
+            return "Housekeeping measured this folder while looking in the folders that belong to no known app, and it has no record that says what this one is. That is not a judgment about whether the contents matter — only that this is real, measured storage it cannot put a name to."
         case .aiAppData:
             return "This path belongs to a known AI application or AI tool that Housekeeping currently detects as installed or active."
         case .aiLeftover:

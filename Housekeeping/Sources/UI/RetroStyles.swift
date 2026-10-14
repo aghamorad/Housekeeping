@@ -308,6 +308,11 @@ struct UIStyle {
     let text: Color
     let secondaryText: Color
     let accent: Color
+    /// The accent at the light end, for the top of a gradient or the bright part
+    /// of a sweep. Equal to `accent` in Classic 9, which is flat by nature.
+    let accentLifted: Color
+    /// The accent at the dark end.
+    let accentShaded: Color
     let border: Color
     let rowSelection: Color
     let rowBackground: Color
@@ -331,6 +336,8 @@ struct UIStyle {
                 text: RetroColors.darkText,
                 secondaryText: RetroColors.secondaryText,
                 accent: RetroColors.selectedItem,
+                accentLifted: RetroColors.selectedItem,
+                accentShaded: RetroColors.selectedItem,
                 border: RetroColors.insetBorder,
                 rowSelection: RetroColors.selectionOverlay,
                 rowBackground: RetroColors.panelBackground,
@@ -355,8 +362,10 @@ struct UIStyle {
                 text: HousekeepingInk.text,
                 secondaryText: HousekeepingInk.secondaryText,
                 accent: HousekeepingInk.red,
+                accentLifted: HousekeepingInk.redLifted,
+                accentShaded: HousekeepingInk.redShaded,
                 border: HousekeepingInk.hairline,
-                rowSelection: HousekeepingInk.red.opacity(0.28),
+                rowSelection: HousekeepingInk.red.opacity(0.24),
                 rowBackground: Color.clear,
                 windowBackground: HousekeepingInk.surface,
                 groupingBackground: HousekeepingInk.surfaceRaised,
@@ -388,8 +397,33 @@ extension EnvironmentValues {
 
 /// Draws the surface a screen sits on. Retro gets a drawn panel; Liquid Glass
 /// gets a real glass surface on macOS 26 and a material fallback below it.
+///
+/// The modern branch is not just a fill. Glass on its own reads as a hole cut in
+/// the window — flat, and with no edge, so a stack of panels turns into a stack
+/// of nothing. What makes a card look like a card is three things: a light wash
+/// down its face, a lit top edge, and a shadow underneath.
 private struct ThemePanelChrome: ViewModifier {
     let isRetro: Bool
+
+    private var panelShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+    }
+
+    private var wash: LinearGradient {
+        LinearGradient(
+            colors: [Color.white.opacity(0.07), Color.white.opacity(0.012)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var edge: LinearGradient {
+        LinearGradient(
+            colors: [Color.white.opacity(0.18), Color.white.opacity(0.03)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -398,9 +432,17 @@ private struct ThemePanelChrome: ViewModifier {
                 .background(RetroColors.panelBackground)
                 .overlay(Rectangle().stroke(RetroColors.insetBorder, lineWidth: 1))
         } else if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            content
+                .glassEffect(.regular, in: panelShape)
+                .overlay(panelShape.fill(wash).allowsHitTesting(false))
+                .overlay(panelShape.strokeBorder(edge, lineWidth: 1).allowsHitTesting(false))
+                .shadow(color: Color.black.opacity(0.32), radius: 16, y: 7)
         } else {
-            content.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            content
+                .background(.ultraThinMaterial, in: panelShape)
+                .background(panelShape.fill(wash))
+                .overlay(panelShape.strokeBorder(edge, lineWidth: 1))
+                .shadow(color: Color.black.opacity(0.32), radius: 16, y: 7)
         }
     }
 }
@@ -434,7 +476,11 @@ struct ThemeButton: View {
     var body: some View {
         content
             .disabled(!isEnabled)
-            .opacity(isEnabled ? 1 : 0.4)
+            // Classic 9 draws no disabled state of its own, so it is dimmed here.
+            // The modern button style reads `isEnabled` itself and dims its own
+            // fill, edges and shadow — dimming twice would read as "broken"
+            // rather than "unavailable".
+            .opacity(style.isRetro && !isEnabled ? 0.4 : 1)
             .helpIfPresent(help)
             // SwiftUI does not derive an accessibility name from a drawn label, so
             // without this every button in Housekeeping reaches VoiceOver — and any
@@ -447,10 +493,9 @@ struct ThemeButton: View {
     private var content: some View {
         if style.isRetro {
             RetroButton(label: title, action: action, isDefault: isPrimary)
-        } else if isPrimary {
-            Button(action: action) { label }.buttonStyle(.borderedProminent)
         } else {
-            Button(action: action) { label }.buttonStyle(.bordered)
+            Button(action: action) { label }
+                .buttonStyle(HousekeepingButtonStyle(style: style, kind: isPrimary ? .primary : .secondary))
         }
     }
 

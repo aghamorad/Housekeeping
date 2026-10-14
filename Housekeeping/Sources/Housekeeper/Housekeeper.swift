@@ -360,9 +360,9 @@ final class Housekeeper: ObservableObject {
             // with one true answer, and it is written here rather than left to the
             // rules to imply.
             lines.append("Nothing was found, so there is nothing for you to describe. If the reader asks what you found on their Mac, your whole answer is this sentence and then you stop: \"Housekeeping has not found anything yet, so there is nothing in front of me.\"")
-            lines.append("Instruction, not part of that answer: do not name a folder, a file, an application, or a size. Nothing was found, so there is nothing to name, and a folder that sounds typical — the sort of folder every Mac is expected to have — is still invented. If the reader asks about one folder in particular, tell them to pick it out on screen and use Ask About This, so that you can actually see it.")
+            lines.append("Instruction, not part of that answer: do not name a folder, a file, an application, or a size. Nothing was found, so there is nothing to name, and a folder that sounds typical — the sort of folder every Mac is expected to have — is still invented. If the reader asks about one folder in particular, tell them to pick it out on screen and use Talk to the Housekeeper, so that you can actually see it.")
         } else {
-            lines.append("This is a sample, not a complete inventory. If the reader asks about something that is not in this briefing, you do not have it in front of you: say so plainly, and tell them to pick it out on screen and use Ask About This so that you can see it. Never describe a folder, a size, or a file you were not given.")
+            lines.append("This is a sample, not a complete inventory. If the reader asks about something that is not in this briefing, you do not have it in front of you: say so plainly, and tell them to pick it out on screen and use Talk to the Housekeeper so that you can see it. Never describe a folder, a size, or a file you were not given.")
         }
         return lines.joined(separator: "\n")
     }

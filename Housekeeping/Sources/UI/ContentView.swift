@@ -124,10 +124,21 @@ struct ContentView: View {
                     .environmentObject(appState)
                     .housekeepingSurface(style)
             }
+            // Housekeeping updating itself, which is a different job from the one
+            // above: that one updates other applications, this one replaces the
+            // bundle the reader is looking at. It is the only sheet that can end
+            // with the app quitting itself, so it owns its own run and its own
+            // failures rather than sharing the app's.
+            .sheet(isPresented: $appState.showSelfUpdate) {
+                SelfUpdateView()
+                    .environment(\.uiStyle, style)
+                    .environmentObject(appState)
+                    .housekeepingSurface(style)
+            }
             // Asked after the first screen is already drawn, not before it: the
             // answer is a line in a footer, and a launch should never wait on the
             // network to show itself.
-            .task { await appState.startUpdateCheck() }
+            .task { await appState.startSelfUpdateCheck() }
             // The menu bar holds no reference to this view, so it asks by
             // notification. Both are only posted once a window is up, because it
             // is the one that delivers them — see `WindowOpener`. What that means
@@ -244,14 +255,109 @@ struct ScreenChrome<Content: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        Group {
             if style.isRetro {
-                TitleBarView(title: title, subtitle: subtitle)
-                    .frame(height: 28)
+                VStack(spacing: 0) {
+                    TitleBarView(title: title, subtitle: subtitle)
+                        .frame(height: 28)
+                    JobBar()
+                    screen
+                    credit
+                }
+            } else {
+                // Liquid Glass stands the bar on its end and moves it to the
+                // side. The readings these screens show are wide and short — a
+                // path, a size, a list of rows — so the edge is where a run of
+                // destinations costs nothing, and the top of the window is worth
+                // more to the content than it was to the buttons. The credit
+                // strip stays inside the right-hand column so it spans the
+                // content it signs rather than the rail beside it.
+                HStack(spacing: 0) {
+                    JobBar()
+                    VStack(spacing: 0) {
+                        screen
+                        credit
+                    }
+                }
             }
-            JobBar()
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private var screen: some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .entrance()
+    }
+
+    /// Every screen signs the app, so no screen can be the one that forgot.
+    ///
+    /// It is a strip rather than a word tucked in a corner, because the corners of
+    /// these screens are where the readings already are — a count, a path, a
+    /// percentage — and a signature competing with those is one nobody reads. Here
+    /// it has its own line, on every screen, in both appearances.
+    private var credit: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Text("Made by Morad")
+                .font(style.smallFont)
+                .foregroundStyle(style.secondaryText.opacity(0.7))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(style.rowBackground)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(style.border.opacity(0.55))
+                .frame(height: 1)
+        }
+    }
+}
+
+/// One door into one job, described once for both appearances.
+///
+/// The bar and the rail carry the same ten jobs, and the help text is not
+/// decoration on either one — a button says what it does, and the tooltip is the
+/// only place that says what it costs. Test Routes warns there that the
+/// connection will drop; Look Everywhere says there that it changes nothing. Two
+/// lists of jobs would be two places for a warning to quietly go missing, so
+/// there is one list and both appearances draw it.
+private struct Job: Identifiable {
+    let id: String
+    let title: String
+    let systemImage: String
+    let zone: Zone
+    var isEnabled: Bool = true
+    let help: String
+    let action: () -> Void
+
+    /// How long each door waits behind the one above it. Ten doors arriving at
+    /// once is a rail switching on; ten arriving in a run is a rail being built,
+    /// which is the half-second that tells a reader there are ten of them and in
+    /// what order. Short enough to be over before anyone has finished reading the
+    /// first label.
+    static let stagger: Double = 0.035
+
+    /// What kind of place this is. It decides the colour of the disc on the
+    /// rail, which is how a reader knows a button tests the network rather than
+    /// reading the disk without first finding which group it is standing in.
+    enum Zone {
+        case reading
+        case route
+        case holding
+        case app
+
+        /// The reading zone borrows the theme's own accent, so the rail always
+        /// agrees with everything else on the screen. The other three need to be
+        /// told apart from it and from each other, so they are hues of their own
+        /// — dark enough to carry a white glyph, light enough to read as a disc
+        /// rather than a hole.
+        func tint(_ style: UIStyle) -> Color {
+            switch self {
+            case .reading: return style.accent
+            case .route: return Color(red: 0.36, green: 0.63, blue: 0.94)
+            case .holding: return Color(red: 0.40, green: 0.76, blue: 0.58)
+            case .app: return Color(red: 0.64, green: 0.55, blue: 0.94)
+            }
         }
     }
 }
@@ -276,28 +382,45 @@ struct ScreenChrome<Content: View>: View {
 /// about the app itself rather than the Mac: its settings, and the housekeeper
 /// you can ask.
 ///
+/// The two appearances then disagree about the one thing they are allowed to:
+/// the shape. Classic 9 draws the row it always drew. Liquid Glass stands the
+/// same four zones on their end as a rail of coloured discs down the left edge,
+/// because a run of buttons read left to right is a sequence to be walked, and
+/// these were never steps — see `rail`.
+///
 /// Quiet by construction: secondary buttons, never the default action, so
 /// nothing here can be hit by pressing Return on a screen that was asking
-/// something else entirely.
+/// something else entirely. The rail keeps that: a disc is a destination, not an
+/// answer to whatever question the screen behind it is asking.
 private struct JobBar: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
 
     var body: some View {
+        if style.isRetro {
+            bar
+        } else {
+            rail
+        }
+    }
+
+    // MARK: - Classic 9: the bar across the top
+
+    private var bar: some View {
         HStack(spacing: 8) {
-            readingJobs
+            themeButtons(readingJobs)
 
             rule
 
-            routesJobs
+            themeButtons(routeJobs)
 
             rule
 
-            holdingJobs
+            themeButtons(holdingJobs)
 
             Spacer(minLength: 16)
 
-            settingsButton
+            themeButtons(appJobs)
 
             // The scan itself had no way to reach the housekeeper from here: the
             // findings carry one each, but the screen that is about to produce
@@ -306,7 +429,7 @@ private struct JobBar: View {
             // summary, the list, the last confirmation — is what it opens on.
             AskHousekeeperButton(
                 topic: housekeeperTopic,
-                title: "Ask About This"
+                title: "Talk to the Housekeeper"
             )
         }
         .padding(.horizontal, 12)
@@ -319,6 +442,129 @@ private struct JobBar: View {
         }
     }
 
+    private func themeButtons(_ jobs: [Job]) -> some View {
+        ForEach(jobs) { job in
+            ThemeButton(
+                title: job.title,
+                systemImage: job.systemImage,
+                isEnabled: job.isEnabled,
+                help: job.help,
+                action: job.action
+            )
+        }
+    }
+
+    // MARK: - Liquid Glass: the rail down the side
+
+    /// The same doors, stood on their end.
+    ///
+    /// A row across the top is read left to right, and reading left to right is
+    /// how one reads a sequence — as though Look Everywhere came before Browse
+    /// the Disk, and that before Two Folders. Nothing on this bar is a step
+    /// after anything: they are ten separate places, of four kinds, and the
+    /// column is the shape that says so. It also gives the width back. Every
+    /// screen behind it is wide and short, so the edge costs nothing and the top
+    /// of the window was being spent on buttons rather than on the reading.
+    ///
+    /// The rules between the groups are a quiet way to say which kind of place
+    /// something is, and a reader who never notices them has still been told:
+    /// the colour of the disc says the same thing, in the half-second before the
+    /// label is read.
+    private var rail: some View {
+        // The stagger counts down the column rather than restarting in each
+        // group, so the rail fills in from the top as one run of doors instead of
+        // four runs that happen to be adjacent. The groups are contiguous, so each
+        // one simply starts where the last one ended.
+        let routeBase = readingJobs.count
+        let holdingBase = routeBase + routeJobs.count
+        let appBase = holdingBase + holdingJobs.count
+        let housekeeperBase = appBase + appJobs.count
+
+        return VStack(spacing: 6) {
+            // The sweep is the one door the app wants pressed, and the only one
+            // whose disc never stops moving. Ten equals in a column is a column
+            // with no front page; a slow halo says which one it is without a
+            // word, and it says it from across the room.
+            railGroup(readingJobs, from: 0, breathesFirst: true)
+
+            railRule
+
+            railGroup(routeJobs, from: routeBase)
+
+            railRule
+
+            railGroup(holdingJobs, from: holdingBase)
+
+            Spacer(minLength: 14)
+
+            railGroup(appJobs, from: appBase)
+
+            // "Ask About This" was a question about the screen the reader was
+            // looking at, which is not what this door is: it is a room with
+            // somebody in it. So the door is named after the somebody, and its
+            // disc is the somebody — the one disc on the rail that is a drawn
+            // character rather than a glyph, in the app's own red rather than a
+            // zone colour, because the housekeeper is not one of the four kinds
+            // of job, it is who you go and ask when none of them is the answer.
+            AskHousekeeperButton(
+                topic: housekeeperTopic,
+                title: "Talk to the Housekeeper",
+                railTint: OctopusMark.benignMonster,
+                railDelay: Double(housekeeperBase) * Job.stagger
+            )
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 14)
+        .frame(maxHeight: .infinity, alignment: .top)
+        // Wide enough that every label breaks at a space rather than losing its
+        // last letters. Measured, not guessed: at 10.5pt medium the longest word
+        // on most doors is "Everywhere", which needs 58pt, and the longest on any
+        // door is "Housekeeper", which needs 62 — so the label column is 75pt and
+        // the rail is 170. It was 152 when the last door was "Ask About This".
+        .frame(width: 170)
+        .background(
+            ZStack {
+                style.rowBackground
+                // A rail that is the same value from top to bottom reads as a
+                // strip of the window; this gives it a top and a bottom, which
+                // is what makes the discs look like they are sitting on it.
+                LinearGradient(
+                    colors: [Color.white.opacity(0.055), Color.clear, Color.black.opacity(0.15)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+        )
+        .overlay(alignment: .trailing) {
+            Rectangle()
+                .fill(style.border.opacity(0.65))
+                .frame(width: 1)
+        }
+    }
+
+    private func railGroup(_ jobs: [Job], from base: Int, breathesFirst: Bool = false) -> some View {
+        ForEach(Array(jobs.enumerated()), id: \.element.id) { offset, job in
+            RailButton(
+                title: job.title,
+                systemImage: job.systemImage,
+                tint: job.zone.tint(style),
+                isEnabled: job.isEnabled,
+                help: job.help,
+                delay: Double(base + offset) * Job.stagger,
+                breathes: breathesFirst && offset == 0,
+                action: job.action
+            )
+        }
+    }
+
+    private var railRule: some View {
+        Rectangle()
+            .fill(style.border.opacity(0.38))
+            .frame(height: 1)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+    }
+
     /// What reads the Mac, and only reads.
     ///
     /// The sweep stands first and alone in its weight — one press for all three
@@ -326,51 +572,56 @@ private struct JobBar: View {
     /// reader who wants one answer rather than the whole account. Check My Setup
     /// was the one job with no button anywhere in the window; it had a menu item
     /// and nothing else.
-    private var readingJobs: some View {
-        HStack(spacing: 8) {
-            ThemeButton(
+    private var readingJobs: [Job] {
+        [
+            Job(
+                id: "look-everywhere",
                 title: "Look Everywhere",
                 systemImage: "sparkle.magnifyingglass",
+                zone: .reading,
                 isEnabled: !appState.isSweeping,
                 help: appState.isSweeping
                     ? "This is the sweep that is running now. It is stopped from its own screen, where Stop sits."
-                    : "Read everything Housekeeping can read — the disk, the setup, and which of your apps and packages have updates — and come back with one list of what it found. It only reads: nothing is ticked, moved, installed or changed, and every screen it hands you still asks before anything happens."
-            ) {
-                appState.startSweep()
-            }
+                    : "Read everything Housekeeping can read — the disk, the setup, and which of your apps and packages have updates — and come back with one list of what it found. It only reads: nothing is ticked, moved, installed or changed, and every screen it hands you still asks before anything happens.",
+                action: { appState.startSweep() }
+            ),
 
-            ThemeButton(
+            Job(
+                id: "browse-the-disk",
                 title: "Browse the Disk",
                 systemImage: "internaldrive",
-                help: "Measure the whole disk and walk around it yourself. This only reads — it changes nothing, offers nothing, and removes nothing."
-            ) {
-                appState.showDiskBrowser = true
-            }
+                zone: .reading,
+                help: "Measure the whole disk and walk around it yourself. This only reads — it changes nothing, offers nothing, and removes nothing.",
+                action: { appState.showDiskBrowser = true }
+            ),
 
-            ThemeButton(
+            Job(
+                id: "two-folders",
                 title: "Two Folders",
                 systemImage: "arrow.left.arrow.right",
-                help: "Compare two folders that are meant to hold the same things — a library and its backup — and see what is on one side and not the other. Reading changes nothing; a copy happens only when you tick the row and press the button."
-            ) {
-                appState.showReconcile = true
-            }
+                zone: .reading,
+                help: "Compare two folders that are meant to hold the same things — a library and its backup — and see what is on one side and not the other. Reading changes nothing; a copy happens only when you tick the row and press the button.",
+                action: { appState.showReconcile = true }
+            ),
 
-            ThemeButton(
+            Job(
+                id: "check-my-setup",
                 title: "Check My Setup",
                 systemImage: "wrench.and.screwdriver",
-                help: "Look at the tools and commands Housekeeping itself depends on: which one a command really runs, whether a link leads anywhere, whether something installed is properly in reach. Every finding says what it would change before you can agree to it."
-            ) {
-                appState.showSetupCheck = true
-            }
+                zone: .reading,
+                help: "Look at the tools and commands Housekeeping itself depends on: which one a command really runs, whether a link leads anywhere, whether something installed is properly in reach. Every finding says what it would change before you can agree to it.",
+                action: { appState.showSetupCheck = true }
+            ),
 
-            ThemeButton(
+            Job(
+                id: "update-apps",
                 title: "Update Apps",
                 systemImage: "arrow.triangle.2.circlepath",
-                help: "What is installed, where each thing came from, and whether any of it is out of date — grouped by where its updates actually come from."
-            ) {
-                appState.showUpdateList = true
-            }
-        }
+                zone: .reading,
+                help: "What is installed, where each thing came from, and whether any of it is out of date — grouped by where its updates actually come from.",
+                action: { appState.showUpdateList = true }
+            )
+        ]
     }
 
     /// The one job on the bar that is about the network rather than the disk.
@@ -380,35 +631,40 @@ private struct JobBar: View {
     /// not a drawer of things already done, since nothing is kept. What it does
     /// leave behind is a decision — which route to use from now on — and that is
     /// the reason the warning in its help text is not a formality.
-    private var routesJobs: some View {
-        ThemeButton(
-            title: "Test Routes",
-            systemImage: "network",
-            help: "Try each server, protocol and port your VPN client offers, one at a time, and see which of them actually carry traffic. The client's own window lists the servers but says nothing about which of their settings this line will carry. Your connection will drop and come back over and over while it runs — that is the test working, not a fault — and it leaves the VPN disconnected when it finishes, never on a server you did not choose."
-        ) {
-            appState.showRoutes = true
-        }
+    private var routeJobs: [Job] {
+        [
+            Job(
+                id: "test-routes",
+                title: "Test Routes",
+                systemImage: "network",
+                zone: .route,
+                help: "Try each server, protocol and port your VPN client offers, one at a time, and see which of them actually carry traffic. The client's own window lists the servers but says nothing about which of their settings this line will carry. Your connection will drop and come back over and over while it runs — that is the test working, not a fault — and it leaves the VPN disconnected when it finishes, never on a server you did not choose.",
+                action: { appState.showRoutes = true }
+            )
+        ]
     }
 
     /// What Housekeeping has already done, and where the doing can be taken back.
-    private var holdingJobs: some View {
-        HStack(spacing: 8) {
-            ThemeButton(
+    private var holdingJobs: [Job] {
+        [
+            Job(
+                id: "quarantine",
                 title: "Quarantine",
                 systemImage: "archivebox",
-                help: "Everything Housekeeping has moved aside, where it went, and how to put any of it back."
-            ) {
-                appState.showQuarantineManagement = true
-            }
+                zone: .holding,
+                help: "Everything Housekeeping has moved aside, where it went, and how to put any of it back.",
+                action: { appState.showQuarantineManagement = true }
+            ),
 
-            ThemeButton(
+            Job(
+                id: "left-alone",
                 title: "Left Alone",
                 systemImage: "hand.raised",
-                help: "Folders and apps you have told Housekeeping never to offer again, and the way to undo that."
-            ) {
-                appState.showProtectionList = true
-            }
-        }
+                zone: .holding,
+                help: "Folders and apps you have told Housekeeping never to offer again, and the way to undo that.",
+                action: { appState.showProtectionList = true }
+            )
+        ]
     }
 
     /// The theme, the deep sweep, and the list of updates told to stay put all
@@ -416,14 +672,17 @@ private struct JobBar: View {
     /// a place a reader only looks if they already know what is in there. The
     /// gear puts the same window on the bar, so the appearance of the app is
     /// reachable from the app.
-    private var settingsButton: some View {
-        ThemeButton(
-            title: "Settings",
-            systemImage: "gearshape",
-            help: "Appearance, how far a scan reaches, and the updates you have told Housekeeping to leave alone."
-        ) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        }
+    private var appJobs: [Job] {
+        [
+            Job(
+                id: "settings",
+                title: "Settings",
+                systemImage: "gearshape",
+                zone: .app,
+                help: "Appearance, how far a scan reaches, and the updates you have told Housekeeping to leave alone.",
+                action: { NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) }
+            )
+        ]
     }
 
     private var rule: some View {
@@ -455,8 +714,8 @@ private struct JobBar: View {
             facts.append("What a scan reads: ~/Library — application data, caches, logs, preferences and containers; tool caches and hidden folders in the home folder, such as cache, .npm, .ollama and similar; housekeeping files left behind on the Desktop by Office and similar apps; and your Applications folders, to work out which apps are still installed.")
             facts.append("Measuring is all it does. Nothing is moved, changed or deleted until an item is ticked and the move is confirmed, and once moved everything can be put back.")
             facts.append(appState.deepSweep
-                         ? "The deep sweep is on, so it also measures the folders it cannot name, where the larger wins usually hide, at the cost of up to a minute more reading."
-                         : "The deep sweep is off, so it only reports what its list of \(RuleEngine.shared.applications.count) known applications and tools covers, and anything not on that list goes unmeasured.")
+                         ? "Housekeeping is also measuring the folders that belong to no known app, which is usually where the space is. That is why this scan is taking longer."
+                         : "Housekeeping is measuring only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows, so folders belonging to anything it does not recognise are not measured and any space they use will not appear.")
             return HousekeeperTopic(
                 id: "scan-idle",
                 title: "Housekeeping, before a scan",
@@ -471,8 +730,8 @@ private struct JobBar: View {
             facts.append("A scan is running now. It is reading the disk; it has not changed anything, and it cannot — measuring and moving are separate steps.")
             facts.append("Right now it is: \(appState.scanProgress.title)")
             facts.append(appState.deepSweep
-                         ? "The deep sweep is on for this run, so the folders Housekeeping cannot name are being measured too, and up to a minute of extra reading is normal."
-                         : "The deep sweep is off for this run, so it is reading only what its list of \(RuleEngine.shared.applications.count) known applications and tools covers.")
+                         ? "This run is also measuring the folders that belong to no known app, so it takes longer than usual and finds more."
+                         : "This run is measuring only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools Housekeeping knows. Folders belonging to anything else are not being measured.")
             facts.append("A scan can be stopped at any point. Stopping keeps whatever was measured so far; it throws nothing away and it changes nothing.")
             return HousekeeperTopic(
                 id: "scan-running",
@@ -586,9 +845,23 @@ private struct FlowDots: View {
     var body: some View {
         HStack(spacing: 6) {
             ForEach(0..<3, id: \.self) { position in
-                Circle()
-                    .fill(position <= index ? style.accent : style.border)
-                    .frame(width: 7, height: 7)
+                Group {
+                    if style.isRetro {
+                        Circle()
+                            .fill(position <= index ? style.accent : style.border)
+                            .frame(width: 7, height: 7)
+                    } else {
+                        // The step the reader is standing on stretches into a
+                        // capsule. Three identical dots say "three of something";
+                        // one longer dot says "you are here", which is the whole
+                        // job of this control — and the stretching is what makes
+                        // moving between steps visible.
+                        Capsule()
+                            .fill(position <= index ? style.accent : style.border)
+                            .frame(width: position == index ? 20 : 7, height: 7)
+                            .animation(HousekeepingMotion.settle, value: index)
+                    }
+                }
             }
         }
         .accessibilityElement()
@@ -622,74 +895,154 @@ private struct SummaryScreen: View {
 
     var body: some View {
         ScreenChrome(title: "Housekeeping", subtitle: "Done") {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
+            if style.isRetro {
+                retroBody
+            } else {
+                modernBody
+            }
+        }
+    }
+
+    /// The good-news screen, and the only one that can lead with a picture.
+    ///
+    /// The amount is the hero rather than the sentence about it, because the
+    /// amount is the thing the reader came for and a number set at 32 points is
+    /// read before any line of prose is. The ring around it is full and glowing:
+    /// nothing about a finished reading is part-way through.
+    private var modernBody: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 20) {
+                    HeroMeter(
+                        progress: 1,
+                        symbol: items.isEmpty ? "checkmark.seal" : "sparkles",
+                        caption: items.isEmpty ? "Nothing to clean up" : "found across \(items.count) item\(items.count == 1 ? "" : "s")",
+                        size: 196,
+                        centerText: items.isEmpty ? "Tidy" : totalSize.sizeDescription
+                    )
+                    .entrance()
+
+                    VStack(spacing: 8) {
                         Text(headline)
                             .font(style.titleFont)
                             .foregroundStyle(style.text)
-                            .fixedSize(horizontal: false, vertical: true)
-
                         Text(detail)
                             .font(style.bodyFont)
                             .foregroundStyle(style.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        if let biggestGroup, !items.isEmpty {
-                            HStack(alignment: .top, spacing: 10) {
-                                Image(systemName: biggestGroup.kind.iconName)
-                                    .font(.system(size: 15))
-                                    .foregroundStyle(style.accent)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Most of it is \(biggestGroup.kind.plainName) — \(biggestGroup.size.sizeDescription) across \(biggestGroup.count) item\(biggestGroup.count == 1 ? "" : "s").")
-                                        .font(style.bodyFont)
-                                        .foregroundStyle(style.text)
-                                    Text(biggestGroup.kind.tagline)
-                                        .font(style.smallFont)
-                                        .foregroundStyle(style.secondaryText)
-                                }
-                                .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(12)
-                            .background(style.rowSelection, in: RoundedRectangle(cornerRadius: 10))
-                        }
-
-                        Text("I have not touched anything. Reading the list changes nothing — it is a list, and you can walk away from it.")
-                            .font(style.smallFont)
-                            .foregroundStyle(style.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxWidth: 620, alignment: .leading)
-                    .frame(maxWidth: .infinity)
-                    .padding(32)
-                }
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 520)
+                    .entrance(delay: 0.08)
 
-                Rectangle().fill(style.border.opacity(0.5)).frame(height: 1)
-
-                HStack(spacing: 12) {
-                    FlowDots(step: .summary)
-                    Spacer()
-                    if items.isEmpty {
-                        ThemeButton(
-                            title: "Scan Again",
-                            isPrimary: true,
-                            help: "Read the disk again from the start. Nothing was moved, so there is nothing to undo."
-                        ) { appState.startScan() }
-                        .keyboardShortcut(.defaultAction)
-                    } else {
-                        ThemeButton(
-                            title: "Look at them",
-                            systemImage: "arrow.right",
-                            isPrimary: true,
-                            help: "Open the list. Nothing is ticked and nothing moves until you ask for it."
-                        ) { appState.advanceFlow(.review) }
-                        .keyboardShortcut(.defaultAction)
+                    if let biggestGroup, !items.isEmpty {
+                        biggestPanel(biggestGroup)
+                            .entrance(delay: 0.14)
                     }
+
+                    Text("I have not touched anything. Reading the list changes nothing — it is a list, and you can walk away from it.")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 460)
+                        .entrance(delay: 0.20)
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 28)
+            }
+
+            Rectangle().fill(style.border.opacity(0.5)).frame(height: 1)
+
+            footline
+        }
+    }
+
+    /// Classic 9 keeps the original layout exactly. The hero ring is a modern
+    /// object — a glowing gradient circle would read as decoration dropped into a
+    /// Platinum window, and the point of the retro appearance is that nothing in
+    /// it looks like it arrived later than 1999.
+    private var retroBody: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(headline)
+                        .font(style.titleFont)
+                        .foregroundStyle(style.text)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(detail)
+                        .font(style.bodyFont)
+                        .foregroundStyle(style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let biggestGroup, !items.isEmpty {
+                        biggestPanel(biggestGroup)
+                    }
+
+                    Text("I have not touched anything. Reading the list changes nothing — it is a list, and you can walk away from it.")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: 620, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding(32)
+            }
+
+            Rectangle().fill(style.border.opacity(0.5)).frame(height: 1)
+
+            footline
+        }
+    }
+
+    /// The one fact under the headline that makes the total mean something, so
+    /// whoever is reading it does not have to work out where the mess actually is.
+    private func biggestPanel(_ group: (kind: FindingKind, size: Int64, count: Int)) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: group.kind.iconName)
+                .font(.system(size: 15))
+                .foregroundStyle(style.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Most of it is \(group.kind.plainName) — \(group.size.sizeDescription) across \(group.count) item\(group.count == 1 ? "" : "s").")
+                    .font(style.bodyFont)
+                    .foregroundStyle(style.text)
+                Text(group.kind.tagline)
+                    .font(style.smallFont)
+                    .foregroundStyle(style.secondaryText)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .background(style.rowSelection, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var footline: some View {
+        HStack(spacing: 12) {
+            FlowDots(step: .summary)
+            Spacer()
+            if items.isEmpty {
+                ThemeButton(
+                    title: "Scan Again",
+                    isPrimary: true,
+                    help: "Read the disk again from the start. Nothing was moved, so there is nothing to undo."
+                ) { appState.startScan() }
+                .keyboardShortcut(.defaultAction)
+                .breathingHalo(style.accent, radius: 14, active: !style.isRetro)
+            } else {
+                ThemeButton(
+                    title: "Look at them",
+                    systemImage: "arrow.right",
+                    isPrimary: true,
+                    help: "Open the list. Nothing is ticked and nothing moves until you ask for it."
+                ) { appState.advanceFlow(.review) }
+                .keyboardShortcut(.defaultAction)
+                .breathingHalo(style.accent, radius: 14, active: !style.isRetro)
             }
         }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
     }
 
     private var headline: String {
@@ -718,14 +1071,24 @@ private struct WelcomeScreen: View {
         "Your Applications folders, to work out which apps are still installed"
     ]
 
+    /// The first screen, and the one that has to answer "what is this" before it
+    /// asks for anything. In the modern appearance the answer is centred and the
+    /// three panels arrive one after another, so the eye is walked down the page
+    /// in the order the reader will actually need them: what it does, how to
+    /// start it, what it will look at. Classic 9 keeps the left-aligned column it
+    /// has always had, because a Platinum window does not centre its type.
     var body: some View {
         ScreenChrome(title: "Housekeeping", subtitle: "Safety-first cleanup") {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: style.isRetro ? .leading : .center, spacing: 18) {
                     masthead
+                        .entrance()
                     ThemePanel { scanControls }
+                        .entrance(delay: 0.08)
                     ThemePanel { scope }
+                        .entrance(delay: 0.16)
                     footer
+                        .entrance(delay: 0.22)
                 }
                 .frame(maxWidth: 700)
                 .frame(maxWidth: .infinity)
@@ -735,18 +1098,25 @@ private struct WelcomeScreen: View {
     }
 
     private var masthead: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(style.accent)
+        VStack(alignment: style.isRetro ? .leading : .center, spacing: 8) {
+            // Her, not a stand-in glyph. This screen is the first thing anyone
+            // sees and the one place the app gets to say what it is, so it says it
+            // with the mark rather than with a sparkle that every other cleaner
+            // also has. `working: false` keeps her to the slow breath: she is
+            // waiting to be asked for something, and a figure mid-task on an
+            // untouched screen would claim work that has not started.
+            WorkingOctopus(size: style.isRetro ? 72 : 84, working: false)
+                .padding(.bottom, 2)
             Text("Housekeeping")
                 .font(style.titleFont)
                 .foregroundStyle(style.text)
             Text("Finds the storage your Mac is holding on to, explains what each thing actually is, and moves nothing until you say so.")
                 .font(style.bodyFont)
                 .foregroundStyle(style.secondaryText)
+                .multilineTextAlignment(style.isRetro ? .leading : .center)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: style.isRetro ? .leading : .center)
     }
 
     private var scanControls: some View {
@@ -766,14 +1136,15 @@ private struct WelcomeScreen: View {
                 appState.startSweep()
             }
             .keyboardShortcut(.defaultAction)
+            .breathingHalo(style.accent, radius: 16, active: !style.isRetro)
 
             ThemeButton(
                 title: "Scan My Mac",
                 systemImage: "magnifyingglass",
                 isPrimary: false,
                 help: appState.deepSweep
-                    ? "Measure only the storage locations Housekeeping knows about, and also sweep the folders where undeclared data collects. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
-                    : "Measure only the storage locations Housekeeping knows about. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
+                    ? "Measure the apps and tools Housekeeping knows, and the folders that belong to none of them as well. It takes longer and finds more. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
+                    : "Measure the apps and tools Housekeeping knows about. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
             ) {
                 appState.startScan()
             }
@@ -785,10 +1156,20 @@ private struct WelcomeScreen: View {
                 set: { appState.setDeepSweep($0) }
             )) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Also measure folders Housekeeping can't name")
+                    Text("Also measure folders that belong to no known app")
                         .font(style.bodyFont)
                         .foregroundStyle(style.text)
-                    Text("This is usually where the big wins hide, because nothing else reports them. It adds up to a minute to the scan. Those findings are shown for information and can only be cleaned after an extra typed confirmation.")
+                    // Said in the reader's terms rather than the app's. The first
+                    // draft of this line talked about "folders Housekeeping can't
+                    // name" and "undeclared data", which is the vocabulary the
+                    // code uses and no vocabulary a reader has — it described the
+                    // mechanism to someone who wanted to know what the switch
+                    // would do to their Mac. So: what Housekeeping knows, what
+                    // this adds, what it costs, and the one thing that makes it
+                    // safe. The count is read rather than written down, because
+                    // it is also shown on the Settings screen and a number typed
+                    // into two places is a number that will disagree with itself.
+                    Text("Housekeeping knows where \(RuleEngine.shared.applications.count) apps and tools keep their files, and normally measures only those. This also measures the folders that belong to none of them — often where the space is, since nothing else reports it. It costs up to a minute a scan, and what it finds is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside.")
                         .font(style.smallFont)
                         .foregroundStyle(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -831,33 +1212,39 @@ private struct WelcomeScreen: View {
                 .font(style.smallFont)
                 .foregroundStyle(style.secondaryText)
 
-            // The one place the app mentions its own age, and only once a newer
-            // release has been confirmed. A copy that is current and a copy that
-            // could not ask both stay silent, because neither has anything to say.
-            // It is a line, not a dialog: Housekeeping is fully usable either way,
-            // and a window that interrupts a cleanup to talk about packaging has
-            // its priorities wrong.
-            if case .newer(let available) = appState.updateStatus {
+            // The one place the app mentions its own age, and only when there is
+            // something the reader can act on. A copy that is current and a copy
+            // that could not ask both stay silent: "could not check" is true on
+            // any launch without a network, and a footer that said it every time
+            // would be talking about the connection rather than the app.
+            //
+            // It is a line, not a dialog. Housekeeping is fully usable either way,
+            // a window that interrupts a cleanup to talk about its own packaging
+            // has its priorities wrong, and nothing updates without being asked —
+            // the button opens the screen, it does not start the work.
+            if case .available(let report) = appState.selfUpdateState {
                 Text("·")
                     .font(style.smallFont)
                     .foregroundStyle(style.secondaryText)
-                Link(destination: AppState.releasesURL) {
+
+                Button {
+                    appState.showSelfUpdate = true
+                } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.down.circle.fill")
-                        Text("Version \(available) is out")
+                        Text(SelfUpdateView.footerLabel(for: report))
                     }
                     .font(style.smallFont)
                     .foregroundStyle(style.accent)
                 }
                 .buttonStyle(.plain)
-                .help("Open the release page on GitHub. Housekeeping does not update itself and has downloaded nothing — this is only the address of the newer copy.")
+                .help("Housekeeping builds itself from its own source folder. Nothing has been downloaded and nothing has changed — this opens the screen that says what updating would involve and offers to do it.")
             }
 
+            // The credit lives on the chrome now, on its own line under every
+            // screen. It used to be here, which meant the first screen signed the
+            // app and the other six did not.
             Spacer()
-
-            Text("Made by Morad")
-                .font(style.smallFont)
-                .foregroundStyle(style.secondaryText)
         }
     }
 }
@@ -877,47 +1264,102 @@ private struct ScanningScreen: View {
 
     var body: some View {
         ScreenChrome(title: "Housekeeping", subtitle: "Scanning") {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Measuring your Mac")
-                    .font(style.titleFont)
-                    .foregroundStyle(style.text)
-                Text("Housekeeping is only reading sizes and dates. Nothing is being changed.")
+            if style.isRetro {
+                retroBody
+            } else {
+                modernBody
+            }
+        }
+    }
+
+    /// One number, as big as the window will carry it.
+    ///
+    /// A scan is the only thing this app does that takes real time, and it is the
+    /// only screen where the reader has nothing to do but watch. So the reading
+    /// gets the whole middle of the window rather than a thin bar at the top of a
+    /// list of text: the ring is the answer to "how much longer", and the line
+    /// under it is the answer to "what is it doing", which is the question a bar
+    /// alone never answers.
+    private var modernBody: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 8)
+
+            HeroMeter(
+                progress: Double(progress),
+                symbol: "sparkle.magnifyingglass",
+                caption: appState.scanProgress.title,
+                size: 200
+            )
+            .frame(maxWidth: .infinity)
+            .entrance()
+
+            VStack(spacing: 5) {
+                Text("Reading sizes and dates. Nothing is being changed.")
                     .font(style.bodyFont)
                     .foregroundStyle(style.secondaryText)
-
-                if style.isRetro {
-                    RetroProgressView(progress: progress, label: appState.scanProgress.title)
-                } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ProgressView(value: Double(progress))
-                        Text(appState.scanProgress.title)
-                            .font(style.smallFont)
-                            .foregroundStyle(style.secondaryText)
-                    }
-                }
 
                 if let currentPath {
                     Text(currentPath)
                         .font(style.pathFont)
-                        .foregroundStyle(style.secondaryText)
-                        .lineLimit(2)
+                        .foregroundStyle(style.secondaryText.opacity(0.8))
+                        .lineLimit(1)
                         .truncationMode(.head)
                         .textSelection(.enabled)
-                }
-
-                Spacer()
-
-                HStack {
-                    ThemeButton(title: "Cancel", isEnabled: true, help: "Stop the scan. Nothing has been changed, so there is nothing to undo.") {
-                        appState.cancelScan()
-                    }
-                    Spacer()
+                        .frame(maxWidth: 520)
                 }
             }
-            .padding(24)
-            .frame(maxWidth: 700, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
+            .entrance(delay: 0.08)
+
+            Spacer(minLength: 8)
+
+            ThemeButton(
+                title: "Stop the Reading",
+                systemImage: "stop.circle",
+                help: "Stop the scan. Nothing has been changed, so there is nothing to undo."
+            ) {
+                appState.cancelScan()
+            }
+            .entrance(delay: 0.16)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Classic 9 gets the same screen in its own vocabulary: a barber-pole strip
+    /// and a written line, which is what a system of that vintage actually did.
+    /// The hero ring is a modern object and would read as decoration here.
+    private var retroBody: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Measuring your Mac")
+                .font(style.titleFont)
+                .foregroundStyle(style.text)
+            Text("Housekeeping is only reading sizes and dates. Nothing is being changed.")
+                .font(style.bodyFont)
+                .foregroundStyle(style.secondaryText)
+
+            RetroProgressView(progress: progress, label: appState.scanProgress.title)
+
+            if let currentPath {
+                Text(currentPath)
+                    .font(style.pathFont)
+                    .foregroundStyle(style.secondaryText)
+                    .lineLimit(2)
+                    .truncationMode(.head)
+                    .textSelection(.enabled)
+            }
+
+            Spacer()
+
+            HStack {
+                ThemeButton(title: "Cancel", isEnabled: true, help: "Stop the scan. Nothing has been changed, so there is nothing to undo.") {
+                    appState.cancelScan()
+                }
+                Spacer()
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: 700, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -1199,8 +1641,8 @@ private struct ResultsScreen: View {
                 .font(style.titleFont)
                 .foregroundStyle(style.text)
             Text(appState.deepSweep
-                 ? "Every folder Housekeeping knows about came back empty, and the deep sweep found nothing outside them either. Your Mac is already tidy — or the remaining clutter is somewhere Housekeeping cannot name."
-                 : "Everything Housekeeping knows about came back empty. Turning on the deep sweep would also measure folders it has nothing on file for, which is often where the real leftovers are.")
+                 ? "Every folder Housekeeping knows about came back empty, and it found nothing in the folders belonging to no known app either. Your Mac is already tidy — or the clutter is somewhere it cannot see."
+                 : "Everything Housekeeping knows about came back empty. Turning on “Also measure folders that belong to no known app”, in Settings, would look in those too — that is often where the real leftovers are.")
                 .font(style.bodyFont)
                 .foregroundStyle(style.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1279,7 +1721,40 @@ private struct FindingRow: View {
         item.lastUsedDate == nil ? "no dates recorded" : "used \(item.lastUsedDescription)"
     }
 
+    /// Two ways of wearing the same row.
+    ///
+    /// Classic 9 rows run edge to edge and go flat maroon when inspected, which
+    /// is how a Platinum list behaves. The modern list floats each row on an
+    /// inset rounded shape instead — the pointer lights the row it is over, and
+    /// the row that is open stays lit, so the two states are the same gesture and
+    /// the eye does not have to learn two colours.
     var body: some View {
+        if style.isRetro {
+            row
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isInspected ? style.rowSelection : Color.clear)
+                .contentShape(Rectangle())
+                .onTapGesture { appState.inspectItem(item.id) }
+                .helpIfPresent(item.path.path)
+        } else {
+            row
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .hoverHighlight(
+                    cornerRadius: 7,
+                    normal: isInspected ? style.rowSelection : Color.clear,
+                    hovered: style.rowSelection.opacity(isInspected ? 1 : 0.55)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture { appState.inspectItem(item.id) }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 1)
+                .helpIfPresent(item.path.path)
+        }
+    }
+
+    private var row: some View {
         HStack(spacing: 10) {
             if assessment.canBeSelected || item.isSelected {
                 ThemeCheckbox(isChecked: item.isSelected) {
@@ -1324,12 +1799,6 @@ private struct FindingRow: View {
             }
             .frame(width: 104, alignment: .trailing)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(isInspected ? style.rowSelection : Color.clear)
-        .contentShape(Rectangle())
-        .onTapGesture { appState.inspectItem(item.id) }
-        .helpIfPresent(item.path.path)
     }
 }
 
@@ -1641,6 +2110,22 @@ private struct ConfirmScreen: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
+                        // The last screen before anything moves, so the amount moves
+                        // up and gets a ring around it. It is the one number the
+                        // reader is being asked to agree to, and at this size it
+                        // cannot be skimmed past on the way to the buttons.
+                        if !style.isRetro {
+                            HeroMeter(
+                                progress: 1,
+                                symbol: aboutToMove.isEmpty ? "hand.raised" : "arrow.down.circle",
+                                caption: aboutToMove.isEmpty ? "Nothing to clear without asking" : "moving into Quarantine, nothing deleted",
+                                size: 168,
+                                centerText: aboutToMove.isEmpty ? "None" : size.sizeDescription
+                            )
+                            .frame(maxWidth: .infinity)
+                            .entrance()
+                        }
+
                         Text(headline)
                             .font(style.titleFont)
                             .foregroundStyle(style.text)
@@ -1699,6 +2184,7 @@ private struct ConfirmScreen: View {
                         appState.confirmRecommendedCleanup()
                     }
                     .keyboardShortcut(.defaultAction)
+                    .breathingHalo(style.accent, radius: 16, active: !style.isRetro && !aboutToMove.isEmpty)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)
