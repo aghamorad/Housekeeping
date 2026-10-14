@@ -45,6 +45,7 @@ SOURCES=(
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Housekeeper/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/Routes/*.swift
 )
 
 WORK_ROOT="$(mktemp -d /private/tmp/housekeeping-package.XXXXXX)"

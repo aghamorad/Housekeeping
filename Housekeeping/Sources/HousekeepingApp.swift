@@ -131,6 +131,19 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
 
+                // The one job here that is about the network rather than the
+                // disk. It belongs in this menu because it is the same kind of
+                // thing as the rest — something you go and ask for — and because
+                // it has nowhere else to be: the VPN client's own window shows
+                // the servers but not which of their protocols this line will
+                // actually carry. It is set slightly apart from the readings
+                // above it, since it is the only one that changes the state of
+                // the machine while it works.
+                Button("Test Routes…") {
+                    appState.showRoutes = true
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+
                 Divider()
 
                 // Opens on whatever is picked out in the list, and introduces

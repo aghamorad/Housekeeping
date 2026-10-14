@@ -85,6 +85,14 @@ final class AppState: ObservableObject {
     /// comparison found belong to `ReconcileModel`, so that reading two libraries
     /// cannot disturb the scan, the disk measurements, or the quarantine.
     @Published var showReconcile = false
+    /// Whether the Routes screen is open. Only the flag lives here, for the same
+    /// reason again: the run, its settings and its results belong to
+    /// `RoutesModel`, so that testing routes cannot disturb the scan, the disk
+    /// measurements, or the quarantine. This is the one screen here that touches
+    /// the network rather than the filesystem — it connects and disconnects a VPN
+    /// client over and over while it runs — which is why it is deliberately built
+    /// to leave the machine on nothing when it stops.
+    @Published var showRoutes = false
     /// Whether the housekeeper sheet is open. Only the flag lives here; the
     /// conversation belongs to `Housekeeper` and is shared rather than owned by
     /// the sheet, so opening it from the menu bar the second time does not lose
