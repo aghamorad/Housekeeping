@@ -127,8 +127,12 @@ final class LlamaServer: ObservableObject {
         let payload: [String: Any] = [
             "messages": [["role": "system", "content": system]] + history,
             "max_tokens": maxTokens,
-            "temperature": 0.3,
+            // A 0.6B model at 0.3 settles on the briefing's own sentences and says
+            // them again turn after turn. Grease plus a penalty on repeated tokens
+            // is what actually stops the parroting; the prompt rule alone does not.
+            "temperature": 0.6,
             "top_p": 0.9,
+            "repeat_penalty": 1.2,
             "stream": false,
         ]
 

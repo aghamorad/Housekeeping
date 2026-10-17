@@ -267,14 +267,16 @@ extension AppState {
     }
 
     /// Runs every ticked row Housekeeping can finish itself, or every ticked row in
-    /// one channel when a group heading was pressed. The App Store, macOS, and
-    /// unidentified groups are never included — not because they were filtered out
-    /// of the list, but because `canInstall` is false for them, and this filter and
-    /// the footer's count are the same filter.
-    func runUpdateAll(in channel: UpdateChannel? = nil) {
-        let targets = updateRows.filter {
-            $0.isSelected && $0.canUpdate && $0.channel.canInstall
-                && (channel == nil || $0.channel == channel)
+    /// one family when a group heading was pressed. A family can hold more than one
+    /// channel — Homebrew is both casks and formulas — so it is handed a set. The
+    /// App Store, macOS, and unidentified groups are never included — not because
+    /// they were filtered out of the list, but because `canInstall` is false for
+    /// them, and this filter and the footer's count are the same filter.
+    func runUpdateAll(in channels: Set<UpdateChannel>? = nil) {
+        let targets = updateRows.filter { row in
+            guard row.isSelected, row.canUpdate, row.channel.canInstall else { return false }
+            guard let channels else { return true }
+            return channels.contains(row.channel)
         }
         guard !targets.isEmpty, !updateIsWorking, !updateIsReading else { return }
 

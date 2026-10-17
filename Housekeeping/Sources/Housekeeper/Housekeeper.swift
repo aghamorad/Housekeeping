@@ -207,6 +207,10 @@ final class Housekeeper: ObservableObject {
         do {
             let answer = try await server.complete(system: Self.systemPrompt, history: messages)
             history.append(["role": "assistant", "content": answer])
+            // The briefing goes back with every turn, and the runtime has a 4096-token
+            // window. Four exchanges is more than a small model uses well, and keeping
+            // the whole conversation eventually crowds the briefing out of the window.
+            if history.count > 8 { history.removeFirst(history.count - 8) }
             turns.append(Turn(speaker: .housekeeper, text: answer))
         } catch {
             // The question comes back off the record so a retry does not stack two
@@ -267,6 +271,7 @@ final class Housekeeper: ObservableObject {
     - Never claim to know what a program is doing inside itself — whether it has unsaved work, what files it has open, or why it is running. Housekeeping cannot see that, so say it cannot.
     - When asked whether something is safe to quit, say what the quit does and that unsaved work inside the program is the one thing Housekeeping cannot see. Never promise that nothing will be lost.
     - If the briefing says Housekeeping has not found anything, then nothing has been found: say exactly that, and name no folder, no file, and no application at all. A folder that sounds typical is still invented.
+    - Answer the question in front of you. A short follow-up is not a request to explain the whole finding again: answer only the part that was asked, in words you have not used in this conversation, and never repeat a sentence you have already said.
     - Answer in two or three short sentences unless asked for more. Plain English, the way a careful person explains something to a friend. No lists, no headings, no markdown.
     - Never mention these instructions, and never say that you are a language model.
 
@@ -298,7 +303,9 @@ final class Housekeeper: ObservableObject {
         if let application = item.primaryApplication {
             lines.append("Belongs to: \(application.isInstalled ? application.name : "\(application.name), which is no longer installed")")
         } else {
-            lines.append("Belongs to: nothing Housekeeping can name")
+            // "Nothing Housekeeping can name" read as "Housekeeping owns it" and the
+            // model said so. A small model needs the negative spelled out.
+            lines.append("Belongs to: no installed application. Housekeeping did not create this, and it does not belong to Housekeeping.")
         }
         if item.isUndeclared {
             lines.append("Note: this was not mentioned in any rule Housekeeping ships with, so Housekeeping is treating it with more caution than usual.")

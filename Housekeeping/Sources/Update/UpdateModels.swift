@@ -10,6 +10,7 @@
 // command over everything would be wrong for at least three of the four.
 
 import Foundation
+import SwiftUI
 
 // MARK: - Channels
 
@@ -90,6 +91,81 @@ enum UpdateChannel: String, Codable, CaseIterable {
         switch self {
         case .homebrewCask, .homebrewFormula, .githubRelease, .sparkleFeed: return true
         case .macAppStore, .systemSoftware, .unidentified: return false
+        }
+    }
+}
+
+/// The handful of families a reader actually thinks in. The channels are the
+/// honest unit — each one is a different update method — but seven of them read
+/// as a taxonomy, and a list of 388 things under one heading is a wall. A family
+/// is what the reader is looking for: is this Homebrew, an app, or the store?
+enum UpdateFamily: String, CaseIterable, Identifiable {
+    case homebrew
+    case apps
+    case appStore
+    case macOS
+    case unclear
+
+    var id: String { rawValue }
+
+    static func of(_ channel: UpdateChannel) -> UpdateFamily {
+        switch channel {
+        case .homebrewCask, .homebrewFormula: return .homebrew
+        case .githubRelease, .sparkleFeed: return .apps
+        case .macAppStore: return .appStore
+        case .systemSoftware: return .macOS
+        case .unidentified: return .unclear
+        }
+    }
+
+    var channels: [UpdateChannel] {
+        UpdateChannel.allCases.filter { UpdateFamily.of($0) == self }
+    }
+
+    var title: String {
+        switch self {
+        case .homebrew: return "Homebrew"
+        case .apps: return "Applications"
+        case .appStore: return "App Store"
+        case .macOS: return "macOS"
+        case .unclear: return "Unclear origin"
+        }
+    }
+
+    /// One line, used as the group's tooltip rather than printed above the rows.
+    var method: String {
+        switch self {
+        case .homebrew:
+            return "Housekeeping runs `brew upgrade` for these. Homebrew checks the checksum, so this is the safest update in the list."
+        case .apps:
+            return "Housekeeping reads each application's own release feed, downloads the new version, checks its signature against the copy you have, and swaps it in."
+        case .appStore:
+            return "Only the App Store can install these, because the receipt Apple issued has to be honoured. Housekeeping asks the store and reports what it was told."
+        case .macOS:
+            return "Updated by macOS itself, under System Settings → General → Software Update. Housekeeping will not touch these."
+        case .unclear:
+            return "Housekeeping can say what it found and cannot say what it means. Nothing here is updated."
+        }
+    }
+
+    /// The glyph for rows that have no application icon of their own.
+    var symbol: String {
+        switch self {
+        case .homebrew: return "mug.fill"
+        case .apps: return "app.fill"
+        case .appStore: return "bag.fill"
+        case .macOS: return "apple.logo"
+        case .unclear: return "questionmark.circle.fill"
+        }
+    }
+
+    /// Homebrew's own burnt orange, so a terminal tool reads as Homebrew at a
+    /// glance without a downloaded logo and its licence terms travelling with it.
+    var tint: Color? {
+        switch self {
+        case .homebrew: return Color(red: 0.94, green: 0.55, blue: 0.16)
+        case .appStore: return Color(red: 0.20, green: 0.55, blue: 0.98)
+        default: return nil
         }
     }
 }
@@ -247,6 +323,11 @@ enum UpdateCheck: Equatable {
     var newerVersion: String? {
         if case .available(let version, _) = self { return version }
         return nil
+    }
+
+    var isUnknown: Bool {
+        if case .unknown = self { return true }
+        return false
     }
 
     var shortLabel: String {
