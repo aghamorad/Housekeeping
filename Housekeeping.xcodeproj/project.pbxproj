@@ -99,6 +99,9 @@
 		A1000093 /* SelfUpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000093; };
 		A1000094 /* SelfUpdateCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000094; };
 		A1000095 /* SelfUpdateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000095; };
+		A10000A0 /* SystemVitals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A0; };
+		A10000A1 /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A1; };
+		A10000A2 /* MenuBarPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A2; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -176,6 +179,9 @@
 		A2000077 /* LlamaServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/LlamaServer.swift; sourceTree = "<group>"; };
 		A2000078 /* OctopusMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/OctopusMark.swift; sourceTree = "<group>"; };
 		A2000079 /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/StatusItemController.swift; sourceTree = "<group>"; };
+		A20000A0 /* SystemVitals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/SystemVitals.swift; sourceTree = "<group>"; };
+		A20000A1 /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/LoginItem.swift; sourceTree = "<group>"; };
+		A20000A2 /* MenuBarPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/MenuBarPanel.swift; sourceTree = "<group>"; };
 		A2000080 /* SweepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/SweepView.swift; sourceTree = "<group>"; };
 		A2000081 /* RouteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteModels.swift; sourceTree = "<group>"; };
 		A2000082 /* RouteProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/RouteProviders.swift; sourceTree = "<group>"; };
@@ -295,6 +301,9 @@
 				A2000077,
 				A2000078,
 				A2000079,
+				A20000A0,
+				A20000A1,
+				A20000A2,
 				A2000080,
 				A2000081,
 				A2000082,
@@ -445,6 +454,9 @@
 				A1000095,
 				A1000096,
 				A1000097,
+				A10000A0,
+				A10000A1,
+				A10000A2,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

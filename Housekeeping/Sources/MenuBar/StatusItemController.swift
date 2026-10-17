@@ -81,7 +81,7 @@ final class WindowOpener {
 }
 
 @MainActor
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSPopoverDelegate {
     static let shared = StatusItemController()
 
     /// Twenty-four frames at twelve a second is a two-second loop. The mark's breath
@@ -96,6 +96,8 @@ final class StatusItemController: NSObject {
     private var timer: Timer?
     private var frames: [NSImage] = []
     private var tick = 0
+    private var popover: NSPopover?
+    private var lastClose = Date.distantPast
 
     private override init() { super.init() }
 
@@ -105,7 +107,11 @@ final class StatusItemController: NSObject {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.imagePosition = .imageOnly
         item.button?.toolTip = "Housekeeping"
-        item.menu = buildMenu()
+        // The octopus opens a panel now, not a menu. The old menu is still there,
+        // one right-click away, for anyone who knows where things live.
+        item.button?.target = self
+        item.button?.action = #selector(handleClick)
+        item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         self.item = item
 
         frames = buildFrames()
@@ -156,6 +162,94 @@ final class StatusItemController: NSObject {
         guard !frames.isEmpty else { return }
         tick = (tick + 1) % frames.count
         item?.button?.image = frames[tick]
+    }
+
+    // MARK: - The panel
+
+    @objc private func handleClick() {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            showMenu()
+            return
+        }
+
+        if let popover, popover.isShown {
+            popover.performClose(nil)
+            return
+        }
+
+        // A transient popover closes on the same click that lands on the button.
+        // Without this guard the click that dismisses the panel would also be the
+        // click that opens it again, and the octopus could never be clicked shut.
+        guard Date().timeIntervalSince(lastClose) > 0.18 else { return }
+        // A turn later, so the mouse-up that got us here is finished before the
+        // popover exists. Shown from inside the action it is shown *during* that
+        // click, and a transient popover reads the rest of the click as a click
+        // outside itself and shuts again immediately.
+        DispatchQueue.main.async { [weak self] in self?.showPanel() }
+    }
+
+    private func showPanel() {
+        guard let button = item?.button, popover?.isShown != true else { return }
+
+        // The reader may have turned the login item off in System Settings since
+        // the panel was last seen; the switch should say what is true now.
+        LoginItem.shared.refresh()
+        SystemVitals.shared.start()
+
+        let popover = panel()
+        popover.contentViewController?.view.layoutSubtreeIfNeeded()
+        let fitting = popover.contentViewController?.view.fittingSize ?? .zero
+        if fitting.height > 0 {
+            popover.contentSize = NSSize(width: max(352, fitting.width), height: fitting.height)
+        }
+
+        // Active first: a popover shown into an inactive app is dismissed by the
+        // activation that follows it.
+        NSApp.activate(ignoringOtherApps: true)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        button.highlight(true)
+    }
+
+    private func panel() -> NSPopover {
+        if let popover { return popover }
+
+        let root = MenuBarPanel(
+            vitals: SystemVitals.shared,
+            loginItem: LoginItem.shared,
+            onOpen: { [weak self] in self?.openMainWindow() },
+            onScan: { [weak self] in self?.scanNow() },
+            onAsk: { [weak self] in self?.askTheHousekeeper() },
+            onExtras: { [weak self] in self?.openExtras() },
+            onQuit: { NSApp.terminate(nil) },
+            onClose: { [weak self] in self?.popover?.performClose(nil) }
+        )
+
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = true
+        // The panel is always the dark house, whatever the Mac is wearing. Without
+        // this the popover draws its own light chrome around it — a white arrow and
+        // a pale edge, framing a dark panel.
+        popover.appearance = NSAppearance(named: .darkAqua)
+        popover.contentViewController = NSHostingController(rootView: root)
+        popover.delegate = self
+        self.popover = popover
+        return popover
+    }
+
+    /// Right-click keeps the old menu. `popUp` draws it at the button without
+    /// leaving it attached to the status item, which would take the left click back.
+    private func showMenu() {
+        guard let button = item?.button else { return }
+        let menu = buildMenu()
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        // Nothing measures the machine while the panel is shut.
+        SystemVitals.shared.stop()
+        item?.button?.highlight(false)
+        lastClose = Date()
     }
 
     // MARK: - The menu
