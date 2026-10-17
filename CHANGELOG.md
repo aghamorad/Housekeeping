@@ -42,6 +42,12 @@ MediaDock 9 and Bookbind are screens in this app now, not two other apps it kept
   screen, but neither carried a way out of its own: MediaDock had none at all, and Bookbind's only
   exit was a Done at the bottom of a 780-point page. Both now start with a Back at the top left,
   the same place the panel's room and process pages put theirs, and it says where it goes.
+- **The findings list can be organised by size.** The filter bar now carries a small Kind / Size
+  control beside the search field. Kind is how this list has always read — one heading per kind of
+  residue, each group biggest first. Size drops the headings and puts every finding in one list,
+  biggest first, so the total in the header can be walked down from the largest thing; its heading
+  keeps the count and the total where the grouped headings put theirs. It changes the order only —
+  never what was found, what it is, or what is ticked.
 
 # Housekeeping 0.14.0
 

@@ -1569,9 +1569,30 @@ private struct ScanningScreen: View {
 // MARK: - Results
 
 private struct FindingGroup: Identifiable {
-    let kind: FindingKind
+    /// Nil is the flat size list: everything found, biggest first, with no
+    /// grouping at all.
+    let kind: FindingKind?
     let items: [FoundItem]
-    var id: FindingKind { kind }
+    var id: String { kind?.displayName ?? "size" }
+}
+
+/// How the list is organised. Grouping by kind is how a scan is normally read —
+/// one heading per kind of residue. Organising by size drops the headings and
+/// puts the whole list in one descending order, which is what you want when the
+/// figure in the header is the thing you are trying to move.
+private enum ResultsOrder: String, CaseIterable, Identifiable {
+    case kind = "Kind"
+    case size = "Size"
+
+    var id: String { rawValue }
+
+    var label: String { self == .kind ? "Kind" : "Size" }
+    var help: String {
+        switch self {
+        case .kind: return "Group the list by what each item is."
+        case .size: return "Ignore the grouping and put everything in one list, biggest first."
+        }
+    }
 }
 
 private struct ResultsScreen: View {
@@ -1579,6 +1600,7 @@ private struct ResultsScreen: View {
     @Environment(\.uiStyle) private var style
 
     @State private var query = ""
+    @State private var order: ResultsOrder = .kind
     @State private var showReadingGuide = false
     @State private var showAllNotes = false
 
@@ -1599,11 +1621,17 @@ private struct ResultsScreen: View {
     }
 
     private var groups: [FindingGroup] {
-        FindingKind.displayOrder.compactMap { kind in
-            let matching = visibleItems
-                .filter { $0.findingKind == kind }
-                .sorted { $0.size > $1.size }
-            return matching.isEmpty ? nil : FindingGroup(kind: kind, items: matching)
+        switch order {
+        case .kind:
+            return FindingKind.displayOrder.compactMap { kind in
+                let matching = visibleItems
+                    .filter { $0.findingKind == kind }
+                    .sorted { $0.size > $1.size }
+                return matching.isEmpty ? nil : FindingGroup(kind: kind, items: matching)
+            }
+        case .size:
+            guard !visibleItems.isEmpty else { return [] }
+            return [FindingGroup(kind: nil, items: visibleItems.sorted { $0.size > $1.size })]
         }
     }
 
@@ -1795,6 +1823,41 @@ private struct ResultsScreen: View {
                     .buttonStyle(.plain)
                     .helpIfPresent("Clear the filter")
                 }
+
+                Rectangle().fill(style.border.opacity(0.5)).frame(width: 1, height: 16)
+
+                HStack(spacing: 2) {
+                    ForEach(ResultsOrder.allCases) { choice in
+                        Button {
+                            order = choice
+                        } label: {
+                            Text(choice.rawValue)
+                                .font(style.smallFont)
+                                .padding(.horizontal, 8)
+                                .frame(height: 20)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                        .fill(order == choice ? style.accent.opacity(0.28) : Color.clear)
+                                )
+                                .foregroundStyle(order == choice ? style.text : style.secondaryText)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(choice.help)
+                        .accessibilityAddTraits(order == choice ? .isSelected : [])
+                    }
+                }
+                .padding(2)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(style.rowBackground.opacity(0.5))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(style.border.opacity(0.6), lineWidth: 1)
+                )
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Organise the list, currently \(order.label)")
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -1824,7 +1887,11 @@ private struct ResultsScreen: View {
                                     FindingRow(item: item)
                                 }
                             } header: {
-                                GroupHeader(kind: group.kind, items: group.items)
+                                if let kind = group.kind {
+                                    GroupHeader(kind: kind, items: group.items)
+                                } else {
+                                    SizeHeader(items: group.items)
+                                }
                             }
                         }
                     }
@@ -1892,6 +1959,47 @@ private struct GroupHeader: View {
                     .foregroundStyle(style.text)
             }
             Text(kind.tagline)
+                .font(style.smallFont)
+                .foregroundStyle(style.secondaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(style.groupingBackground)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(style.border.opacity(0.45)).frame(height: 1)
+        }
+    }
+}
+
+/// The heading for the flat size list. There is no kind to name, so it names the
+/// order instead and keeps the count and the total in the same place the grouped
+/// headings put theirs.
+private struct SizeHeader: View {
+    @Environment(\.uiStyle) private var style
+    let items: [FoundItem]
+
+    private var total: Int64 { items.reduce(0) { $0 + $1.size } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(style.text)
+                Text("Biggest first")
+                    .font(style.labelFont)
+                    .foregroundStyle(style.text)
+                Text("\(items.count)")
+                    .font(style.smallFont)
+                    .foregroundStyle(style.secondaryText)
+                Spacer()
+                Text(total.sizeDescription)
+                    .font(style.labelFont)
+                    .foregroundStyle(style.text)
+            }
+            Text("Everything found, in one list. Each row still says what it is and whether it can be cleaned.")
                 .font(style.smallFont)
                 .foregroundStyle(style.secondaryText)
                 .lineLimit(1)
