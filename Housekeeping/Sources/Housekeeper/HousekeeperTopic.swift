@@ -150,6 +150,184 @@ extension HousekeeperTopic {
     }
 }
 
+// MARK: - The rooms in the menu bar panel
+
+extension HousekeeperTopic {
+
+    /// The readings are handed in as a snapshot rather than read from
+    /// `SystemVitals` here, for the same reason the routes screen hands in its
+    /// counts: the panel knows what it was showing when the reader pressed, and
+    /// the topic has to be about that, not about a later tick that has already
+    /// moved on. Everything else on this page is the teaching the panel itself is
+    /// too small to carry.
+    static func processor(_ snapshot: VitalsSnapshot) -> HousekeeperTopic {
+        var facts: [String] = [
+            "This is the share of the whole processor that was busy in the last second, added up across all \(snapshot.coreCount) cores. A reading of 30% on eight cores is about two and a half cores' worth of work.",
+            "Short spikes are the machine doing something and then stopping. A figure that stays high while nothing visible is running is the case worth looking at.",
+            "Each process's own figure is out of one core, so 100% is one core fully used and 200% is two.",
+        ]
+
+        if snapshot.processes.isEmpty {
+            facts.append("At the last reading no process was using measurable processor time.")
+        } else {
+            let hands = snapshot.processes.prefix(4)
+                .map { "\($0.name) at \(VitalsFormat.share($0.cpu))" }
+                .joined(separator: ", ")
+            facts.append("At the last reading the busiest hands were \(hands).")
+        }
+
+        facts.append("Housekeeping does not know what a process is or who installed it; the name comes from the process itself. That is why the panel offers to stop one only after showing you what it is doing.")
+
+        return HousekeeperTopic(
+            id: "room-processor",
+            title: "The processor",
+            label: VitalsFormat.percent(snapshot.cpu),
+            tone: snapshot.cpu > 0.85 ? .caution : .plain,
+            facts: facts,
+            opener: "My processor reads \(VitalsFormat.percent(snapshot.cpu)) — what is using it, is that a lot, and should I do anything?"
+        )
+    }
+
+    static func memory(_ snapshot: VitalsSnapshot) -> HousekeeperTopic {
+        var facts: [String] = [
+            "This figure counts memory apps are actively using, memory the system is holding and cannot page out, and memory it has compressed in RAM. It does not count files kept in memory as cache, which macOS drops when an app needs the room.",
+            "A Mac keeps memory busy on purpose — free memory is memory doing nothing — so a high number is not by itself a problem. The reading that describes actual trouble is memory pressure, which this panel does not measure yet. Housekeeping can tell you what is holding memory, not whether the Mac is short of it.",
+        ]
+
+        if snapshot.memoryHogs.isEmpty {
+            facts.append("At the last reading no process was holding more than about 8 MB on its own.")
+        } else {
+            let holders = snapshot.memoryHogs.prefix(5)
+                .map { "\($0.name) holding \(VitalsFormat.megabytes($0.memory))" }
+                .joined(separator: ", ")
+            facts.append("At the last reading the biggest holders were \(holders).")
+        }
+
+        facts.append("Quitting an app frees what it was holding, but the overall figure can stay high afterwards, because macOS fills the freed room with cache. On Apple silicon the processor and the graphics share this one pool of memory.")
+
+        return HousekeeperTopic(
+            id: "room-memory",
+            title: "Memory",
+            label: "\(String(format: "%.1f", Double(snapshot.memoryUsed) / 1_000_000_000)) of \(VitalsFormat.gigabytes(snapshot.memoryTotal))",
+            tone: snapshot.memoryFraction > 0.92 ? .caution : .plain,
+            facts: facts,
+            opener: "My memory reads \(String(format: "%.1f", Double(snapshot.memoryUsed) / 1_000_000_000)) of \(VitalsFormat.gigabytes(snapshot.memoryTotal)). What does that mean, what is holding it, and should I do something about it?"
+        )
+    }
+
+    static func disk(_ snapshot: VitalsSnapshot) -> HousekeeperTopic {
+        let facts: [String] = [
+            "This is the volume macOS started from, not every disk attached to the Mac.",
+            "macOS wants roughly a tenth of a volume free. Below about 5%, caches, updates and the sleep image start failing, and the machine slows down.",
+            "At the last reading \(VitalsFormat.gigabytes(snapshot.diskUsed)) of \(VitalsFormat.gigabytes(snapshot.diskTotal)) was in use, leaving \(VitalsFormat.gigabytes(snapshot.diskFree)) free.",
+            "This panel can say how full the volume is. It does not know which folders are taking the room — the disk browser on the main window measures them when you ask it to.",
+        ]
+
+        return HousekeeperTopic(
+            id: "room-disk",
+            title: "The disk",
+            label: VitalsFormat.percent(snapshot.diskFraction),
+            tone: snapshot.diskFraction > 0.92 ? .broken : (snapshot.diskFraction > 0.85 ? .caution : .plain),
+            facts: facts,
+            opener: "My disk is \(VitalsFormat.percent(snapshot.diskFraction)) full with \(VitalsFormat.gigabytes(snapshot.diskFree)) free. What is taking the space, and what is safe to do about it?"
+        )
+    }
+
+    static func network(_ snapshot: VitalsSnapshot) -> HousekeeperTopic {
+        let facts: [String] = [
+            "The two numbers are every app's traffic added together, measured between two readings a second apart. They are not one app's share.",
+            "Traffic is counted on every network interface except the loopback, so while a VPN tunnel is up the same bytes can be counted twice: once on the tunnel and once on the interface carrying it.",
+            "At the last reading the Mac was receiving \(VitalsFormat.rate(snapshot.downPerSecond)) and sending \(VitalsFormat.rate(snapshot.upPerSecond)).",
+            "Housekeeping does not break this figure down by app. It can tell you how much is moving, not who is moving it.",
+        ]
+
+        return HousekeeperTopic(
+            id: "room-network",
+            title: "The network",
+            label: nil,
+            tone: .plain,
+            facts: facts,
+            opener: "The panel says \(VitalsFormat.rate(snapshot.downPerSecond)) down and \(VitalsFormat.rate(snapshot.upPerSecond)) up. What does that include, and is it a lot?"
+        )
+    }
+
+    static func graphics(_ snapshot: VitalsSnapshot) -> HousekeeperTopic {
+        var facts: [String] = [
+            "This is how much of the graphics processor the driver reports busy.",
+            "Video, games, and image or video processing move it. A figure that stays high with nothing open is the case worth looking at.",
+            "Housekeeping has no per-app breakdown of the graphics processor; that is not something this panel can read.",
+        ]
+        if let value = snapshot.gpu {
+            facts.insert("At the last reading it was \(VitalsFormat.percent(value)) busy.", at: 0)
+        } else {
+            facts.insert("This Mac did not report a graphics reading when the panel last asked.", at: 0)
+        }
+
+        return HousekeeperTopic(
+            id: "room-graphics",
+            title: "The graphics processor",
+            label: snapshot.gpu.map(VitalsFormat.percent),
+            tone: .plain,
+            facts: facts,
+            opener: snapshot.gpu == nil
+                ? "The panel cannot read my graphics processor — is that expected?"
+                : "Graphics reads \(VitalsFormat.percent(snapshot.gpu ?? 0)). Is that normal for what I am doing?"
+        )
+    }
+
+    static func battery(_ battery: BatteryState) -> HousekeeperTopic {
+        let state: String
+        if battery.charging {
+            state = "The Mac is plugged in and charging."
+        } else if battery.onAC {
+            state = "The Mac is on power and the battery is not charging."
+        } else if let left = VitalsFormat.minutes(battery.minutesLeft) {
+            state = "The Mac is running on the battery, with about \(left) left at the current draw."
+        } else {
+            state = "The Mac is running on the battery, and macOS has not offered an estimate of the time left."
+        }
+
+        let facts: [String] = [
+            "Percent is the charge in the battery, not a statement about its health.",
+            "macOS estimates the time left from recent draw, so the estimate moves as apps load the machine.",
+            state,
+        ]
+
+        return HousekeeperTopic(
+            id: "room-battery",
+            title: "The battery",
+            label: "\(battery.percent)%",
+            tone: battery.percent < 10 ? .broken : (battery.percent < 20 ? .caution : .plain),
+            facts: facts,
+            opener: "My battery reads \(battery.percent)%. What should I know about that right now?"
+        )
+    }
+
+    /// One process, as the panel saw it when the reader pressed its row.
+    static func process(_ load: ProcessLoad, totalMemory: UInt64) -> HousekeeperTopic {
+        let cpu = load.cpu > 0.001
+            ? "\(VitalsFormat.share(load.cpu)) of one core"
+            : "no measurable processor time"
+        let share = totalMemory > 0 ? Double(load.memory) / Double(totalMemory) : 0
+
+        let facts: [String] = [
+            "\(load.name) (process \(load.id)) was using \(cpu) and holding \(VitalsFormat.megabytes(load.memory)), about \(VitalsFormat.percent(share)) of the Mac's memory.",
+            "A quit is a request: the process can save, close and exit on its own terms. A force quit takes the memory away where it stands, and anything unsaved in it is lost.",
+            "The name comes from the process itself. Housekeeping does not know what installed it, when it started, or what it is partway through.",
+            "Housekeeping will not stop the system's own processes or itself, and macOS refuses for anything owned by another user.",
+        ]
+
+        return HousekeeperTopic(
+            id: "process-\(load.id)",
+            title: load.name,
+            label: "process \(load.id)",
+            tone: load.cpu > 1 ? .caution : .plain,
+            facts: facts,
+            opener: "What is \(load.name), and is it safe to quit it?"
+        )
+    }
+}
+
 /// The one button every screen in Housekeeping uses to reach the housekeeper.
 ///
 /// It exists rather than each screen setting the two properties itself because

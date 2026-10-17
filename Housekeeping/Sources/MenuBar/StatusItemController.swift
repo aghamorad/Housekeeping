@@ -18,7 +18,15 @@ extension Notification.Name {
     static let housekeepingOpenHousekeeper = Notification.Name("HousekeepingOpenHousekeeper")
     static let housekeepingScanNow = Notification.Name("HousekeepingScanNow")
     static let housekeepingOpenPhone = Notification.Name("HousekeepingOpenPhone")
-    static let housekeepingOpenExtras = Notification.Name("HousekeepingOpenExtras")
+    static let housekeepingOpenMediaDock = Notification.Name("HousekeepingOpenMediaDock")
+    static let housekeepingOpenBookbind = Notification.Name("HousekeepingOpenBookbind")
+    /// Opens the housekeeper already holding a topic. The topic itself travels as
+    /// the notification's object, because a reading is the reason it was opened.
+    static let housekeepingAskAbout = Notification.Name("HousekeepingAskAbout")
+    static let housekeepingOpenDisk = Notification.Name("HousekeepingOpenDisk")
+    /// The panel was dismissed, so the next opening starts at the overview rather
+    /// than on whichever page was left behind.
+    static let housekeepingPanelClosed = Notification.Name("HousekeepingPanelClosed")
 }
 
 /// The menu bar's way back into the main window.
@@ -219,9 +227,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             onOpen: { [weak self] in self?.openMainWindow() },
             onScan: { [weak self] in self?.scanNow() },
             onAsk: { [weak self] in self?.askTheHousekeeper() },
-            onExtras: { [weak self] in self?.openExtras() },
+            onMediaDock: { [weak self] in self?.openMediaDock() },
+            onBookbind: { [weak self] in self?.openBookbind() },
             onQuit: { NSApp.terminate(nil) },
-            onClose: { [weak self] in self?.popover?.performClose(nil) }
+            onClose: { [weak self] in self?.popover?.performClose(nil) },
+            onDisk: { [weak self] in self?.openDisk() },
+            onExplain: { [weak self] topic in self?.explain(topic) },
+            onResize: { [weak self] height in self?.resize(to: height) }
         )
 
         let popover = NSPopover()
@@ -237,6 +249,30 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         return popover
     }
 
+    /// A page inside the panel is taller than the overview, and the popover is only
+    /// measured once, when it is built. So the page reports its own height and the
+    /// popover is resized here. It anchors at the arrow, so growth goes downward.
+    private func resize(to height: CGFloat) {
+        guard let popover, popover.isShown, height > 0 else { return }
+        let target = NSSize(width: 352, height: ceil(height))
+        guard abs(popover.contentSize.height - target.height) > 1 else { return }
+        popover.contentSize = target
+    }
+
+    private func explain(_ topic: HousekeeperTopic) {
+        // The sheet belongs to the window, so the window has to be there first —
+        // and the topic has to survive that wait, which is why it rides along.
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingAskAbout, object: topic)
+        }
+    }
+
+    private func openDisk() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenDisk, object: nil)
+        }
+    }
+
     /// Right-click keeps the old menu. `popUp` draws it at the button without
     /// leaving it attached to the status item, which would take the left click back.
     private func showMenu() {
@@ -248,6 +284,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         // Nothing measures the machine while the panel is shut.
         SystemVitals.shared.stop()
+        // The panel keeps its state between openings, which is what lets a detail
+        // page survive the popover resizing underneath it. Without this, reopening
+        // the panel would land on whatever page was last looked at.
+        NotificationCenter.default.post(name: .housekeepingPanelClosed, object: nil)
         item?.button?.highlight(false)
         lastClose = Date()
     }
@@ -262,7 +302,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         menu.addItem(.separator())
         menu.addItem(entry("Scan My Mac", #selector(scanNow)))
         menu.addItem(entry("Spoof Location…", #selector(spoofLocation)))
-        menu.addItem(entry("Extras…", #selector(openExtras)))
+        menu.addItem(entry("MediaDock 9…", #selector(openMediaDock)))
+        menu.addItem(entry("Bookbind…", #selector(openBookbind)))
         menu.addItem(.separator())
         menu.addItem(entry("Quit Housekeeping", #selector(quit)))
 
@@ -301,9 +342,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
     }
 
-    @objc private func openExtras() {
+    @objc private func openMediaDock() {
         WindowOpener.shared.withWindow {
-            NotificationCenter.default.post(name: .housekeepingOpenExtras, object: nil)
+            NotificationCenter.default.post(name: .housekeepingOpenMediaDock, object: nil)
+        }
+    }
+
+    @objc private func openBookbind() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenBookbind, object: nil)
         }
     }
 

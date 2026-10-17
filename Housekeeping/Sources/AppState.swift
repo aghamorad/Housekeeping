@@ -53,15 +53,15 @@ final class AppState: ObservableObject {
     ///
     /// AppKit attaches a single sheet to a window, so fourteen independent
     /// `showX` flags did not give fourteen screens. They gave one screen and a
-    /// queue nobody could see: asking for Extras while Update Apps was open put
-    /// Extras behind it, and closing Update Apps then opened Extras as if the
-    /// click had only just happened. One optional screen makes the flags
+    /// queue nobody could see: asking for Update Apps while Check My Setup was
+    /// open put it behind Setup, and closing Setup then opened Update Apps as if
+    /// the click had only just happened. One optional screen makes the flags
     /// exclusive by construction, and every `appState.showX = true` call site
     /// still reads the way it did.
     enum Screen: String, Identifiable, Hashable {
         case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
         case protectionList, diskBrowser, reconcile, updateList, setupCheck
-        case housekeeper, routes, phone, extras, selfUpdate
+        case housekeeper, routes, phone, mediaDock, bookbind, selfUpdate
 
         var id: String { rawValue }
     }
@@ -152,12 +152,27 @@ final class AppState: ObservableObject {
         get { screen == .phone }
         set { show(.phone, newValue) }
     }
-    /// Whether the Extras sheet is open. Only the flag lives here: the screen
-    /// starts other apps and holds nothing the rest of the window needs to know.
-    var showExtras: Bool {
-        get { screen == .extras }
-        set { show(.extras, newValue) }
+    /// Whether MediaDock 9 is open. The flag lives here like every other door's;
+    /// the settings, the queue and a command in flight belong to `mediaDock`, so
+    /// closing the sheet does not drop them.
+    var showMediaDock: Bool {
+        get { screen == .mediaDock }
+        set { show(.mediaDock, newValue) }
     }
+    /// Whether Bookbind is open. Its model holds the engine and the page, for the
+    /// same reason: the file list a reader has built up and a merge in progress
+    /// outlive the sheet that shows them.
+    var showBookbind: Bool {
+        get { screen == .bookbind }
+        set { show(.bookbind, newValue) }
+    }
+
+    /// MediaDock 9, folded into this app. Owned here rather than by its screen so
+    /// that reopening the sheet finds the same settings and the same queue.
+    let mediaDock = AppModel()
+    /// Bookbind, folded into this app. Owned here so its server and its page live
+    /// as long as the app does rather than as long as one sheet is on screen.
+    let bookbind = BookbindEngine()
     /// Whether the housekeeper sheet is open. Only the flag lives here; the
     /// conversation belongs to `Housekeeper` and is shared rather than owned by
     /// the sheet, so opening it from the menu bar the second time does not lose
@@ -400,6 +415,7 @@ final class AppState: ObservableObject {
     func setTheme(_ theme: Theme) {
         guard currentTheme != theme else { return }
         currentTheme = theme
+        bookbind.applyTheme(theme)
         UserDefaults.standard.set(theme.rawValue, forKey: "housekeeping.theme")
     }
 
