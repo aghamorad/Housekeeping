@@ -48,6 +48,19 @@ MediaDock 9 and Bookbind are screens in this app now, not two other apps it kept
   biggest first, so the total in the header can be walked down from the largest thing; its heading
   keeps the count and the total where the grouped headings put theirs. It changes the order only —
   never what was found, what it is, or what is ticked.
+- **The update list is grouped, not one wall.** Seven channels used to be flattened into a single
+  alphabetical list under one heading. They are now five families — Homebrew, Applications, App
+  Store, macOS, Unclear origin — with a chip strip above them carrying the count in each, and one
+  heading per family that says how many are in it and what Housekeeping does about them. The
+  heading's tick box selects the whole family, and its own Update button runs only that family.
+  Each row grew the icon it deserves: Homebrew's burnt-orange mug, the App Store bag, and, for a
+  real application, its actual icon read off the bundle.
+- **The Housekeeper answers the question in front of it.** Asked three questions in a row about one
+  list, it used to answer the third with a paraphrase of the first. It is now told to answer only
+  what was asked and to never reuse a sentence it has already said, and the runtime runs a little
+  warmer with a repetition penalty. The briefing also now states, for a family with nothing in it,
+  what Housekeeping would do about it — previously the App Store had no line of its own and the
+  model, given a gap, filled it with an invented reason.
 
 # Housekeeping 0.14.0
 

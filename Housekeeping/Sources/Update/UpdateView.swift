@@ -19,6 +19,9 @@ struct UpdateView: View {
     /// so it survives a rebuild of the list after an update finishes.
     @State private var expandedEvidence: Set<String> = []
     @State private var filter: Filter = .needsAttention
+    /// Nil is every family. A selection narrows the same list rather than
+    /// replacing it, so the picker above and the search on the right keep working.
+    @State private var family: UpdateFamily?
     @State private var query: String = ""
 
     /// What the list is showing. "Needs updating" is where it opens, because that
@@ -60,16 +63,36 @@ struct UpdateView: View {
             .contains { $0.localizedCaseInsensitiveContains(needle) }
     }
 
-    private var groups: [(channel: UpdateChannel, rows: [UpdateRow])] {
-        let visible = appState.updateRows.filter { matches($0) }
-        return UpdateChannel.allCases
-            .sorted { $0.order < $1.order }
-            .compactMap { channel in
-                let rows = visible.filter {
-                    $0.channel == channel && (filter == .everything || isNoteworthy($0))
-                }
-                return rows.isEmpty ? nil : (channel, rows)
+    /// The rows the picker, the search and the family strip leave on screen.
+    private var shownRows: [UpdateRow] {
+        appState.updateRows.filter { matches($0) && (filter == .everything || isNoteworthy($0)) }
+    }
+
+    private func rows(of family: UpdateFamily) -> [UpdateRow] {
+        shownRows
+            .filter { UpdateFamily.of($0.channel) == family }
+            .sorted { a, b in
+                if a.channel.order != b.channel.order { return a.channel.order < b.channel.order }
+                // Within a family, the rows with something to do come first —
+                // that is the only reason this screen was opened.
+                if isNoteworthy(a) != isNoteworthy(b) { return isNoteworthy(a) }
+                return a.name.localizedStandardCompare(b.name) == .orderedAscending
             }
+    }
+
+    /// Every family worth a chip: the ones with rows under the current filter and
+    /// search, plus the one selected even when it has none, so pressing a chip can
+    /// never make that chip vanish under the pointer.
+    private var familiesOnScreen: [(family: UpdateFamily, rows: [UpdateRow])] {
+        UpdateFamily.allCases.compactMap { candidate in
+            let rows = rows(of: candidate)
+            guard !rows.isEmpty || family == candidate else { return nil }
+            return (candidate, rows)
+        }
+    }
+
+    private var groups: [(family: UpdateFamily, rows: [UpdateRow])] {
+        familiesOnScreen.filter { family == nil || $0.family == family }
     }
 
     private var noteworthyCount: Int {
@@ -206,6 +229,28 @@ struct UpdateView: View {
                         .foregroundColor(style.secondaryText)
                 }
             }
+            let families = familiesOnScreen
+            if families.count > 1 || family != nil {
+                HStack(spacing: 6) {
+                    familyChip(
+                        "All",
+                        symbol: "square.grid.2x2.fill",
+                        count: shownRows.count,
+                        isOn: family == nil
+                    ) { family = nil }
+                    ForEach(families, id: \.family) { pair in
+                        familyChip(
+                            pair.family.title,
+                            symbol: pair.family.symbol,
+                            count: pair.rows.count,
+                            isOn: family == pair.family
+                        ) {
+                            family = family == pair.family ? nil : pair.family
+                        }
+                    }
+                    Spacer()
+                }
+            }
             ForEach(appState.updateNotes, id: \.self) { note in
                 Text(note)
                     .font(style.smallFont)
@@ -235,6 +280,38 @@ struct UpdateView: View {
         .disabled(!enabled)
         .help(help)
         .accessibilityLabel(title)
+    }
+
+    /// One family, as a chip. Not a segmented control: there can be five families
+    /// and the counts change with every check, and a capsule reads as a thing to
+    /// press rather than as a row of exclusive tabs.
+    private func familyChip(
+        _ title: String,
+        symbol: String,
+        count: Int,
+        isOn: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(title)
+                    .font(style.smallFont)
+                Text("\(count)")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+            }
+            .foregroundColor(isOn ? style.text : style.secondaryText)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(isOn ? style.rowSelection : style.rowBackground))
+            .overlay(
+                Capsule().stroke(style.border.opacity(isOn ? 0.7 : 0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .help(isOn ? "Showing only \(title). Press again to show every family." : "Show only \(title).")
     }
 
     private var readingState: some View {
@@ -317,8 +394,8 @@ struct UpdateView: View {
     private var list: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
-                ForEach(groups, id: \.channel) { group in
-                    channelGroup(group.channel, group.rows)
+                ForEach(groups, id: \.family) { group in
+                    familyGroup(group.family, group.rows)
                 }
             }
             .padding(.vertical, 2)
@@ -399,62 +476,81 @@ struct UpdateView: View {
 
     // MARK: - One group
 
-    private func channelGroup(_ channel: UpdateChannel, _ rows: [UpdateRow]) -> some View {
+    private func familyGroup(_ family: UpdateFamily, _ rows: [UpdateRow]) -> some View {
         let selectable = selectableRows(rows)
         let selected = selectable.filter(\.isSelected)
         let allSelected = !selectable.isEmpty && selected.count == selectable.count
         let partlySelected = !selected.isEmpty && !allSelected
+        let needing = rows.filter(isNoteworthy).count
+        // An altered copy in the unclear group is not "to update" — Housekeeping
+        // will not touch it, and saying update there would promise the one thing
+        // this group exists to refuse.
+        let needingWording = family.channels.contains { $0.canInstall } ? "to update" : "to look at"
 
         return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    // The heading's tick box stands for every row below it. It is
-                    // drawn only where there is something Housekeeping can finish;
-                    // the App Store, macOS and unidentified groups get the same
-                    // dash they get on their own rows.
-                    if selectable.isEmpty {
-                        Image(systemName: "minus.circle")
-                            .font(.system(size: 12))
-                            .foregroundColor(style.secondaryText)
-                            .frame(width: 22, height: 22)
-                            .help("Nothing in this group is updated by Housekeeping, so there is nothing to select.")
-                    } else {
-                        ThemeCheckbox(
-                            isChecked: allSelected,
-                            isMixed: partlySelected,
-                            help: allSelected
-                                ? "Untick every row in this group."
-                                : "Tick every row in this group that Housekeeping can update."
-                        ) {
-                            appState.setUpdateSelection(ids: selectable.map(\.id), selected: !allSelected)
-                        }
+            HStack(spacing: 7) {
+                // The heading's tick box stands for every row below it. It is
+                // drawn only where there is something Housekeeping can finish;
+                // the App Store, macOS and unclear groups get the same dash they
+                // get on their own rows.
+                if selectable.isEmpty {
+                    Image(systemName: "minus.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(style.secondaryText)
+                        .frame(width: 22, height: 22)
+                        .help("Nothing in this group is updated by Housekeeping, so there is nothing to select.")
+                } else {
+                    ThemeCheckbox(
+                        isChecked: allSelected,
+                        isMixed: partlySelected,
+                        help: allSelected
+                            ? "Untick every row in this group."
+                            : "Tick every row in this group that Housekeeping can update."
+                    ) {
+                        appState.setUpdateSelection(ids: selectable.map(\.id), selected: !allSelected)
                     }
-                    Text(channel.title)
-                        .font(style.labelFont)
-                        .foregroundColor(style.text)
+                }
+                Image(systemName: family.symbol)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(family.tint ?? style.secondaryText)
+                Text(family.title)
+                    .font(style.labelFont)
+                    .foregroundColor(style.text)
+                if needing == rows.count {
+                    Text("\(needing) \(needingWording)")
+                        .font(style.smallFont)
+                        .foregroundColor(style.accent)
+                } else {
                     Text("\(rows.count)")
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
-                    Spacer()
-                    // The same action for the whole group, without having to reach
-                    // the footer's Update All and hope it covers what was meant.
-                    if !selectable.isEmpty {
-                        selectionButton(
-                            selected.isEmpty ? "Update group" : "Update \(selected.count)",
-                            help: selected.isEmpty
-                                ? "Tick at least one row in this group first."
-                                : "Update only the ticked rows in this group — \(selected.count) of \(selectable.count) it can finish.",
-                            enabled: !selected.isEmpty && !appState.updateIsWorking && !appState.updateIsReading
-                        ) { appState.runUpdateAll(in: channel) }
+                    if needing > 0 {
+                        Text("· \(needing) \(needingWording)")
+                            .font(style.smallFont)
+                            .foregroundColor(style.accent)
                     }
                 }
-                // The method sentence is the group's contract, so it is written
-                // out above the rows rather than hidden in a button's help text.
-                Text(channel.method)
-                    .font(style.smallFont)
+                // The method sentence is the group's contract. It lives on the ⓘ
+                // rather than above the rows: five paragraphs of contract is what
+                // turned this screen into something to be got past, and the reader
+                // who wants the reason now has one place to ask instead of five
+                // lines to skip.
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
                     .foregroundColor(style.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 28)
+                    .help(family.method)
+                Spacer()
+                // The same action for the whole group, without having to reach
+                // the footer's Update All and hope it covers what was meant.
+                if !selectable.isEmpty {
+                    selectionButton(
+                        selected.isEmpty ? "Update group" : "Update \(selected.count)",
+                        help: selected.isEmpty
+                            ? "Tick at least one row in this group first."
+                            : "Update only the ticked rows in this group — \(selected.count) of \(selectable.count) it can finish.",
+                        enabled: !selected.isEmpty && !appState.updateIsWorking && !appState.updateIsReading
+                    ) { appState.runUpdateAll(in: Set(family.channels)) }
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
@@ -475,127 +571,100 @@ struct UpdateView: View {
 
     private func rowView(_ row: UpdateRow) -> some View {
         let actionLabel = rowActionLabel(row)
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                if row.canUpdate && row.channel.canInstall {
-                    ThemeCheckbox(
-                        isChecked: row.isSelected,
-                        help: row.isSelected
-                            ? "Untick this row. Nothing is updated for it."
-                            : "Tick this row so Update All includes it."
-                    ) { appState.toggleUpdateSelection(id: row.id) }
-                } else {
-                    Image(systemName: "minus.circle")
-                        .font(.system(size: 12))
-                        .foregroundColor(style.secondaryText)
-                        .frame(width: 22, height: 22)
-                        // A tick box that Update All would then skip is worse than
-                        // no tick box at all, so the ones it cannot finish say why
-                        // here rather than leaving the reader to find out.
-                        .help(row.channel.canInstall
-                              ? "Housekeeping will not update this row. The reason is written under it."
-                              : "\(row.channel.title) is a group Update All cannot finish on its own, so there is nothing to tick. Use this row's own button.")
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 9) {
+                Group {
+                    if row.canUpdate && row.channel.canInstall {
+                        ThemeCheckbox(
+                            isChecked: row.isSelected,
+                            help: row.isSelected
+                                ? "Untick this row. Nothing is updated for it."
+                                : "Tick this row so Update All includes it."
+                        ) { appState.toggleUpdateSelection(id: row.id) }
+                    } else {
+                        Image(systemName: "minus.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(style.secondaryText)
+                            .frame(width: 22, height: 22)
+                            // A tick box that Update All would then skip is worse than
+                            // no tick box at all, so the ones it cannot finish say why
+                            // here rather than leaving the reader to find out.
+                            .help(row.channel.canInstall
+                                  ? "Housekeeping will not update this row. The reason is written under it."
+                                  : "\(row.channel.title) is a group Update All cannot finish on its own, so there is nothing to tick. Use this row's own button.")
+                    }
                 }
+                .padding(.top, 1)
+
+                rowIcon(row)
+                    .padding(.top, 2)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(row.name)
-                        .font(style.bodyFont)
-                        .foregroundColor(style.text)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(row.name)
+                            .font(style.bodyFont)
+                            .foregroundColor(style.text)
+                            .lineLimit(1)
+                        if !row.installedVersion.isEmpty {
+                            Text(row.installedVersion)
+                                .font(style.smallFont)
+                                .foregroundColor(style.secondaryText)
+                                .lineLimit(1)
+                        }
+                    }
                     // What this is, before anything about its version. A reader who
                     // does not know what `dav1d` is cannot decide anything about it,
-                    // and its version number is no help at all.
-                    if let summary = row.summary {
-                        Text(summary)
+                    // and its version number is no help at all. When nothing on disk
+                    // could describe it, the channel's own label stands in.
+                    if let line = row.summary ?? (row.detail.isEmpty ? nil : row.detail) {
+                        Text(line)
                             .font(style.smallFont)
-                            .foregroundColor(style.text)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .lineLimit(2)
+                            .foregroundColor(style.secondaryText)
+                            .lineLimit(1)
                     }
-                    Text(row.detail)
-                        .font(style.smallFont)
-                        .foregroundColor(style.secondaryText)
-                        .lineLimit(1)
+                    if let said = explanation(row) {
+                        Text(said)
+                            .font(style.smallFont)
+                            .foregroundColor(row.check.isUnknown ? style.caution : style.secondaryText)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(row.installedVersion.isEmpty ? "version unknown" : row.installedVersion)
-                        .font(style.bodyFont)
-                        .foregroundColor(style.text)
+                VStack(alignment: .trailing, spacing: 4) {
                     Text(row.check.shortLabel)
                         .font(style.smallFont)
                         .foregroundColor(checkColour(row.check))
-                }
-                .frame(width: 150, alignment: .trailing)
-            }
-
-            if let said = explanation(row) {
-                HStack(alignment: .top, spacing: 10) {
-                    Text(said)
-                        .font(style.smallFont)
-                        .foregroundColor(style.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                }
-                .padding(.leading, 32)
-            }
-
-            HStack(spacing: 8) {
-                if !row.evidence.isEmpty {
-                    Button {
-                        toggleEvidence(row.id)
-                    } label: {
-                        Text(expandedEvidence.contains(row.id) ? "Hide how this was worked out" : "How this was worked out")
-                            .font(style.smallFont)
-                            .foregroundColor(style.accent)
+                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        if let actionLabel, row.canUpdate {
+                            ThemeButton(
+                                title: actionLabel.title,
+                                isEnabled: !appState.updateIsWorking && !appState.updateIsReading,
+                                help: actionLabel.help
+                            ) { appState.runUpdate(row) }
+                        }
+                        // One small control instead of a button per row. "Leave this
+                        // alone for good" is a rare decision about a single row, and
+                        // printing it on all fifty-five of them is most of what made
+                        // this list feel like something to be got past.
+                        Menu {
+                            rowMenuItems(row)
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 13))
+                                .foregroundColor(style.secondaryText)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .fixedSize()
+                        .help("Everything else you can do with this row — ask the housekeeper, see where it came from, or leave it alone from now on.")
+                        .accessibilityLabel("More options for \(row.name)")
                     }
-                    .buttonStyle(.plain)
                 }
-                if let path = row.path {
-                    Button {
-                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-                    } label: {
-                        Text("Show in Finder")
-                            .font(style.smallFont)
-                            .foregroundColor(style.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
-                AskHousekeeperButton(
-                    topic: topic(for: row),
-                    closing: { appState.showUpdateList = false },
-                    title: "Ask about this one",
-                    help: "Opens the housekeeper on this row. It explains what was found and what updating it would involve; Housekeeping is the one that decides and the one that runs anything.",
-                    compact: true
-                )
-                Spacer()
-                if let actionLabel, row.canUpdate {
-                    ThemeButton(
-                        title: actionLabel.title,
-                        isEnabled: !appState.updateIsWorking && !appState.updateIsReading,
-                        help: actionLabel.help
-                    ) { appState.runUpdate(row) }
-                }
-                // One small control instead of a button per row. "Leave this alone
-                // for good" is a rare decision about a single row, and printing it
-                // on all fifty-five of them is most of what made this list feel
-                // like something to be got past.
-                Menu {
-                    rowMenuItems(row)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 13))
-                        .foregroundColor(style.secondaryText)
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("Everything else you can do with this row — including leaving it alone from now on.")
-                .accessibilityLabel("More options for \(row.name)")
             }
-            .padding(.leading, 32)
 
             if expandedEvidence.contains(row.id), !row.evidence.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
@@ -615,11 +684,11 @@ struct UpdateView: View {
                 .padding(8)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(style.rowSelection.opacity(0.35))
-                .padding(.leading, 32)
+                .padding(.leading, 41)
             }
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         // The same list again on a right-click, because that is where a reader
         // looks for the thing that is not a button, and the ellipsis above is what
         // tells them there is one.
@@ -640,7 +709,14 @@ struct UpdateView: View {
             facts.append("The list is showing \(totalCount) installed thing\(totalCount == 1 ? "" : "s"), of which \(noteworthyCount) need\(noteworthyCount == 1 ? "s" : "") attention — a newer version to be had, or a copy Housekeeping found something wrong with.")
             facts.append(summaryLine)
             for group in groups {
-                facts.append("- \(group.channel.title): \(group.rows.count). \(group.channel.method)")
+                facts.append("- \(group.family.title): \(group.rows.count). \(group.family.method)")
+            }
+            // A family with nothing in it is still a question the reader can ask —
+            // "what about the App Store ones?" arrived in testing and the model,
+            // given no line for it, invented a reason. Its method is the answer,
+            // and it is one sentence, so it is handed over even when empty.
+            for family in UpdateFamily.allCases where !groups.contains(where: { $0.family == family }) {
+                facts.append("- \(family.title): nothing in this list. \(family.method)")
             }
             if selectedCount > 0 {
                 facts.append("\(selectedCount) row\(selectedCount == 1 ? " is" : "s are") ticked, meaning Update All would act on them.")
@@ -724,6 +800,13 @@ struct UpdateView: View {
     /// drift into offering different things.
     @ViewBuilder
     private func rowMenuItems(_ row: UpdateRow) -> some View {
+        // The same door the row used to print as a red link on every line, now in
+        // the one menu the row has room for.
+        Button("Ask the Housekeeper about this") {
+            appState.housekeeperTopic = topic(for: row)
+            appState.showUpdateList = false
+            Task { @MainActor in appState.showHousekeeper = true }
+        }
         if let path = row.path {
             Button("Show in Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
@@ -734,13 +817,31 @@ struct UpdateView: View {
                 toggleEvidence(row.id)
             }
         }
-        if row.path != nil || !row.evidence.isEmpty {
-            Divider()
-        }
+        Divider()
         if row.isExcepted {
             Button("Offer this again") { appState.offerUpdateAgain(row) }
         } else {
             Button("Ignore from now on") { appState.ignoreUpdate(row) }
+        }
+    }
+
+    /// The row's own face: the application's real icon when the row has a bundle,
+    /// and the family's glyph otherwise. A list of fifty-five identical rows reads
+    /// as a block of text; a column of recognizable icons is read one at a time,
+    /// which is the whole difference between a list a reader scans and a wall they
+    /// scroll past.
+    @ViewBuilder
+    private func rowIcon(_ row: UpdateRow) -> some View {
+        let family = UpdateFamily.of(row.channel)
+        if let path = row.path, path.hasSuffix(".app") {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: path))
+                .resizable()
+                .frame(width: 20, height: 20)
+        } else {
+            Image(systemName: family.symbol)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(family.tint ?? style.secondaryText)
+                .frame(width: 20, height: 20)
         }
     }
 
