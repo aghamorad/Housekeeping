@@ -1602,12 +1602,7 @@ private struct ResultsScreen: View {
     @State private var query = ""
     @State private var order: ResultsOrder = .kind
     @State private var showReadingGuide = false
-    @State private var showAllNotes = false
-
-    /// Three notes fit beside the findings without crowding them. Anything past
-    /// that folds away, so a scan that produces a dozen of them can never push the
-    /// list, the detail pane, and the action bar off the bottom of the window.
-    private static let inlineNoteLimit = 3
+    @State private var showScanNotes = false
 
     private var allItems: [FoundItem] { appState.scanResults?.foundItems ?? [] }
 
@@ -1691,15 +1686,16 @@ private struct ResultsScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            DisclosureGroup(isExpanded: $showReadingGuide) {
+            disclosureRow(
+                showReadingGuide ? "Hide how to read this list" : "How to read this list",
+                isExpanded: showReadingGuide
+            ) {
+                showReadingGuide.toggle()
+            }
+            if showReadingGuide {
                 readingGuide
                     .padding(.top, 6)
-            } label: {
-                Text("How to read this list")
-                    .font(style.labelFont)
-                    .foregroundStyle(style.accent)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -1711,52 +1707,62 @@ private struct ResultsScreen: View {
         return "Measured \(results.scannedPaths.count) location\(results.scannedPaths.count == 1 ? "" : "s") in \(seconds) seconds."
     }
 
+    /// The notes above the list used to be printed in full, three paragraphs deep,
+    /// before a single finding was visible. They are still one click away, but the
+    /// header now reads as a title, a line, and two small links — so the list is
+    /// what the screen is about again.
     @ViewBuilder
     private var notesBanner: some View {
         let notes = appState.scanResults?.scanNotes ?? []
         if !notes.isEmpty {
-            let shown = Array(notes.prefix(Self.inlineNoteLimit))
-            let hidden = Array(notes.dropFirst(Self.inlineNoteLimit))
-
-            VStack(alignment: .leading, spacing: 5) {
-                ForEach(Array(shown.enumerated()), id: \.offset) { _, note in
-                    noteRow(note)
-                }
-
-                if !hidden.isEmpty {
-                    DisclosureGroup(isExpanded: $showAllNotes) {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 5) {
-                                ForEach(Array(hidden.enumerated()), id: \.offset) { _, note in
-                                    noteRow(note)
-                                }
-                            }
-                            .padding(.top, 4)
-                        }
-                        // Same reason as the review sheet: with the modifiers the
-                        // other way round the block is always 120 points tall, so
-                        // one short note left a blank space under the disclosure.
-                        .frame(maxHeight: 120)
-                        .fixedSize(horizontal: false, vertical: true)
-                    } label: {
-                        Text(showAllNotes
-                             ? "Hide these details"
-                             : "Show \(hidden.count) more detail\(hidden.count == 1 ? "" : "s")")
-                            .font(style.labelFont)
-                            .foregroundStyle(style.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
+            disclosureRow(
+                showScanNotes ? "Hide scan details" : "Scan details · \(notes.count)",
+                isExpanded: showScanNotes
+            ) {
+                showScanNotes.toggle()
             }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(style.rowSelection.opacity(0.45))
+            if showScanNotes {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
+                            noteRow(note)
+                        }
+                    }
+                    .padding(.top, 6)
+                }
+                .frame(maxHeight: 140)
+            }
         }
     }
 
+    /// A one-line disclosure. `DisclosureGroup` was used here first, but its header
+    /// stops taking clicks the moment it is given a plain button style — it drew the
+    /// chevron and did nothing when pressed. This is the same look without that trap.
+    private func disclosureRow(
+        _ title: String,
+        isExpanded: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .foregroundStyle(style.accent)
+                Text(title)
+                    .font(style.labelFont)
+                    .foregroundStyle(style.accent)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func noteRow(_ note: ScanResults.ScanNote) -> some View {
-        HStack(alignment: .top, spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(note.phase)
+                .font(style.labelFont)
+                .foregroundStyle(style.text)
             Text(note.message)
                 .font(style.smallFont)
                 .foregroundStyle(style.secondaryText)
