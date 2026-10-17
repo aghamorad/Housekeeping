@@ -97,7 +97,7 @@ struct ProtectionView: View {
             }
         }
         .padding(16)
-        .frame(minWidth: 720, minHeight: 520)
+        .frame(minWidth: 720, maxWidth: 720, minHeight: 520)
         .preferredColorScheme(style.isRetro ? .light : nil)
     }
 

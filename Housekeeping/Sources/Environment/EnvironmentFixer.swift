@@ -222,6 +222,37 @@ struct EnvironmentFixer {
                     success: "Homebrew's \(formula) now owns the name."
                 )
 
+            case .brewUpgrade(let formulae):
+                // Names reach a command line here, so the same restraint as
+                // everywhere else: only a name that is one word and does not
+                // start like an option is handed to Homebrew.
+                let names = formulae.filter { !$0.isEmpty && !$0.contains(" ") && !$0.hasPrefix("-") }
+                guard !names.isEmpty else { continue }
+                outcomes[finding.id] = await brewOutcome(
+                    finding,
+                    arguments: ["upgrade"] + names,
+                    timeout: 3600,
+                    success: names.count == 1
+                        ? "Updated to the version Homebrew reported."
+                        : "Updated \(names.count) packages to the versions Homebrew reported."
+                )
+
+            case .brewCleanup:
+                outcomes[finding.id] = await brewOutcome(
+                    finding,
+                    arguments: ["cleanup"],
+                    timeout: 1800,
+                    success: "Homebrew's old versions and download cache are cleared. The current version of everything is untouched."
+                )
+
+            case .brewAutoremove:
+                outcomes[finding.id] = await brewOutcome(
+                    finding,
+                    arguments: ["autoremove"],
+                    timeout: 900,
+                    success: "Dependencies nothing needed any more were removed."
+                )
+
             case .quarantine:
                 // Reported by the move pass. Reaching here would mean the move
                 // was skipped for want of a path, which the row below says.
@@ -232,6 +263,55 @@ struct EnvironmentFixer {
 
             case .rewriteShellConfig(let path, let newContents):
                 outcomes[finding.id] = rewrite(path: path, contents: newContents, of: finding)
+            }
+        }
+
+        // The check after the fix. A repair for a shadowed command is only a
+        // repair if the name now resolves elsewhere, and that is answered by
+        // reading the search path again rather than by trusting the rewrite.
+        // Homebrew's three maintenance actions are checked the same way: the
+        // question they were offered for is asked a second time.
+        for finding in findings {
+            guard let recorded = outcomes[finding.id], recorded.succeeded else { continue }
+            if let command = finding.verifyCommand {
+                outcomes[finding.id] = await verified(recorded, command: command)
+            } else if let fix = finding.fix {
+                switch fix {
+                case .brewUpgrade:
+                    outcomes[finding.id] = await verifiedHomebrew(recorded, arguments: ["outdated", "--json=v2"]) { output in
+                        guard let data = output.data(using: .utf8),
+                              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                            return "Checked afterwards: Homebrew did not answer the follow-up check."
+                        }
+                        let formulae = (json["formulae"] as? [[String: Any]])?.count ?? 0
+                        let casks = (json["casks"] as? [[String: Any]])?.count ?? 0
+                        let remaining = formulae + casks
+                        return remaining == 0
+                            ? "Checked afterwards: nothing Homebrew knows about is still outdated."
+                            : "Checked afterwards: \(remaining) package\(remaining == 1 ? " is" : "s are") still reported as outdated."
+                    }
+                case .brewCleanup:
+                    outcomes[finding.id] = await verifiedHomebrew(recorded, arguments: ["cleanup", "--dry-run"]) { output in
+                        let remaining = output.split(separator: "\n").filter {
+                            let line = $0.trimmingCharacters(in: .whitespaces)
+                            return line.hasPrefix("Would remove:") || line.hasPrefix("Removing:")
+                        }.count
+                        return remaining == 0
+                            ? "Checked afterwards: a dry run finds nothing left to remove."
+                            : "Checked afterwards: a dry run still finds \(remaining) item\(remaining == 1 ? "" : "s") to remove."
+                    }
+                case .brewAutoremove:
+                    outcomes[finding.id] = await verifiedHomebrew(recorded, arguments: ["autoremove", "--dry-run"]) { output in
+                        let remaining = output.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+                            .filter { !$0.isEmpty && !$0.hasPrefix("==>") && !$0.contains(" ") && !$0.hasSuffix(":") }
+                            .count
+                        return remaining == 0
+                            ? "Checked afterwards: a dry run finds no dependencies left to remove."
+                            : "Checked afterwards: a dry run still names \(remaining) dependency\(remaining == 1 ? "" : "ies")."
+                    }
+                default:
+                    break
+                }
             }
         }
 
@@ -292,7 +372,9 @@ struct EnvironmentFixer {
             return Self.deadLinkReason
         case .unshadow(let formula, let stray) where stray != nil:
             return "Moved because Homebrew could not put its own \(formula) in place while this copy was here."
-        case .unshadow, .brewLink, .brewUntap, .brewInstall, .brewUninstall, .repointSymlink, .rewriteShellConfig:
+        case .unshadow, .brewLink, .brewUntap, .brewInstall, .brewUninstall,
+             .brewUpgrade, .brewCleanup, .brewAutoremove,
+             .repointSymlink, .rewriteShellConfig:
             return nil
         }
     }
@@ -440,6 +522,86 @@ struct EnvironmentFixer {
         }
     }
 
+    // MARK: - The check after the fix
+
+    /// Resolves the command the fix was meant to change, using the profile
+    /// files as they are now, and reads its version from the program itself.
+    /// The sentence reports what actually wins rather than asserting success —
+    /// a profile rewrite that did not change the answer is exactly the thing
+    /// this check exists to catch.
+    private func verified(_ outcome: EnvironmentOutcome, command: String) async -> EnvironmentOutcome {
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        let prefix = brewPath.map {
+            URL(fileURLWithPath: $0).deletingLastPathComponent().deletingLastPathComponent().path
+        }
+        let shell = ShellPathModel.read(home: home, brewPrefix: prefix)
+
+        guard let winner = shell.searchDirectories
+            .map({ "\($0)/\(command)" })
+            .first(where: { fileManager.isExecutableFile(atPath: $0) }) else {
+            return withVerification(outcome, "Checked afterwards: \(command) still does not resolve to a file.")
+        }
+
+        var environment = ProcessInfo.processInfo.environment
+        environment["PATH"] = shell.searchDirectories.joined(separator: ":")
+        environment["LC_ALL"] = "C"
+        let result = try? await runner.run(
+            executable: winner,
+            arguments: ["--version"],
+            environment: environment,
+            timeout: 10
+        )
+        let text = result.map { $0.stdout.isEmpty ? $0.stderr : $0.stdout } ?? ""
+        let version = LanguageToolAudit.versionNumber(in: text)
+
+        let shown = (winner as NSString).abbreviatingWithTildeInPath
+        var sentence = "Checked afterwards: \(command) now runs \(shown)"
+        if let version { sentence += " (version \(version))" }
+        sentence += "."
+        let resolved = URL(fileURLWithPath: winner).resolvingSymlinksInPath().path
+        if resolved != URL(fileURLWithPath: winner).standardizedFileURL.path {
+            sentence += " It resolves to \((resolved as NSString).abbreviatingWithTildeInPath)."
+        }
+        return withVerification(outcome, sentence)
+    }
+
+    /// Runs the question a Homebrew maintenance action was offered for, a
+    /// second time. Network use here is deliberate: `outdated` is the only way
+    /// to know whether an update actually landed.
+    private func verifiedHomebrew(
+        _ outcome: EnvironmentOutcome,
+        arguments: [String],
+        reading: (String) -> String
+    ) async -> EnvironmentOutcome {
+        guard let brewPath else { return outcome }
+        guard let result = try? await runner.run(
+            executable: brewPath,
+            arguments: arguments,
+            environment: brewEnvironment(),
+            timeout: 240
+        ) else {
+            return withVerification(outcome, "Checked afterwards: Homebrew did not answer the follow-up check.")
+        }
+        return withVerification(outcome, reading(result.stdout + "\n" + result.stderr))
+    }
+
+    private func brewEnvironment() -> [String: String] {
+        var environment = ProcessInfo.processInfo.environment
+        if let brewPath {
+            let prefix = URL(fileURLWithPath: brewPath).deletingLastPathComponent().deletingLastPathComponent().path
+            environment["PATH"] = "\(prefix)/bin:" + (environment["PATH"] ?? "/usr/bin:/bin")
+        }
+        environment["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+        environment["HOMEBREW_NO_ENV_HINTS"] = "1"
+        return environment
+    }
+
+    private func withVerification(_ outcome: EnvironmentOutcome, _ verification: String) -> EnvironmentOutcome {
+        var copy = outcome
+        copy.verification = verification
+        return copy
+    }
+
     /// Homebrew writes progress and warnings freely and its actual complaint last.
     private static func lastMeaningfulLine(_ text: String) -> String? {
         text.split(separator: "\n")
@@ -469,6 +631,12 @@ struct EnvironmentFixer {
             return tap
         case .quarantine(let path), .repointSymlink(let path, _), .rewriteShellConfig(let path, _):
             return (path as NSString).abbreviatingWithTildeInPath
+        case .brewUpgrade(let names):
+            return names.count == 1 ? names[0] : "\(names.count) packages"
+        case .brewCleanup:
+            return "Old versions"
+        case .brewAutoremove:
+            return "Unneeded dependencies"
         }
     }
 }

@@ -27,7 +27,7 @@ struct ReconcileView: View {
             Divider()
             footer
         }
-        .frame(minWidth: 940, minHeight: 660)
+        .frame(minWidth: 940, maxWidth: 940, minHeight: 660)
         .background(style.windowBackground)
     }
 

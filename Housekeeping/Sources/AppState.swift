@@ -49,11 +49,41 @@ enum SweepStage: Int, CaseIterable, Equatable {
 
 @MainActor
 final class AppState: ObservableObject {
+    /// The one sheet the window may show at a time.
+    ///
+    /// AppKit attaches a single sheet to a window, so fourteen independent
+    /// `showX` flags did not give fourteen screens. They gave one screen and a
+    /// queue nobody could see: asking for Extras while Update Apps was open put
+    /// Extras behind it, and closing Update Apps then opened Extras as if the
+    /// click had only just happened. One optional screen makes the flags
+    /// exclusive by construction, and every `appState.showX = true` call site
+    /// still reads the way it did.
+    enum Screen: String, Identifiable, Hashable {
+        case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
+        case protectionList, diskBrowser, reconcile, updateList, setupCheck
+        case housekeeper, routes, phone, extras, selfUpdate
+
+        var id: String { rawValue }
+    }
+
+    @Published var screen: Screen?
+
+    private func show(_ which: Screen, _ on: Bool) {
+        if on {
+            screen = which
+        } else if screen == which {
+            screen = nil
+        }
+    }
+
     @Published var scanState: ScanState = .idle
     @Published var flowStep: FlowStep = .summary
     @Published var scanProgress: ScanProgress = .idle  // Changed from .none to .idle
     @Published var scanResults: ScanResults?
-    @Published var showCleanupConfirmation = false
+    var showCleanupConfirmation: Bool {
+        get { screen == .cleanupConfirmation }
+        set { show(.cleanupConfirmation, newValue) }
+    }
     @Published var cleanupHistory: [CleanupRecord] = []
     @Published var currentTheme: Theme
     @Published var lastErrorMessage: String?
@@ -62,10 +92,19 @@ final class AppState: ObservableObject {
     /// folder has been walked out into the visible one. A property initializer
     /// here would run before that move and report the wrong answer.
     @Published var hasQuarantineItems = false
-    @Published var showQuarantineManagement = false
-    @Published var showGuidedCleanup = false
+    var showQuarantineManagement: Bool {
+        get { screen == .quarantine }
+        set { show(.quarantine, newValue) }
+    }
+    var showGuidedCleanup: Bool {
+        get { screen == .guidedCleanup }
+        set { show(.guidedCleanup, newValue) }
+    }
     /// The rehearsal sheet: what a cleanup would do, said before anything does it.
-    @Published var showCleanupPreview = false
+    var showCleanupPreview: Bool {
+        get { screen == .cleanupPreview }
+        set { show(.cleanupPreview, newValue) }
+    }
     @Published var guidedCleanupItems: [FoundItem] = []
     /// When on, the scan also measures folders no rule describes. It is the
     /// difference between "nothing else to clean" and "4 GB in places I have no
@@ -75,16 +114,25 @@ final class AppState: ObservableObject {
     /// launch. Published so the lists, counts, and veredicts that depend on it
     /// redraw the moment it changes.
     @Published private(set) var protectionEntries: [ProtectionList.Entry] = []
-    @Published var showProtectionList = false
+    var showProtectionList: Bool {
+        get { screen == .protectionList }
+        set { show(.protectionList, newValue) }
+    }
     /// Whether the disk browser is open. Only the flag lives here — which folder
     /// is on screen and what the measurement found belong to `DiskBrowserModel`,
     /// so that walking around the disk cannot disturb the scan or the quarantine.
-    @Published var showDiskBrowser = false
+    var showDiskBrowser: Bool {
+        get { screen == .diskBrowser }
+        set { show(.diskBrowser, newValue) }
+    }
     /// Whether the two-folder comparison is open. Only the flag lives here, for
     /// the same reason as the disk browser: which pair is on screen and what the
     /// comparison found belong to `ReconcileModel`, so that reading two libraries
     /// cannot disturb the scan, the disk measurements, or the quarantine.
-    @Published var showReconcile = false
+    var showReconcile: Bool {
+        get { screen == .reconcile }
+        set { show(.reconcile, newValue) }
+    }
     /// Whether the Routes screen is open. Only the flag lives here, for the same
     /// reason again: the run, its settings and its results belong to
     /// `RoutesModel`, so that testing routes cannot disturb the scan, the disk
@@ -92,12 +140,32 @@ final class AppState: ObservableObject {
     /// the network rather than the filesystem — it connects and disconnects a VPN
     /// client over and over while it runs — which is why it is deliberately built
     /// to leave the machine on nothing when it stops.
-    @Published var showRoutes = false
+    var showRoutes: Bool {
+        get { screen == .routes }
+        set { show(.routes, newValue) }
+    }
+    /// Whether the Spoof Location sheet is open. Only the flag lives here, for the
+    /// same reason again: the phone readings and the run belong to `PhoneModel`,
+    /// so a location change cannot disturb the scan or the quarantine. It is the
+    /// one screen that acts on another device rather than on this Mac.
+    var showPhone: Bool {
+        get { screen == .phone }
+        set { show(.phone, newValue) }
+    }
+    /// Whether the Extras sheet is open. Only the flag lives here: the screen
+    /// starts other apps and holds nothing the rest of the window needs to know.
+    var showExtras: Bool {
+        get { screen == .extras }
+        set { show(.extras, newValue) }
+    }
     /// Whether the housekeeper sheet is open. Only the flag lives here; the
     /// conversation belongs to `Housekeeper` and is shared rather than owned by
     /// the sheet, so opening it from the menu bar the second time does not lose
     /// what was said the first.
-    @Published var showHousekeeper = false
+    var showHousekeeper: Bool {
+        get { screen == .housekeeper }
+        set { show(.housekeeper, newValue) }
+    }
     /// What the housekeeper's window should be about, when the screen opening it
     /// is not about a scanned path. A screen that wants the housekeeper sets this
     /// and flips `showHousekeeper` in the same turn; the sheet takes it as it
@@ -107,7 +175,10 @@ final class AppState: ObservableObject {
     // MARK: - Is a newer Housekeeping out
 
     /// Whether the sheet that checks this copy's own age is open.
-    @Published var showSelfUpdate = false
+    var showSelfUpdate: Bool {
+        get { screen == .selfUpdate }
+        set { show(.selfUpdate, newValue) }
+    }
     /// What the last check found. Starts `.idle` rather than `.checking`: nothing
     /// has been asked yet, and a screen that showed a spinner before the question
     /// was put would be animating a lie.
@@ -129,7 +200,10 @@ final class AppState: ObservableObject {
     // MARK: - Updating the applications
 
     /// Whether the update sheet is open.
-    @Published var showUpdateList = false
+    var showUpdateList: Bool {
+        get { screen == .updateList }
+        set { show(.updateList, newValue) }
+    }
     /// What the last reading found. Kept as one flat list: `UpdateView` groups it
     /// by channel itself, because the grouping is a presentation choice and the
     /// list should stay usable without it.
@@ -171,7 +245,10 @@ final class AppState: ObservableObject {
     // MARK: - Checking the setup
 
     /// Whether the setup sheet is open.
-    @Published var showSetupCheck = false
+    var showSetupCheck: Bool {
+        get { screen == .setupCheck }
+        set { show(.setupCheck, newValue) }
+    }
     /// What the last reading found, in the order the sheet draws it. Rebuilt
     /// whole by each reading rather than merged into, so the list can never hold
     /// a row whose subject has since been fixed by hand.
@@ -190,6 +267,15 @@ final class AppState: ObservableObject {
     /// `beginSetupCheckIfNeeded` — so this is the flag that tells a list nobody
     /// has asked for yet from one that came back empty.
     @Published var environmentHasRead = false
+    /// What earlier readings and repairs found, newest first.
+    @Published var environmentHistoryEntries: [EnvironmentHistoryEntry] = []
+    /// Whether the sheet is showing the history rather than the current list.
+    @Published var environmentShowHistory = false
+
+    /// The record on disk. Its entries are mirrored into the published list
+    /// above, so views observe one array rather than a reference type. Lazy so
+    /// the file is read after the one-time folder migration in `init`.
+    lazy var environmentHistory = EnvironmentHistory()
 
     /// Stored here for the same reason the update feature's are: an extension
     /// cannot hold storage, and the bridge that uses these lives in its own file.
@@ -262,6 +348,10 @@ final class AppState: ObservableObject {
         let engine = CleanupEngine()
         engine.adoptLegacyQuarantineIfNeeded()
         hasQuarantineItems = engine.hasQuarantineItems
+
+        // Read once here so the history panel has something to show before this
+        // launch's first check.
+        environmentHistoryEntries = environmentHistory.entries
     }
 
     // MARK: - Leaving things alone

@@ -79,6 +79,12 @@ extension AppState {
             self.environmentHasRead = true
             self.environmentIsReading = false
             self.environmentRunner = nil
+
+            self.recordEnvironmentHistory(
+                kind: .scan,
+                summary: "Checked the setup: " + Self.describe(report),
+                detail: report.findings.prefix(20).map { "\($0.severity.label): \($0.title)" }
+            )
         }
         return environmentTask
     }
@@ -135,6 +141,18 @@ extension AppState {
             self.environmentIsWorking = false
             self.environmentFixer = nil
             self.environmentRunner = nil
+
+            self.recordEnvironmentHistory(
+                kind: .repair,
+                summary: Self.summaryLine(for: outcomes),
+                detail: outcomes.map { outcome in
+                    var line = "\(outcome.succeeded ? "Done" : "Not done"): \(outcome.name) — \(outcome.message)"
+                    if let verification = outcome.verification {
+                        line += " " + verification
+                    }
+                    return line
+                }
+            )
 
             // Rows that were fixed are no longer true, so they leave the list. A
             // row that failed stays, with its reason above, because the reader's

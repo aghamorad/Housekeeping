@@ -45,7 +45,7 @@ struct RoutesView: View {
             Divider()
             footer
         }
-        .frame(minWidth: 1040, minHeight: 680)
+        .frame(minWidth: 1040, maxWidth: 1040, minHeight: 680)
         .background(style.windowBackground)
         .preferredColorScheme(style.isRetro ? .light : .dark)
         // A run that is allowed to disappear closes nothing: the engine finishes

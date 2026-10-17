@@ -103,6 +103,20 @@ struct UpdateView: View {
         appState.updateRows.filter { $0.isSelected && $0.canUpdate && $0.channel.canInstall }.count
     }
 
+    /// The rows a group heading's tick box stands for: the ones Housekeeping can
+    /// finish, in the list as it is filtered on screen.
+    private func selectableRows(_ rows: [UpdateRow]) -> [UpdateRow] {
+        rows.filter { $0.canUpdate && $0.channel.canInstall }
+    }
+
+    /// Everything Select all and Select none act on — the rows the list is showing
+    /// right now, after the search and the filter, rather than the whole Mac. A
+    /// button that ticked things the reader cannot see would be doing more than
+    /// the screen says it does.
+    private var visibleSelectableIDs: [String] {
+        groups.flatMap { selectableRows($0.rows).map(\.id) }
+    }
+
     private var visibleCount: Int {
         groups.reduce(0) { $0 + $1.rows.count }
     }
@@ -200,6 +214,27 @@ struct UpdateView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A text button for the two bulk selections. Plain rather than a full
+    /// `ThemeButton` because they sit in a toolbar line whose subject is the list,
+    /// not them — and because the group headings already carry the same control.
+    private func selectionButton(
+        _ title: String,
+        help: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(style.smallFont)
+                .underline()
+                .foregroundColor(enabled ? style.accentLifted : style.secondaryText)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .help(help)
+        .accessibilityLabel(title)
     }
 
     private var readingState: some View {
@@ -323,6 +358,20 @@ struct UpdateView: View {
                  : "\(selectedCount) ticked, in groups Housekeeping can finish on its own.")
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
+            if !appState.updateIsReading {
+                selectionButton(
+                    "Select all",
+                    help: "Tick every row the list is showing that Housekeeping can update. Groups it cannot finish are left alone.",
+                    enabled: !visibleSelectableIDs.isEmpty && !appState.updateIsWorking
+                ) { appState.setUpdateSelection(ids: visibleSelectableIDs, selected: true) }
+                selectionButton(
+                    "Select none",
+                    help: "Untick every row in the list. Nothing is changed on the Mac — this only clears the ticks.",
+                    enabled: visibleSelectableIDs.contains { id in
+                        appState.updateRows.first { $0.id == id }?.isSelected == true
+                    } && !appState.updateIsWorking
+                ) { appState.setUpdateSelection(ids: visibleSelectableIDs, selected: false) }
+            }
             Spacer()
             AskHousekeeperButton(
                 topic: overviewTopic,
@@ -351,15 +400,53 @@ struct UpdateView: View {
     // MARK: - One group
 
     private func channelGroup(_ channel: UpdateChannel, _ rows: [UpdateRow]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let selectable = selectableRows(rows)
+        let selected = selectable.filter(\.isSelected)
+        let allSelected = !selectable.isEmpty && selected.count == selectable.count
+        let partlySelected = !selected.isEmpty && !allSelected
+
+        return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
+                    // The heading's tick box stands for every row below it. It is
+                    // drawn only where there is something Housekeeping can finish;
+                    // the App Store, macOS and unidentified groups get the same
+                    // dash they get on their own rows.
+                    if selectable.isEmpty {
+                        Image(systemName: "minus.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(style.secondaryText)
+                            .frame(width: 22, height: 22)
+                            .help("Nothing in this group is updated by Housekeeping, so there is nothing to select.")
+                    } else {
+                        ThemeCheckbox(
+                            isChecked: allSelected,
+                            isMixed: partlySelected,
+                            help: allSelected
+                                ? "Untick every row in this group."
+                                : "Tick every row in this group that Housekeeping can update."
+                        ) {
+                            appState.setUpdateSelection(ids: selectable.map(\.id), selected: !allSelected)
+                        }
+                    }
                     Text(channel.title)
                         .font(style.labelFont)
                         .foregroundColor(style.text)
                     Text("\(rows.count)")
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
+                    Spacer()
+                    // The same action for the whole group, without having to reach
+                    // the footer's Update All and hope it covers what was meant.
+                    if !selectable.isEmpty {
+                        selectionButton(
+                            selected.isEmpty ? "Update group" : "Update \(selected.count)",
+                            help: selected.isEmpty
+                                ? "Tick at least one row in this group first."
+                                : "Update only the ticked rows in this group — \(selected.count) of \(selectable.count) it can finish.",
+                            enabled: !selected.isEmpty && !appState.updateIsWorking && !appState.updateIsReading
+                        ) { appState.runUpdateAll(in: channel) }
+                    }
                 }
                 // The method sentence is the group's contract, so it is written
                 // out above the rows rather than hidden in a button's help text.
@@ -367,6 +454,7 @@ struct UpdateView: View {
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 28)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
@@ -560,6 +648,7 @@ struct UpdateView: View {
                 facts.append("Nothing is ticked, so Update All would do nothing.")
             }
             facts.append("Update All never touches the Mac App Store, macOS itself, or anything whose origin Housekeeping could not establish — those groups say so instead.")
+            facts.append("Each group heading has its own tick box for the whole group and a button that updates just that group; Select all and Select none sit beside the ticked count at the bottom and act on what the list is showing.")
         }
 
         if let line = appState.updateSummaryLine {

@@ -44,6 +44,10 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
     /// The Hermes class: a symlink whose target has gone, and a configuration
     /// file naming a program that no longer exists.
     case brokenLinks
+    /// Python, Node and the tools their package managers install: pipx, uv and
+    /// npm keep each tool in its own folder and put a small launcher on the
+    /// path, and that launcher is easy to lose behind an older copy.
+    case languageTools
     /// The shell's own search path: entries repeated, entries that lead nowhere.
     case shellPath
     /// Homebrew's own links, dependencies, taps and formulae.
@@ -52,6 +56,9 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
     case packageManagers
     /// Language runtimes installed outside a package manager.
     case runtimes
+    /// Work that is not a fault: packages Homebrew has a newer version of, old
+    /// versions taking up room, and dependencies nothing needs any more.
+    case maintenance
 
     var id: String { rawValue }
 
@@ -59,10 +66,12 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
         switch self {
         case .shadowing: return "Commands that run the wrong copy"
         case .brokenLinks: return "Links that lead nowhere"
+        case .languageTools: return "Python, Node and their tools"
         case .shellPath: return "Your shell's search path"
         case .homebrew: return "Homebrew's own health"
         case .packageManagers: return "Two package managers"
         case .runtimes: return "Runtimes installed by hand"
+        case .maintenance: return "Updates and leftovers"
         }
     }
 
@@ -76,6 +85,8 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
             return "For every Homebrew formula with programs in it, Housekeeping walked your search path to see which file would actually run. A name is only reported when the copy that wins is not the one Homebrew installed. Reported names can be re-linked, or the stray copy moved to Quarantine."
         case .brokenLinks:
             return "Every entry in the standard binary folders was followed to its target. A link whose target has gone is reported; where the same program still exists inside the same application bundle, the link is re-pointed at it. Links that lead nowhere can be moved to Quarantine. Configuration files that name a missing program are read only, never rewritten — Housekeeping has no business editing another application's settings."
+        case .languageTools:
+            return "pipx and uv install each Python tool into its own folder and leave a small launcher in ~/.local/bin; npm does the same under Homebrew. Housekeeping asks each manager what it installed, checks that its launcher is still there, then walks your search path to see which copy of each name actually runs. A tool is only reported when the copy that wins is a different, older one — several Python versions side by side are normal and are not reported as a fault. Reordering your own profile line is offered where it would fix the name; nothing in a system folder is touched."
         case .shellPath:
             return "Your profile files were read and assembled in the order a shell would read them. Repeated entries inside one file can be tidied, with a copy of the original kept beside it. An entry repeated across two different files is reported but left alone: which file should keep it depends on whether a shell is a login shell, and Housekeeping cannot know that. A line that sets the path from a command's output is counted but not interpreted, because reading is not running."
         case .homebrew:
@@ -84,6 +95,8 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
             return "Two package managers on one Mac each keep their own copy of common tools, and the one earlier in your search path wins. Housekeeping lists the names they both provide and can move the older one later in the path — a change to one line of your profile, with a backup. Removing a package manager outright is written out as commands rather than done here."
         case .runtimes:
             return "Language runtimes installed outside any package manager, and whether anything on this Mac still points at them. Nothing is changed in this group: runtimes live in system folders, which need an administrator, and an item moved by an administrator is one Housekeeping cannot restore on its own. What you get is the list of what still refers to it."
+        case .maintenance:
+            return "Homebrew's own answers to three questions: which installed packages have a newer version, how much room old versions are using, and which dependencies nothing needs any more. None of this is a fault, which is why none of it is ticked for you. Updating downloads; clearing old versions re-downloads them only if you roll back; removing unused dependencies is the one that needs the most thought. Each is one command you can approve or leave alone."
         }
     }
 
@@ -91,10 +104,12 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
         switch self {
         case .shadowing: return 0
         case .brokenLinks: return 1
-        case .homebrew: return 2
+        case .languageTools: return 2
         case .shellPath: return 3
-        case .packageManagers: return 4
-        case .runtimes: return 5
+        case .homebrew: return 4
+        case .packageManagers: return 5
+        case .runtimes: return 6
+        case .maintenance: return 7
         }
     }
 }
@@ -151,6 +166,14 @@ enum EnvironmentFix: Equatable {
     /// Rewrites one profile file with the corrected lines, keeping a copy of the
     /// original beside it.
     case rewriteShellConfig(path: String, newContents: String)
+    /// Updates the named Homebrew packages to the versions Homebrew reports.
+    /// One action for the batch, because updating one at a time is the same
+    /// decision made twenty times.
+    case brewUpgrade(formulae: [String])
+    /// Removes Homebrew's old versions of things that are still installed.
+    case brewCleanup
+    /// Removes dependencies that no installed package needs any more.
+    case brewAutoremove
 
     /// What the button says. Written out per case rather than assembled from the
     /// pieces, because "Link cjson" and "Link yt-dlp over the old copy" are
@@ -167,6 +190,12 @@ enum EnvironmentFix: Equatable {
         case .quarantine: return "Move to Quarantine"
         case .repointSymlink: return "Point it at the right file"
         case .rewriteShellConfig: return "Tidy the file"
+        case .brewUpgrade(let names):
+            return names.count == 1
+                ? "Update \(names[0])"
+                : "Update \(names.count) Homebrew packages"
+        case .brewCleanup: return "Remove Homebrew's old versions"
+        case .brewAutoremove: return "Remove unneeded dependencies"
         }
     }
 
@@ -196,6 +225,12 @@ enum EnvironmentFix: Equatable {
             return "Re-creates the link so it points at the file that is there now. The link that was there is replaced, not deleted, and the file it points at does not move."
         case .rewriteShellConfig:
             return "Writes the corrected file and keeps the original beside it as a dated backup. Your next new terminal window reads the new one; nothing already running is affected."
+        case .brewUpgrade(let names):
+            return "Downloads and installs the newer version of \(names.count == 1 ? names[0] : "these \(names.count) packages") with Homebrew. Homebrew keeps the previous version in its cellar, so `brew switch` or a reinstall can go back if something stops working. This reaches the network."
+        case .brewCleanup:
+            return "Deletes Homebrew's copies of older versions of packages that are still installed, and clears its download cache. The current version of everything stays. An old version can be downloaded again if you ever need it, but not instantly, and not without a connection."
+        case .brewAutoremove:
+            return "Removes packages that were installed only because something else needed them, and that nothing needs any more. Homebrew's own answer to which ones those are. `brew install <name>` puts any of them back."
         }
     }
 
@@ -203,7 +238,8 @@ enum EnvironmentFix: Equatable {
     /// batch through one lock and skip the rest when `brew` is not installed.
     var needsHomebrew: Bool {
         switch self {
-        case .brewLink, .brewUntap, .brewInstall, .brewUninstall, .unshadow: return true
+        case .brewLink, .brewUntap, .brewInstall, .brewUninstall, .unshadow,
+             .brewUpgrade, .brewCleanup, .brewAutoremove: return true
         case .quarantine, .repointSymlink, .rewriteShellConfig: return false
         }
     }
@@ -234,6 +270,12 @@ struct EnvironmentFinding: Identifiable, Equatable {
     /// Whether the row starts ticked. Only ever true for a change that is
     /// reversible by the reader in one command and affects nothing else.
     var isSelected: Bool
+    /// The command name whose behaviour this fix is meant to change, if any.
+    /// After the fix runs, Housekeeping resolves that name again and reports
+    /// which file wins now — a fix that ran without changing the answer is not
+    /// a fix, and the row should say so rather than the reader finding out in a
+    /// terminal next week.
+    var verifyCommand: String? = nil
 
     /// Whether this row can be run at all. The footer's count and the run
     /// itself use this same property, so the number on screen and the number of
@@ -249,7 +291,8 @@ struct EnvironmentFinding: Identifiable, Equatable {
             return path
         case .unshadow(_, let stray):
             return stray
-        case .brewLink, .brewInstall, .brewUninstall, .brewUntap, .none:
+        case .brewLink, .brewInstall, .brewUninstall, .brewUntap,
+             .brewUpgrade, .brewCleanup, .brewAutoremove, .none:
             return nil
         }
     }
@@ -286,4 +329,7 @@ struct EnvironmentOutcome: Identifiable, Equatable {
     let name: String
     let message: String
     let succeeded: Bool
+    /// What the check after the fix found, when the fix has something to check.
+    /// Nil for a finding Housekeeping refused to run or a run that stopped.
+    var verification: String? = nil
 }

@@ -68,6 +68,12 @@
 		A1000070 /* EnvironmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000070; };
 		A1000071 /* EnvironmentShellPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000071; };
 		A1000072 /* EnvironmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000072; };
+		A1000098 /* EnvironmentHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000098; };
+		A1000099 /* EnvironmentMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000099; };
+		A100009A /* EnvironmentPackages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009A; };
+		A100009B /* PhoneModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009B; };
+		A100009C /* PhoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009C; };
+		A100009D /* ExtrasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009D; };
 		A1000073 /* Housekeeper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000073; };
 		A1000074 /* HousekeeperTopic.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000074; };
 		A1000075 /* HousekeeperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000075; };
@@ -157,6 +163,12 @@
 		A2000070 /* EnvironmentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentModels.swift; sourceTree = "<group>"; };
 		A2000071 /* EnvironmentShellPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentShellPath.swift; sourceTree = "<group>"; };
 		A2000072 /* EnvironmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentView.swift; sourceTree = "<group>"; };
+		A2000098 /* EnvironmentHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentHistory.swift; sourceTree = "<group>"; };
+		A2000099 /* EnvironmentMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentMonitor.swift; sourceTree = "<group>"; };
+		A200009A /* EnvironmentPackages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentPackages.swift; sourceTree = "<group>"; };
+		A200009B /* PhoneModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Phone/PhoneModels.swift; sourceTree = "<group>"; };
+		A200009C /* PhoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Phone/PhoneView.swift; sourceTree = "<group>"; };
+		A200009D /* ExtrasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/ExtrasView.swift; sourceTree = "<group>"; };
 		A2000073 /* Housekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/Housekeeper.swift; sourceTree = "<group>"; };
 		A2000074 /* HousekeeperTopic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperTopic.swift; sourceTree = "<group>"; };
 		A2000075 /* HousekeeperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperView.swift; sourceTree = "<group>"; };
@@ -270,6 +282,12 @@
 				A2000070,
 				A2000071,
 				A2000072,
+				A2000098,
+				A2000099,
+				A200009A,
+				A200009B,
+				A200009C,
+				A200009D,
 				A2000073,
 				A2000074,
 				A2000075,
@@ -397,6 +415,12 @@
 				A1000070,
 				A1000071,
 				A1000072,
+				A1000098,
+				A1000099,
+				A100009A,
+				A100009B,
+				A100009C,
+				A100009D,
 				A1000073,
 				A1000074,
 				A1000075,

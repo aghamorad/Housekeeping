@@ -24,6 +24,8 @@ struct EnvironmentView: View {
     /// Which rows have their evidence unfolded. Kept here rather than on the row
     /// so it survives a rebuild of the list after a run.
     @State private var expandedEvidence: Set<String> = []
+    /// Which history lines have their rows unfolded.
+    @State private var expandedHistory: Set<UUID> = []
 
     private var groups: [(category: EnvironmentCategory, findings: [EnvironmentFinding])] {
         EnvironmentCategory.allCases
@@ -50,7 +52,9 @@ struct EnvironmentView: View {
             header
             ThemePanel(padding: 10) { toolbar }
 
-            if appState.environmentIsReading {
+            if appState.environmentShowHistory {
+                history
+            } else if appState.environmentIsReading {
                 readingState
             } else if groups.isEmpty {
                 emptyState
@@ -83,21 +87,94 @@ struct EnvironmentView: View {
     // MARK: - Header and footer
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Check My Setup")
-                    .font(style.titleFont)
-                Text("Which copy of each command actually runs, whether your links lead anywhere, and what Homebrew says about itself.")
-                    .font(style.smallFont)
-                    .foregroundColor(style.secondaryText)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Terminal Health")
+                        .font(style.titleFont)
+                    Text("Which copy of each command actually runs, what your package managers installed, and what Homebrew says about itself.")
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                }
+                Spacer()
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(statusColour)
+                        .frame(width: 8, height: 8)
+                    Text(statusLine)
+                        .font(style.smallFont)
+                        .foregroundColor(statusColour)
+                }
+                .padding(.top, 2)
             }
-            Spacer()
-            ThemeButton(
-                title: "Check Again",
-                systemImage: "arrow.clockwise",
-                isEnabled: !appState.environmentIsReading && !appState.environmentIsWorking,
-                help: "Read the Mac again from the start. This only reads — it runs `which`, Homebrew's own report, and walks the binary folders. Nothing is changed by a check."
-            ) { appState.startSetupCheck() }
+
+            HStack(spacing: 10) {
+                ThemeButton(
+                    title: "Scan System",
+                    systemImage: "magnifyingglass",
+                    isEnabled: !appState.environmentIsReading && !appState.environmentIsWorking,
+                    help: "Read the Mac again from the start. This only reads — it runs `which`, Homebrew's own report, and walks the binary folders. Nothing is changed by a scan."
+                ) {
+                    appState.environmentShowHistory = false
+                    appState.startSetupCheck()
+                }
+                ThemeButton(
+                    title: "Review Recommended Fixes",
+                    isEnabled: appState.environmentHasRead && !appState.environmentIsReading && !appState.environmentIsWorking,
+                    help: "Tick every row Housekeeping can do itself, so you can read each one before applying. Nothing runs until you press Apply Approved Fixes."
+                ) { reviewRecommended() }
+                ThemeButton(
+                    title: "Verify System",
+                    systemImage: "checkmark.seal",
+                    isEnabled: appState.environmentHasRead && !appState.environmentIsReading && !appState.environmentIsWorking,
+                    help: "Read the Mac again and record it as a verification. Same reading as Scan System; the difference is what the history says it was for."
+                ) {
+                    appState.environmentShowHistory = false
+                    appState.verifyTerminalHealth()
+                }
+                ThemeButton(
+                    title: appState.environmentShowHistory ? "Hide History" : "View History",
+                    systemImage: "clock.arrow.circlepath",
+                    isEnabled: !appState.environmentIsReading || appState.environmentShowHistory,
+                    help: "Every scan, repair and verification this Mac has recorded, newest first."
+                ) { appState.environmentShowHistory.toggle() }
+                Spacer()
+            }
+        }
+    }
+
+    private var statusLine: String {
+        if appState.environmentIsReading { return "Scanning the system…" }
+        guard appState.environmentHasRead else { return "Not scanned yet." }
+        if appState.environmentFindings.isEmpty { return "Everything looks right." }
+
+        let broken = appState.environmentFindings.filter { $0.severity == .broken }.count
+        if broken > 0 {
+            return broken == 1 ? "One thing is not working." : "\(broken) things are not working."
+        }
+        let shadowed = appState.environmentFindings.filter { $0.severity == .shadowed }.count
+        if shadowed > 0 {
+            return shadowed == 1 ? "One command runs a different copy." : "\(shadowed) commands run a different copy."
+        }
+        let untidy = appState.environmentFindings.count
+        return "\(untidy) thing\(untidy == 1 ? "" : "s") to tidy; nothing is broken."
+    }
+
+    private var statusColour: Color {
+        if appState.environmentIsReading || !appState.environmentHasRead { return style.secondaryText }
+        if appState.environmentFindings.contains(where: { $0.severity == .broken }) { return style.negative }
+        if appState.environmentFindings.contains(where: { $0.severity == .shadowed }) { return style.caution }
+        if appState.environmentFindings.isEmpty { return style.positive }
+        return style.secondaryText
+    }
+
+    /// Ticks every row Housekeeping can run itself. The ticks are proposals: the
+    /// reader still reads them, can clear any of them, and the run only starts
+    /// from the button at the bottom.
+    private func reviewRecommended() {
+        appState.environmentShowHistory = false
+        for index in appState.environmentFindings.indices where appState.environmentFindings[index].canFix {
+            appState.environmentFindings[index].isSelected = true
         }
     }
 
@@ -179,6 +256,89 @@ struct EnvironmentView: View {
             }
             .padding(.vertical, 2)
         }
+    }
+
+    // MARK: - History
+
+    private var history: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                if appState.environmentHistoryEntries.isEmpty {
+                    Text("Nothing recorded yet. Every scan, repair and verification adds a line here, so a change can be traced to the day it happened.")
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                        .padding(10)
+                } else {
+                    ForEach(appState.environmentHistoryEntries) { entry in
+                        historyRow(entry)
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func historyRow(_ entry: EnvironmentHistoryEntry) -> some View {
+        let isExpanded = expandedHistory.contains(entry.id)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(entry.kind.label)
+                    .font(style.labelFont)
+                    .foregroundColor(style.text)
+                Text(entry.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                Spacer()
+            }
+            Text(entry.summary)
+                .font(style.smallFont)
+                .foregroundColor(style.text)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !entry.detail.isEmpty {
+                Button {
+                    if isExpanded {
+                        expandedHistory.remove(entry.id)
+                    } else {
+                        expandedHistory.insert(entry.id)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if style.isRetro {
+                            RetroDisclosureTriangle(isExpanded: isExpanded)
+                        } else {
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                        }
+                        Text(isExpanded ? "Hide the rows" : "\(entry.detail.count) row\(entry.detail.count == 1 ? "" : "s")")
+                            .font(style.smallFont)
+                    }
+                    .foregroundColor(style.secondaryText)
+                }
+                .buttonStyle(.plain)
+
+                if isExpanded {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(entry.detail, id: \.self) { line in
+                            Text(line)
+                                .font(style.pathFont)
+                                .foregroundColor(style.secondaryText)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(style.groupingBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .stroke(style.border.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
     // MARK: - One group
@@ -487,6 +647,12 @@ struct EnvironmentView: View {
                                 .font(style.smallFont)
                                 .foregroundColor(style.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
+                            if let verification = outcome.verification {
+                                Text(verification)
+                                    .font(style.smallFont)
+                                    .foregroundColor(style.positive)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                 }
@@ -497,9 +663,14 @@ struct EnvironmentView: View {
 
     private var footer: some View {
         HStack(spacing: 10) {
+            // "Ticked", not "approved": some rows arrive ticked because running
+            // them is plainly the right thing to do, and the reader has not
+            // agreed to anything merely by reading a list.
             Text(selectedCount == 0
-                 ? "Nothing ticked. Tick a row Housekeeping can do for you, or press Done."
-                 : "\(selectedCount) ticked\(appState.environmentIsWorking ? ", running now" : "").")
+                 ? "Nothing ticked. Review the recommended fixes, then apply the ones you want."
+                 : appState.environmentIsWorking
+                    ? "\(selectedCount) ticked, running now."
+                    : "\(selectedCount) ticked. Nothing changes until you press Apply.")
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
             Spacer()
@@ -517,13 +688,13 @@ struct EnvironmentView: View {
                 ) { appState.cancelEnvironmentWork() }
             }
             ThemeButton(
-                title: selectedCount == 1 ? "Fix One Thing" : "Fix \(selectedCount) Things",
+                title: selectedCount == 0 ? "Apply Approved Fixes" : "Apply \(selectedCount) Approved Fix\(selectedCount == 1 ? "" : "es")",
                 systemImage: "wrench.and.screwdriver",
                 isPrimary: true,
                 isEnabled: selectedCount > 0 && !appState.environmentIsWorking && !appState.environmentIsReading,
                 help: selectedCount == 0
-                    ? "Nothing is ticked yet. Rows Housekeeping will not run carry commands instead and are never included."
-                    : "Do the \(selectedCount) ticked thing\(selectedCount == 1 ? "" : "s"). Anything moved goes to Housekeeping's Quarantine, where Restore puts it back."
+                    ? "Nothing is approved yet. Review the recommended fixes first; rows Housekeeping will not run carry commands instead and are never included."
+                    : "Do the \(selectedCount) approved thing\(selectedCount == 1 ? "" : "s"), then check the affected command still runs. Anything moved goes to Housekeeping's Quarantine, where Restore puts it back."
             ) { appState.runEnvironmentFixes() }
             ThemeButton(title: "Done", isPrimary: false) { appState.showSetupCheck = false }
         }

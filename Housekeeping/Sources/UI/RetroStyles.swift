@@ -244,6 +244,7 @@ struct RetroDisclosureTriangle: View {
 
 struct RetroCheckbox: View {
     let isChecked: Bool
+    var isMixed: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -253,6 +254,11 @@ struct RetroCheckbox: View {
                     RoundedRectangle(cornerRadius: 1, style: .circular)
                         .fill(RetroColors.darkText).frame(width: 18, height: 18)
                     Text("✓").font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+                } else if isMixed {
+                    RoundedRectangle(cornerRadius: 1, style: .circular)
+                        .fill(Color.white).frame(width: 18, height: 18)
+                        .border(RetroColors.darkText, width: 2)
+                    Text("–").font(.system(size: 13, weight: .bold)).foregroundColor(RetroColors.darkText)
                 } else {
                     RoundedRectangle(cornerRadius: 1, style: .circular)
                         .fill(Color.white).frame(width: 18, height: 18)
@@ -512,24 +518,29 @@ struct ThemeButton: View {
 struct ThemeCheckbox: View {
     @Environment(\.uiStyle) private var style
     let isChecked: Bool
+    /// Some but not all of what this box stands for are ticked. A group heading
+    /// that showed an empty box while three of its rows were ticked would be
+    /// saying something untrue about those three.
+    var isMixed: Bool = false
     var help: String? = nil
     let action: () -> Void
 
     var body: some View {
         Group {
             if style.isRetro {
-                RetroCheckbox(isChecked: isChecked, action: action)
+                RetroCheckbox(isChecked: isChecked, isMixed: isMixed, action: action)
             } else {
                 Button(action: action) {
-                    Image(systemName: isChecked ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: isChecked ? "checkmark.circle.fill"
+                                          : (isMixed ? "minus.circle.fill" : "circle"))
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(isChecked ? style.accent : style.secondaryText)
+                        .foregroundStyle(isChecked ? style.accent : (isMixed ? style.accent : style.secondaryText))
                 }
                 .buttonStyle(.plain)
             }
         }
         .helpIfPresent(help ?? (isChecked ? "Remove from the cleanup review" : "Add to the cleanup review"))
-        .accessibilityLabel(isChecked ? "Untick" : "Tick for the cleanup review")
+        .accessibilityLabel(isMixed ? "Some are ticked" : (isChecked ? "Untick" : "Tick for the cleanup review"))
     }
 }
 

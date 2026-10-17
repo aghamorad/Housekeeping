@@ -1,3 +1,32 @@
+# Housekeeping 0.14.0
+
+The window opens on a picture of everything it can do, and two other programs now travel inside it.
+
+- **The welcome screen is a ring of doors.** Four jobs sit around the octopus in a circle — scan,
+  browse, routes, spoof — with Extras beneath and the disk-reading screen on its own. Each door is a
+  disc with a colour and a face, and each says in a line what it is for. The cue is Jeopardy's board:
+  a shape is remembered before a label is read, and a reader who does not yet know what the app does
+  can find out by looking rather than by opening every menu.
+- **Extras.** MediaDock 9 and Bookbind — the two other apps built here — ship inside the bundle, so
+  the Extras screen can start them without being told where they live. A build made from a checkout
+  that has not built them says so instead of offering a dead button. Bookbind's program files are
+  staged into its embedded copy the way its own release workflow stages them; without that the
+  copied bundle cannot find its own code and opens to an error.
+- **One sheet at a time.** Fourteen independent presentation flags became one optional screen.
+  AppKit attaches a single sheet to a window, so the flags were never fourteen windows — they were
+  one window and an invisible queue: ask for Extras while Update Apps was open and Extras waited
+  behind it, then appeared when Update Apps closed as though the click had just happened. The flags
+  survive as computed properties, so every existing call site reads unchanged, and the screen asked
+  for last is the one that shows.
+- **The command menu is called Jobs.** SwiftUI names the app menu after the app, so a command menu
+  called Housekeeping put the name in the menu bar twice.
+- **The update list can be chosen in groups.** Every channel heading now carries its own tick box and
+  a link that updates only that group — Homebrew applications, Homebrew packages, GitHub releases —
+  and Select all and Select none sit beside the ticked count at the bottom, acting on whatever the
+  list is showing. Leaving Homebrew alone while replacing three bundles no longer means walking the
+  list row by row. A group Housekeeping cannot finish itself shows a dash in that box rather than a
+  tick, so the control never offers something the Update button would then ignore.
+
 # Housekeeping 0.13.0
 
 Housekeeping gets a face, a way to update itself, and a command line other apps can call. The engine
