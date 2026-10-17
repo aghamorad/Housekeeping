@@ -21,6 +21,9 @@ struct ProcessLoad: Identifiable, Equatable {
     let name: String
     /// Fraction of one core, so a busy process can read above 100%.
     let cpu: Double
+    /// Physical memory the process is holding, the same figure Activity Monitor
+    /// calls its memory. Read from the same rusage as the CPU time.
+    let memory: UInt64
 }
 
 struct BatteryState: Equatable {
@@ -50,7 +53,11 @@ struct VitalsSnapshot: Equatable {
     var gpu: Double?
     var battery: BatteryState?
     var uptime: TimeInterval = ProcessInfo.processInfo.systemUptime
+    /// The busiest hands. Kept to four because the panel names the first three.
     var processes: [ProcessLoad] = []
+    /// The biggest holders of memory, which are rarely the busiest hands — a
+    /// browser idles at no processor time while holding gigabytes.
+    var memoryHogs: [ProcessLoad] = []
 
     var memoryFraction: Double {
         memoryTotal > 0 ? Double(memoryUsed) / Double(memoryTotal) : 0
@@ -85,7 +92,7 @@ final class SystemVitals: NSObject, ObservableObject {
     private var timer: Timer?
     private var previousCPU: (busy: Double, total: Double)?
     private var previousInterfaces: [String: (rx: UInt32, tx: UInt32)] = [:]
-    private var previousProcessTimes: [pid_t: UInt64] = [:]
+    private var previousProcessTimes: [pid_t: (cpu: UInt64, memory: UInt64)] = [:]
     private var lastProcessSample = Date()
     private var quickProcessSample = false
 
@@ -111,7 +118,7 @@ final class SystemVitals: NSObject, ObservableObject {
         // would be the first *scheduled* sample, and the panel would say
         // "watching…" for the first seconds it was open. Take it now, then let
         // the first tick a second later complete the pair.
-        previousProcessTimes = readProcessTimes()
+        previousProcessTimes = readProcessUsage()
         lastProcessSample = Date()
         quickProcessSample = true
 
@@ -130,6 +137,43 @@ final class SystemVitals: NSObject, ObservableObject {
     func stop() {
         timer?.invalidate()
         timer = nil
+    }
+
+    /// Re-reads now rather than up to 2.5 seconds from now. Used after the panel
+    /// has stopped a process, so the list it is looking at does not keep naming it.
+    /// The last process sample is backdated past the sampling threshold, which
+    /// gives the CPU shares a real interval to divide by instead of a few
+    /// milliseconds of noise.
+    func refresh() {
+        lastProcessSample = Date().addingTimeInterval(-0.6)
+        sample()
+    }
+
+    /// Sends a stop signal to one process. Returns what went wrong, or nil.
+    ///
+    /// The normal signal is a request the process is free to answer on its own
+    /// terms — save, close, exit. The force signal takes the memory away where it
+    /// stands. Either way, the answer is Housekeeping's: a process it cannot signal
+    /// is reported rather than retried harder.
+    @discardableResult
+    func stop(_ process: ProcessLoad, force: Bool) -> String? {
+        guard process.id > 1, process.id != getpid() else {
+            return "Housekeeping will not stop that process."
+        }
+        if kill(process.id, force ? SIGKILL : SIGTERM) != 0 {
+            switch errno {
+            case ESRCH:
+                // It left between the last sample and the press.
+                refresh()
+                return nil
+            case EPERM:
+                return "macOS would not let Housekeeping stop \(process.name). It belongs to the system or to another user."
+            default:
+                return String(cString: strerror(errno))
+            }
+        }
+        refresh()
+        return nil
     }
 
     @objc private func tick() {
@@ -163,7 +207,9 @@ final class SystemVitals: NSObject, ObservableObject {
         next.gpu = readGPU()
         next.battery = readBattery()
         next.uptime = ProcessInfo.processInfo.systemUptime
-        next.processes = readProcesses()
+        let hands = readProcesses()
+        next.processes = hands.busy
+        next.memoryHogs = hands.holding
         snapshot = next
     }
 
@@ -319,7 +365,10 @@ final class SystemVitals: NSObject, ObservableObject {
         return nil
     }
 
-    private func readProcessTimes() -> [pid_t: UInt64] {
+    /// CPU time and memory for every process, from one rusage each. The two
+    /// readings are collected together because the second is free: `phys_footprint`
+    /// is already in the structure that supplies the CPU time.
+    private func readProcessUsage() -> [pid_t: (cpu: UInt64, memory: UInt64)] {
         let byteCount = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
         guard byteCount > 0 else { return [:] }
 
@@ -329,7 +378,7 @@ final class SystemVitals: NSObject, ObservableObject {
         }
         guard filled > 0 else { return [:] }
 
-        var times: [pid_t: UInt64] = [:]
+        var usageByPID: [pid_t: (cpu: UInt64, memory: UInt64)] = [:]
         let count = Int(filled) / MemoryLayout<pid_t>.size
 
         for index in 0..<count {
@@ -344,44 +393,65 @@ final class SystemVitals: NSObject, ObservableObject {
             }
             guard read == 0 else { continue }
 
-            times[pid] = usage.ri_user_time &+ usage.ri_system_time
+            // phys_footprint is the figure Activity Monitor calls memory: it is
+            // what the process has charged against the machine, not what it has
+            // merely reserved.
+            usageByPID[pid] = (
+                usage.ri_user_time &+ usage.ri_system_time,
+                usage.ri_phys_footprint
+            )
         }
 
-        return times
+        return usageByPID
     }
 
-    private func readProcesses() -> [ProcessLoad] {
+    private func readProcesses() -> (busy: [ProcessLoad], holding: [ProcessLoad]) {
         let now = Date()
         let elapsed = now.timeIntervalSince(lastProcessSample)
         // Every tick would mean reading a rusage for every process on the machine
         // once a second. Nothing in this panel moves that fast. The one exception
         // is the tick right after the panel opens, which finishes the pair the
         // baseline left half-done.
-        guard elapsed >= (quickProcessSample ? 0.4 : 2.5) else { return snapshot.processes }
+        guard elapsed >= (quickProcessSample ? 0.4 : 2.5) else {
+            return (snapshot.processes, snapshot.memoryHogs)
+        }
         lastProcessSample = now
         quickProcessSample = false
 
-        let times = readProcessTimes()
+        let usages = readProcessUsage()
         var loads: [ProcessLoad] = []
 
-        for (pid, spent) in times {
-            guard let previous = previousProcessTimes[pid] else { continue }
-            let seconds = Double(spent &- previous) / 1_000_000_000
-            let share = seconds / elapsed
-            // A floor only to keep sleepers out. At 1% an idle Mac reports nobody
-            // at all, and the panel says "watching…" while the machine is plainly
-            // doing something — the three busiest hands are worth naming even when
-            // the busiest is only using a tenth of a core.
-            guard share > 0.001 else { continue }
+        for (pid, usage) in usages {
+            // The first reading of a process only establishes a baseline. Its
+            // memory is real, though, so it still counts for the holders list.
+            let share: Double
+            if let previous = previousProcessTimes[pid] {
+                let seconds = Double(usage.cpu &- previous.cpu) / 1_000_000_000
+                share = seconds / elapsed
+            } else {
+                share = 0
+            }
 
             var nameBuffer = [CChar](repeating: 0, count: 128)
             let named = proc_name(pid, &nameBuffer, UInt32(nameBuffer.count))
             let name = named > 0 ? String(cString: nameBuffer) : "pid \(pid)"
-            loads.append(ProcessLoad(id: pid, name: name, cpu: share))
+            loads.append(ProcessLoad(id: pid, name: name, cpu: share, memory: usage.memory))
         }
 
-        previousProcessTimes = times
-        return Array(loads.sorted { $0.cpu > $1.cpu }.prefix(4))
+        previousProcessTimes = usages
+
+        // A floor only to keep sleepers out. At 1% an idle Mac reports nobody at
+        // all, and the panel says "watching…" while the machine is plainly doing
+        // something — the three busiest hands are worth naming even when the
+        // busiest is only using a tenth of a core.
+        let busy = loads
+            .filter { $0.cpu > 0.001 }
+            .sorted { $0.cpu > $1.cpu }
+        let holding = loads
+            .filter { $0.memory > 8 * 1_048_576 }
+            .sorted { $0.memory > $1.memory }
+
+        return (Array(busy.prefix(4)), Array(holding.prefix(6)))
     }
 
     // MARK: - Machine
@@ -429,6 +499,13 @@ enum VitalsFormat {
     static func gigabytes(_ bytes: UInt64) -> String {
         let gigabytes = Double(bytes) / 1_073_741_824
         return gigabytes >= 100 ? String(format: "%.0f GB", gigabytes) : String(format: "%.1f GB", gigabytes)
+    }
+
+    /// For a process, where whole gigabytes would round most of the list to zero.
+    static func megabytes(_ bytes: UInt64) -> String {
+        let megabytes = Double(bytes) / 1_048_576
+        if megabytes >= 1024 { return String(format: "%.1f GB", megabytes / 1024) }
+        return "\(Int(megabytes.rounded())) MB"
     }
 
     static func rate(_ bytes: Double) -> String {

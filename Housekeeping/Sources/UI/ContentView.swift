@@ -34,13 +34,26 @@ struct ContentView: View {
             case .housekeeper: HousekeeperView()
             case .routes: RoutesView()
             case .phone: PhoneView()
-            case .extras: ExtrasView()
+            case .mediaDock: mediaDockBody
+            case .bookbind: BookbindView(engine: appState.bookbind)
             case .selfUpdate: SelfUpdateView()
             }
         }
         .environment(\.uiStyle, style)
+        .environment(\.mediaDockSkin, MediaDockSkin.resolve(style))
         .environmentObject(appState)
         .housekeepingSurface(style)
+    }
+
+    /// MediaDock 9's own window, laid into a sheet. It wears the house's
+    /// appearance like every other sheet — Liquid Glass by default, its Classic 9
+    /// front end when that is what Housekeeping is wearing — and takes its size
+    /// from the room the window has.
+    private var mediaDockBody: some View {
+        RootView(onBack: { appState.showMediaDock = false })
+            .environmentObject(appState.mediaDock)
+            .frame(minWidth: 1040, idealWidth: 1200, maxWidth: 1360,
+                   minHeight: 640, idealHeight: 800, maxHeight: 980)
     }
 
     var body: some View {
@@ -67,8 +80,8 @@ struct ContentView: View {
             // sheet, with every colour and font in it hardcoded to Mac OS 9.
             // One sheet, not fourteen. AppKit attaches a single sheet to a
             // window, so separate `isPresented` flags queued invisibly: asking
-            // for Extras while Update Apps was open put Extras behind it, and
-            // closing Update Apps then opened Extras as though the click had
+            // for Update Apps while Check My Setup was open put it behind Setup,
+            // and closing Setup then opened Update Apps as though the click had
             // only just happened. `appState.screen` makes the flags exclusive,
             // so the screen asked for last is the one that shows.
             .sheet(item: $appState.screen) { screen in
@@ -94,14 +107,28 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenHousekeeper)) { _ in
                 appState.showHousekeeper = true
             }
+            // A room or a hand in the menu bar panel asked for the housekeeper by
+            // name. The topic rides on the notification because the reading that
+            // prompted it is the whole reason for opening the sheet.
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingAskAbout)) { note in
+                guard let topic = note.object as? HousekeeperTopic else { return }
+                appState.housekeeperTopic = topic
+                appState.showHousekeeper = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenDisk)) { _ in
+                appState.showDiskBrowser = true
+            }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingScanNow)) { _ in
                 appState.startScan()
             }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenPhone)) { _ in
                 appState.showPhone = true
             }
-            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenExtras)) { _ in
-                appState.showExtras = true
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenMediaDock)) { _ in
+                appState.showMediaDock = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenBookbind)) { _ in
+                appState.showBookbind = true
             }
     }
 }
@@ -265,7 +292,7 @@ struct ScreenChrome<Content: View>: View {
 
 /// One door into one job, described once for both appearances.
 ///
-/// The bar and the rail carry the same eleven doors, and the help text is not
+/// The bar and the rail carry the same twelve doors, and the help text is not
 /// decoration on either one — a button says what it does, and the tooltip is the
 /// only place that says what it costs. Test Routes warns there that the
 /// connection will drop; Look Everywhere says there that it changes nothing. Two
@@ -280,9 +307,9 @@ private struct Job: Identifiable {
     let help: String
     let action: () -> Void
 
-    /// How long each door waits behind the one above it. Eleven doors arriving at
-    /// once is a rail switching on; eleven arriving in a run is a rail being built,
-    /// which is the half-second that tells a reader there are eleven of them and in
+    /// How long each door waits behind the one above it. Twelve doors arriving at
+    /// once is a rail switching on; twelve arriving in a run is a rail being built,
+    /// which is the half-second that tells a reader there are twelve of them and in
     /// what order. Short enough to be over before anyone has finished reading the
     /// first label.
     static let stagger: Double = 0.035
@@ -658,16 +685,25 @@ private struct JobBar: View {
     /// reachable from the app.
     private var appJobs: [Job] {
         [
-            // The other apps built here. They are not jobs, but they are the
-            // same kind of thing as Settings: about this app and the collection
-            // it belongs to rather than about the Mac.
+            // The two other things built here, as screens rather than as apps
+            // carried alongside: they open in this window, keep this window's
+            // look, and are backed by the same install.
             Job(
-                id: "extras",
-                title: "Extras",
-                systemImage: "square.grid.2x2",
+                id: "mediadock",
+                title: "MediaDock 9",
+                systemImage: "play.rectangle.fill",
                 zone: .extra,
-                help: "The other apps built here — MediaDock 9 and Bookbind — carried inside this one so they are found in the same place. Opening one starts it as its own app; Housekeeping changes nothing about it.",
-                action: { appState.showExtras = true }
+                help: "A retro front end for yt-dlp, spotdl and gamdl. Paste a link and pick where it goes; the downloaders still do the downloading, and every command is shown before it runs.",
+                action: { appState.showMediaDock = true }
+            ),
+
+            Job(
+                id: "bookbind",
+                title: "Bookbind",
+                systemImage: "book.closed.fill",
+                zone: .extra,
+                help: "Give it a folder of loose audio and it merges it into one .m4b with chapters, looks the book up for its cover and metadata, and checks the result. It runs on this Mac.",
+                action: { appState.showBookbind = true }
             ),
 
             Job(
@@ -1223,13 +1259,13 @@ private struct WelcomeScreen: View {
 ///
 /// The bar above carries every job the app has, which is the right shape for a
 /// reader who already knows what they are looking for and the wrong shape for
-/// someone opening this for the first time: a list of eleven names tells you what
+/// someone opening this for the first time: a list of twelve names tells you what
 /// the app is called, not what it does. So the first screen says it the other
-/// way — six discs around the mark, each one an action with its name under it,
+/// way — seven discs around the mark, each one an action with its name under it,
 /// the same arrangement the Jeopardy board uses to say "these are the categories"
 /// before any of them is opened.
 ///
-/// The six are the things a reader comes here to do. The rest (Two Folders,
+/// The seven are the things a reader comes here to do. The rest (Two Folders,
 /// Update Apps, Check My Setup, Quarantine, Left Alone, Settings) stay on the bar,
 /// where they are a glance away rather than a second ring.
 private struct WelcomeRing: View {
@@ -1273,12 +1309,20 @@ private struct WelcomeRing: View {
                 action: { appState.showPhone = true }
             ),
             Door(
-                id: "extras",
-                title: "Extras",
-                systemImage: "square.grid.2x2",
+                id: "mediadock",
+                title: "MediaDock 9",
+                systemImage: "play.rectangle.fill",
                 zone: .extra,
-                help: "MediaDock 9 and Bookbind — the other apps built here — carried inside this one so they are found in the same place. Opening one starts it as its own app.",
-                action: { appState.showExtras = true }
+                help: "Paste a link and pick where it goes: yt-dlp, spotdl and gamdl do the downloading, and every command is shown before it runs.",
+                action: { appState.showMediaDock = true }
+            ),
+            Door(
+                id: "bookbind",
+                title: "Bookbind",
+                systemImage: "book.closed.fill",
+                zone: .extra,
+                help: "Give it a folder of loose audio and it merges it into one chaptered audiobook, looks up the cover and tags, and checks the result. Everything runs on this Mac.",
+                action: { appState.showBookbind = true }
             ),
             Door(
                 id: "routes",

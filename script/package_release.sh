@@ -50,6 +50,8 @@ SOURCES=(
   "$ROOT_DIR"/Housekeeping/Sources/Housekeeper/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Routes/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Phone/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/MediaDock/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/Bookbind/*.swift
 )
 
 WORK_ROOT="$(mktemp -d /private/tmp/housekeeping-package.XXXXXX)"
@@ -133,44 +135,20 @@ stage() {
   chmod 755 "$app/Contents/Resources/llama-server"
   codesign --force --sign - "$app/Contents/Resources/llama-server"
 
-  # The other two apps built here travel inside the bundle, so the Extras screen
-  # can start them without having to ask where they are. Missing is a normal
-  # state rather than a build failure — a source checkout may not have built
-  # them — and the screen says "not included" instead of offering a dead button.
-  # `ditto` rather than `cp -R`, because these are signed bundles and `cp` can
-  # drop the metadata that makes a bundle a bundle.
-  local extras="$app/Contents/Resources/Extras"
-  mkdir -p "$extras"
-  local pair name from
-  for pair in \
-    "MediaDock 9.app|${HOUSEKEEPING_MEDIADOCK_APP:-$HOME/Claude/Apps & Games/MediaDock9/dist/MediaDock 9.app}" \
-    "Bookbind.app|${HOUSEKEEPING_BOOKBIND_APP:-$HOME/Claude/Bookbind/Bookbind.app}"
-  do
-    name="${pair%%|*}"
-    from="${pair#*|}"
-    if [[ -d "$from" ]]; then
-      ditto "$from" "$extras/$name"
-    else
-      echo "  note: $name is not at $from — this build ships without it"
-    fi
-  done
-
-  # Bookbind in its checkout finds `app.py` by walking up out of the bundle to the
-  # repo root, which stops being the repo root the moment the bundle is copied in
-  # here — it then opens and says it cannot find its own program files. Its release
-  # workflow stages those files into the bundle for exactly this reason, so the
-  # embedded copy is completed the same way. A copy that already carries them (a
-  # downloaded release) is left alone.
-  local bookbind="$extras/Bookbind.app/Contents/Resources"
-  local bookbind_src="${HOUSEKEEPING_BOOKBIND_APP:-$HOME/Claude/Bookbind/Bookbind.app}"
-  if [[ -d "$extras/Bookbind.app" && ! -f "$bookbind/app.py" ]]; then
-    bookbind_src="$(dirname "$bookbind_src")"
-    if [[ -f "$bookbind_src/app.py" && -f "$bookbind_src/bookbind_cli.py" && -d "$bookbind_src/static" ]]; then
-      cp "$bookbind_src/app.py" "$bookbind_src/bookbind_cli.py" "$bookbind/"
-      ditto "$bookbind_src/static" "$bookbind/static"
-    else
-      echo "  note: Bookbind.app is embedded but its program files are not at $bookbind_src — it will not start"
-    fi
+  # MediaDock 9 is no longer embedded as an app: its sources compile into this
+  # binary and it is a screen here. Bookbind's work is Python, so its program
+  # files travel inside the bundle — `Contents/Resources/Bookbind` — and the
+  # engine starts them with the Python that is already on the Mac. Missing is a
+  # normal state rather than a build failure: a source checkout may not have the
+  # folder, and the screen then says what is missing and where to get it.
+  local bookbind_dst="$app/Contents/Resources/Bookbind"
+  local bookbind_src="${HOUSEKEEPING_BOOKBIND_SRC:-$HOME/Claude/Bookbind}"
+  if [[ -f "$bookbind_src/app.py" && -f "$bookbind_src/bookbind_cli.py" && -d "$bookbind_src/static" ]]; then
+    mkdir -p "$bookbind_dst"
+    cp "$bookbind_src/app.py" "$bookbind_src/bookbind_cli.py" "$bookbind_dst/"
+    ditto "$bookbind_src/static" "$bookbind_dst/static"
+  else
+    echo "  note: Bookbind's program files are not at $bookbind_src — this build ships without Bookbind"
   fi
 
   codesign --force --deep --sign - "$app"

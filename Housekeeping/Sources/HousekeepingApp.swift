@@ -204,10 +204,15 @@ struct HousekeepingApp: App {
                 // are set apart from the readings and the two that touch a
                 // device — what they have in common with the rest is only where
                 // they are found.
-                Button("Extras…") {
-                    appState.showExtras = true
+                Button("MediaDock 9…") {
+                    appState.showMediaDock = true
                 }
-                .keyboardShortcut("x", modifiers: [.command, .shift])
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+
+                Button("Bookbind…") {
+                    appState.showBookbind = true
+                }
+                .keyboardShortcut("o", modifiers: [.command, .shift])
 
                 Divider()
 

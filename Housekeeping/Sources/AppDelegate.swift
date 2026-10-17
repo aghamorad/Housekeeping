@@ -37,6 +37,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // The fake-location session is the same shape of thing: a child process
         // holding a phone somewhere it is not. It ends with the app.
         PhoneTool.endSession()
+
+        // Bookbind's engine, too. It watches this process and would quit on its
+        // own, but saying so here is quicker and does not depend on it noticing.
+        BookbindEngine.current?.stop()
     }
 
     /// Lets the app be quit while one of its own sheets is open.

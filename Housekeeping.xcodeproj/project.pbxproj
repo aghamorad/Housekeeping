@@ -73,7 +73,6 @@
 		A100009A /* EnvironmentPackages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009A; };
 		A100009B /* PhoneModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009B; };
 		A100009C /* PhoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009C; };
-		A100009D /* ExtrasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009D; };
 		A1000073 /* Housekeeper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000073; };
 		A1000074 /* HousekeeperTopic.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000074; };
 		A1000075 /* HousekeeperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000075; };
@@ -102,6 +101,17 @@
 		A10000A0 /* SystemVitals.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A0; };
 		A10000A1 /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A1; };
 		A10000A2 /* MenuBarPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A2; };
+		B1000001 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001; };
+		B1000002 /* CommandRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002; };
+		B1000003 /* DownloadDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003; };
+		B1000004 /* GamdlTempDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000004; };
+		B1000005 /* MainViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005; };
+		B1000006 /* MediaDockModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000006; };
+		B1000007 /* RetroTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000007; };
+		B1000008 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000008; };
+		B1000009 /* SelfCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000009; };
+		B100000A /* BookbindEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200000A; };
+		B100000B /* BookbindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200000B; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -171,7 +181,6 @@
 		A200009A /* EnvironmentPackages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/EnvironmentPackages.swift; sourceTree = "<group>"; };
 		A200009B /* PhoneModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Phone/PhoneModels.swift; sourceTree = "<group>"; };
 		A200009C /* PhoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Phone/PhoneView.swift; sourceTree = "<group>"; };
-		A200009D /* ExtrasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/ExtrasView.swift; sourceTree = "<group>"; };
 		A2000073 /* Housekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/Housekeeper.swift; sourceTree = "<group>"; };
 		A2000074 /* HousekeeperTopic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperTopic.swift; sourceTree = "<group>"; };
 		A2000075 /* HousekeeperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperView.swift; sourceTree = "<group>"; };
@@ -202,6 +211,17 @@
 		A2000097 /* HousekeepingCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/CLI/HousekeepingCLI.swift; sourceTree = "<group>"; };
 		A3000001 /* Housekeeping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Housekeeping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B2000001 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/AppModel.swift; sourceTree = "<group>"; };
+		B2000002 /* CommandRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/CommandRuntime.swift; sourceTree = "<group>"; };
+		B2000003 /* DownloadDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/DownloadDirectory.swift; sourceTree = "<group>"; };
+		B2000004 /* GamdlTempDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/GamdlTempDirectory.swift; sourceTree = "<group>"; };
+		B2000005 /* MainViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/MainViews.swift; sourceTree = "<group>"; };
+		B2000006 /* MediaDockModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/MediaDockModels.swift; sourceTree = "<group>"; };
+		B2000007 /* RetroTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/RetroTheme.swift; sourceTree = "<group>"; };
+		B2000008 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/RootView.swift; sourceTree = "<group>"; };
+		B2000009 /* SelfCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/SelfCheck.swift; sourceTree = "<group>"; };
+		B200000A /* BookbindEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Bookbind/BookbindEngine.swift; sourceTree = "<group>"; };
+		B200000B /* BookbindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Bookbind/BookbindView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -293,7 +313,17 @@
 				A200009A,
 				A200009B,
 				A200009C,
-				A200009D,
+				B2000001,
+				B2000002,
+				B2000003,
+				B2000004,
+				B2000005,
+				B2000006,
+				B2000007,
+				B2000008,
+				B2000009,
+				B200000A,
+				B200000B,
 				A2000073,
 				A2000074,
 				A2000075,
@@ -429,7 +459,17 @@
 				A100009A,
 				A100009B,
 				A100009C,
-				A100009D,
+				B1000001,
+				B1000002,
+				B1000003,
+				B1000004,
+				B1000005,
+				B1000006,
+				B1000007,
+				B1000008,
+				B1000009,
+				B100000A,
+				B100000B,
 				A1000073,
 				A1000074,
 				A1000075,

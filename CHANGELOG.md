@@ -1,3 +1,48 @@
+# Housekeeping 0.15.0
+
+MediaDock 9 and Bookbind are screens in this app now, not two other apps it kept in a drawer.
+
+- **The kitchen sink.** Both used to sit behind an Extras door that started them as separate
+  programs. That was the wrong shape: they were inside the bundle, but they were not inside the
+  app — each one opened its own window, kept its own Dock presence while it ran, and had to be
+  quit on its own. The door is gone, and so is the embedding. MediaDock's sources compile into
+  this binary and its screen opens on top of the window like every other screen here; Bookbind
+  keeps its Python engine, which starts with the app and stops with it, but its page is shown in
+  the app's own web view rather than a browser window of its own.
+- **The ring has twelve doors, and two of them are new.** MediaDock 9 and Bookbind sit beside
+  scan, browse, routes, spoof and the disk-reading screen, with the same faces and the same one
+  line of description as everything else. The menu bar panel has a door for each, and both are in
+  the Jobs menu — MediaDock on ⇧⌘D, Bookbind on ⇧⌘O.
+- **Closing the screen does not lose the work.** Bookbind's page is kept by the app rather than by
+  the sheet, so a folder half chosen, or a merge still running, is still there when the screen is
+  opened again. MediaDock keeps its log and its settings the same way.
+- **Bookbind travels as its program files.** The release no longer carries a second `.app`, and no
+  longer ships the 121 MB frozen server: `app.py`, `bookbind_cli.py` and `static/` go into
+  `Contents/Resources/Bookbind`, and the engine runs them with the Python already on the Mac. If
+  Python or the tag reader is missing, the screen says which one and how to get it, rather than
+  failing silently.
+- **MediaDock's own updater is gone.** It compared its version against a bundle that is no longer
+  MediaDock's, so it could only ever be wrong. Housekeeping's self-update covers both.
+- **Both screens wear the house's appearance.** MediaDock arrived with its own cream-and-steel
+  palette and Bookbind's page with a light blue one; inside this app both now use the maroon glass
+  the rest of the window is made of — the same ink, the same red, the same rounded panels and
+  system type. MediaDock reads the active theme and switches back to its retro face when the app is
+  set to classic9; Bookbind's page gets a stylesheet that overrides only the colours it already
+  reads, so its layout and behaviour are unchanged and the skin comes back after every reload.
+- **The menu bar panel answers back.** Every room and every hand is a button now. Clicking
+  PROCESSOR, MEMORY, DISK, NETWORK, GRAPHICS or BATTERY opens a page in the panel itself: the live
+  reading, what the number actually counts, and what sits behind it — the busiest hands for the
+  processor, the biggest holders for memory, because "11.6 of 16 GB" is a figure and not an
+  explanation. Clicking a hand opens it by name, with its share of one core, the memory it is
+  holding, and quit or force-quit behind a confirmation that says what each one does. Every page
+  ends with a door to the housekeeper, opened already holding that reading, so the question can be
+  asked in the panel's own numbers. The panel resizes to whichever page is showing, and closes
+  back to the overview.
+- **Every screen has a way back.** MediaDock 9 and Bookbind open over the window like every other
+  screen, but neither carried a way out of its own: MediaDock had none at all, and Bookbind's only
+  exit was a Done at the bottom of a 780-point page. Both now start with a Back at the top left,
+  the same place the panel's room and process pages put theirs, and it says where it goes.
+
 # Housekeeping 0.14.0
 
 The window opens on a picture of everything it can do, and two other programs now travel inside it.
