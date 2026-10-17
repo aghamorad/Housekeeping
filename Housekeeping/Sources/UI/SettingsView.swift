@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var loginItem = LoginItem.shared
     @Environment(\.uiStyle) private var style
 
     var body: some View {
@@ -23,6 +24,37 @@ struct SettingsView: View {
                     .font(.callout)
                     .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Section("Startup") {
+                Toggle("Open Housekeeping when I log in", isOn: Binding(
+                    get: { loginItem.enabled },
+                    set: { loginItem.setEnabled($0) }
+                ))
+
+                Text(loginItem.enabled
+                     ? "The octopus will be in the menu bar after you log in, so the house is being watched before you open anything."
+                     : "Housekeeping waits until you open it. Unchecked here means nothing runs at login.")
+                    .font(.callout)
+                    .foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if loginItem.needsApproval {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("macOS is holding the request until you allow it in Login Items.")
+                            .font(.callout)
+                            .foregroundStyle(style.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Open Login Items") { loginItem.openSystemSettings() }
+                    }
+                }
+
+                if let problem = loginItem.problem {
+                    Text(problem)
+                        .font(.callout)
+                        .foregroundStyle(HousekeepingInk.negative)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Section("Scanning") {
@@ -127,7 +159,8 @@ struct SettingsView: View {
         // the rest of the app wears comes through.
         .scrollContentBackground(.hidden)
         .padding(20)
-        .frame(width: 540, height: 560)
+        .frame(width: 540, height: 640)
+        .onAppear { loginItem.refresh() }
     }
 
     /// Four states, said four ways. "Could not check" is not "up to date", and a

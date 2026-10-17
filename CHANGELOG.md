@@ -27,6 +27,17 @@ The window opens on a picture of everything it can do, and two other programs no
   list row by row. A group Housekeeping cannot finish itself shows a dash in that box rather than a
   tick, so the control never offers something the Update button would then ignore.
 
+- **The octopus now opens a live panel.** Clicking the menu bar icon no longer drops a list of
+  commands; it opens a small window on the machine as it is this second — a verdict and a score, the
+  processor with the last half-minute drawn behind it, memory, disk, network, graphics and battery,
+  and the three busiest programs by name. The numbers are readings, not stored ones: each is the
+  difference between two samples a second apart, which is the only way a counter that climbs forever
+  can say anything at all. The octopus in the panel works harder as the processor does. Nothing is
+  measured while the panel is shut. The old menu is still there on a right-click.
+- **Open at login.** A switch in the panel turns it on and off, and it reports what is true rather
+  than what was asked: if macOS is waiting for approval it says so and offers the button, and if it
+  was turned off somewhere else, the switch shows that the next time the panel opens.
+
 # Housekeeping 0.13.0
 
 Housekeeping gets a face, a way to update itself, and a command line other apps can call. The engine
