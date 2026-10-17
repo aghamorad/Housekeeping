@@ -7,6 +7,11 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // One window, and only one. Left on, macOS adds window tabbing, which
+        // puts "Show Tab Bar" and "Show All Tabs" in the View menu as disabled
+        // items — a menu of things this app does not do.
+        NSWindow.allowsAutomaticWindowTabbing = false
+
         // Set up the retro cursor
         setupAppearance()
 
@@ -28,6 +33,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // the app that started it, still resident and still listening, with nothing
         // left running that knows it is there.
         Housekeeper.shared.server.stopAndWait()
+
+        // The fake-location session is the same shape of thing: a child process
+        // holding a phone somewhere it is not. It ends with the app.
+        PhoneTool.endSession()
     }
 
     /// Lets the app be quit while one of its own sheets is open.
@@ -51,10 +60,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if let window = sender.windows.first(where: { !$0.isMiniaturized }) ?? sender.windows.first {
-            window.deminiaturize(nil)
-            window.makeKeyAndOrderFront(nil)
-        }
+        // Three states, and the old two-line version only covered two of them.
+        // Minimised and hidden windows come back with `deminiaturize` and
+        // `makeKeyAndOrderFront`; a window that was closed outright is gone, and
+        // there is nothing left to order front — clicking the Dock tile did
+        // nothing, which reads as the app being broken. `WindowOpener` knows how
+        // to ask SwiftUI for a new one, so the reopen goes through it either way.
+        WindowOpener.shared.withWindow {}
         sender.activate(ignoringOtherApps: true)
         return true
     }

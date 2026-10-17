@@ -17,6 +17,8 @@ extension Notification.Name {
     /// menu bar does not need a reference to any window or to `AppState`.
     static let housekeepingOpenHousekeeper = Notification.Name("HousekeepingOpenHousekeeper")
     static let housekeepingScanNow = Notification.Name("HousekeepingScanNow")
+    static let housekeepingOpenPhone = Notification.Name("HousekeepingOpenPhone")
+    static let housekeepingOpenExtras = Notification.Name("HousekeepingOpenExtras")
 }
 
 /// The menu bar's way back into the main window.
@@ -165,6 +167,8 @@ final class StatusItemController: NSObject {
         menu.addItem(entry("Talk to the Housekeeper", #selector(askTheHousekeeper)))
         menu.addItem(.separator())
         menu.addItem(entry("Scan My Mac", #selector(scanNow)))
+        menu.addItem(entry("Spoof Location…", #selector(spoofLocation)))
+        menu.addItem(entry("Extras…", #selector(openExtras)))
         menu.addItem(.separator())
         menu.addItem(entry("Quit Housekeeping", #selector(quit)))
 
@@ -194,6 +198,18 @@ final class StatusItemController: NSObject {
     @objc private func scanNow() {
         WindowOpener.shared.withWindow {
             NotificationCenter.default.post(name: .housekeepingScanNow, object: nil)
+        }
+    }
+
+    @objc private func spoofLocation() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenPhone, object: nil)
+        }
+    }
+
+    @objc private func openExtras() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenExtras, object: nil)
         }
     }
 

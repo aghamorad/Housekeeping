@@ -38,7 +38,10 @@ struct EnvironmentAudit: Sendable {
     /// Never throws. A reading that dies on one unreadable folder would throw
     /// away everything the other four questions found, so each part records what
     /// went wrong in `notes` and carries on.
-    func run() async -> EnvironmentReport {
+    /// `includeMaintenance` is off for the weekly background reading: the
+    /// maintenance checks are the only part that reaches the network, and a
+    /// check that runs without anyone asking should not spend the connection.
+    func run(includeMaintenance: Bool = true) async -> EnvironmentReport {
         var findings: [EnvironmentFinding] = []
         var notes: [String] = []
         let fileManager = FileManager.default
@@ -70,9 +73,11 @@ struct EnvironmentAudit: Sendable {
 
         // 2. What each package manager has installed, and what it says is wrong.
         var formulae: [BrewFormula] = []
+        var installedNames: Set<String> = []
         var doctor = DoctorReport.empty
         if let brewPath {
             formulae = await readFormulae(brewPath: brewPath, prefix: brewPrefix, notes: &notes)
+            installedNames = await readInstalledNames(brewPath: brewPath)
             doctor = await readDoctor(brewPath: brewPath, notes: &notes)
         } else {
             notes.append("Homebrew is not installed, so its own checks were skipped.")
@@ -93,6 +98,7 @@ struct EnvironmentAudit: Sendable {
         findings.append(contentsOf: deadReferences(home: home, shell: shell, notes: &notes))
         findings.append(contentsOf: homebrewHealth(
             formulae: formulae,
+            installedNames: installedNames,
             doctor: doctor,
             brewPath: brewPath,
             brewPrefix: brewPrefix,
@@ -109,6 +115,28 @@ struct EnvironmentAudit: Sendable {
             shell: shell,
             searchDirectories: shell.searchDirectories
         ))
+
+        // 4. The other package managers: pipx, uv and npm. Their launchers are
+        // ordinary files on the search path, so an older copy from anywhere can
+        // win the name without Homebrew ever being involved.
+        let languageTools = await LanguageToolAudit(
+            runner: runner,
+            homePath: homePath,
+            brewPath: brewPath,
+            brewPrefix: brewPrefix
+        ).findings(shell: shell)
+        findings.append(contentsOf: languageTools.findings)
+        notes.append(contentsOf: languageTools.notes)
+
+        // 5. Work rather than faults: newer versions, old kegs, unused
+        // dependencies. Each is one Homebrew command and none is pre-ticked.
+        if includeMaintenance {
+            findings.append(contentsOf: await maintenance(
+                brewPath: brewPath,
+                brewPrefix: brewPrefix,
+                notes: &notes
+            ))
+        }
 
         // A fix is only offered for something this reading actually saw. If the
         // subject has gone since, the row is dropped rather than shown, because
@@ -163,6 +191,17 @@ struct EnvironmentAudit: Sendable {
             ))
         }
         return formulae
+    }
+
+    /// Every name `brew list --formula` prints, including formulae the JSON no
+    /// longer carries because they have been retired in favour of a successor.
+    private func readInstalledNames(brewPath: String) async -> Set<String> {
+        guard let result = try? await runner.run(
+            executable: brewPath,
+            arguments: ["list", "--formula"],
+            timeout: 120
+        ), result.succeeded else { return [] }
+        return Set(result.stdout.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
     }
 
     /// Homebrew's own report, plus `brew missing`, which doctor only summarises.
@@ -564,20 +603,45 @@ struct EnvironmentAudit: Sendable {
 
     private func homebrewHealth(
         formulae: [BrewFormula],
+        installedNames: Set<String>,
         doctor: DoctorReport,
         brewPath: String?,
         brewPrefix: String?,
         searchDirectories: [String]
     ) -> [EnvironmentFinding] {
         var findings: [EnvironmentFinding] = []
-        let installedNames = Set(formulae.map(\.name))
+        // `brew list` answers "is this installed"; the JSON answers "what is it".
+        // They disagree for names Homebrew has retired: `sdl2` is still a keg in
+        // the cellar and doctor still flags it unlinked, while `brew info sdl2`
+        // now resolves to `sdl2-compat` and never returns the old name. Asking
+        // only the JSON quietly drops every retired formula from doctor's list.
+        let known = installedNames.isEmpty ? Set(formulae.map(\.name)) : installedNames
 
         // Unlinked packages: Homebrew has files in its cellar and no link in its
         // own folders, so the program is installed and unreachable. The names
         // come from `brew doctor`, and every one is checked against the list of
         // what is installed before it is used — a parser reading a report in
         // prose has no business creating a finding on its own.
-        for name in doctor.unlinkedKegs where installedNames.contains(name) {
+        let currentNames = Set(formulae.map(\.name))
+        for name in doctor.unlinkedKegs where known.contains(name) {
+            // A name `brew list` knows and the JSON does not is a keg Homebrew
+            // has retired — `sdl2` is one, superseded by `sdl2-compat`. Linking
+            // it would fight the successor for the same filenames, so the row
+            // says what it is and leaves the decision alone.
+            if !currentNames.contains(name) {
+                findings.append(EnvironmentFinding(
+                    id: "unlinked:\(name)",
+                    category: .homebrew,
+                    severity: .untidy,
+                    title: "\(name) is an old keg Homebrew has left unlinked",
+                    summary: "\(name) is still in Homebrew's cellar and doctor lists it as unlinked, but Homebrew no longer treats it as a current formula — `brew info \(name)` resolves to its replacement. It is not linked on purpose, so nothing here needs fixing.",
+                    evidence: doctor.sectionLines(containing: "unlinked kegs", mentioning: name).map { "brew doctor: \($0)" },
+                    steps: ["# If nothing still needs the old keg, it can go:", "brew uninstall \(name)"],
+                    fix: nil,
+                    isSelected: false
+                ))
+                continue
+            }
             findings.append(EnvironmentFinding(
                 id: "unlinked:\(name)",
                 category: .homebrew,
@@ -661,6 +725,169 @@ struct EnvironmentAudit: Sendable {
                 fix: nil,
                 isSelected: false
             ))
+        }
+
+        return findings
+    }
+
+    // MARK: - Updates and leftovers
+
+    /// Three questions Homebrew can answer about itself, none of which is a
+    /// fault: what has a newer version, how much room old versions use, and
+    /// which dependencies nothing needs. Nothing here is pre-ticked, and the
+    /// network is only touched by `outdated` — which is what the reader asked
+    /// the app to find out.
+    ///
+    /// The Brewfile is written on every reading. It is a snapshot of every
+    /// package and tap installed, kept in the app's own support folder, so a
+    /// later Homebrew accident has something to compare against.
+    private func maintenance(
+        brewPath: String?,
+        brewPrefix: String?,
+        notes: inout [String]
+    ) async -> [EnvironmentFinding] {
+        guard let brewPath else { return [] }
+
+        var environment = ProcessInfo.processInfo.environment
+        var path = brewPrefix.map { ["\($0)/bin"] } ?? []
+        if let inherited = environment["PATH"] { path.append(inherited) }
+        environment["PATH"] = path.joined(separator: ":")
+        environment["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+        environment["HOMEBREW_NO_ENV_HINTS"] = "1"
+
+        var findings: [EnvironmentFinding] = []
+
+        if let result = try? await runner.run(
+            executable: brewPath,
+            arguments: ["outdated", "--json=v2"],
+            environment: environment,
+            timeout: 180
+        ), result.succeeded,
+           let data = result.stdout.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+
+            var names: [String] = []
+            var evidence: [String] = []
+
+            for formula in json["formulae"] as? [[String: Any]] ?? [] {
+                guard let name = formula["name"] as? String else { continue }
+                let installed = (formula["installed_versions"] as? [String])?.joined(separator: ", ") ?? "installed"
+                let current = formula["current_version"] as? String ?? "a newer version"
+                names.append(name)
+                evidence.append("\(name): \(installed) → \(current)")
+            }
+            for cask in json["casks"] as? [[String: Any]] ?? [] {
+                guard let token = cask["token"] as? String else { continue }
+                let installed = cask["installed_versions"] as? String ?? "installed"
+                let current = cask["current_version"] as? String ?? "a newer version"
+                names.append(token)
+                evidence.append("\(token) (cask): \(installed) → \(current)")
+            }
+
+            names = names.filter { !$0.isEmpty && !$0.contains(" ") && !$0.hasPrefix("-") }
+            if !names.isEmpty {
+                findings.append(EnvironmentFinding(
+                    id: "maintenance:outdated",
+                    category: .maintenance,
+                    severity: .untidy,
+                    title: names.count == 1
+                        ? "1 Homebrew package has a newer version"
+                        : "\(names.count) Homebrew packages have a newer version",
+                    summary: "Homebrew knows about a newer version of \(names.count == 1 ? "this package" : "these packages"). Nothing is broken; this is simply the list of what could be updated. Updating downloads, so it is left for you to choose.",
+                    evidence: Array(evidence.prefix(30)) + (evidence.count > 30 ? ["…and \(evidence.count - 30) more"] : []),
+                    steps: [
+                        "# See the same list in a terminal:",
+                        "brew outdated --verbose",
+                        "# Update the ones you want, by name:",
+                        "brew upgrade <name>"
+                    ],
+                    fix: .brewUpgrade(formulae: names),
+                    isSelected: false
+                ))
+            }
+        } else {
+            notes.append("Homebrew could not report which packages have newer versions. That check needs the network, so a failed check here says nothing about your setup.")
+        }
+
+        if let result = try? await runner.run(
+            executable: brewPath,
+            arguments: ["cleanup", "--dry-run"],
+            environment: environment,
+            timeout: 240
+        ) {
+            let text = result.stdout + "\n" + result.stderr
+            let lines = text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            let removable = lines.filter { $0.hasPrefix("Would remove:") || $0.hasPrefix("Removing:") }
+            let freed = lines.first { $0.lowercased().contains("would free") }
+            let nothingToFree = freed.map { $0.contains("0B") || $0.contains("0 B") || $0.contains("approximately 0") } ?? true
+            if !removable.isEmpty || !nothingToFree {
+                findings.append(EnvironmentFinding(
+                    id: "maintenance:cleanup",
+                    category: .maintenance,
+                    severity: .untidy,
+                    title: "Homebrew is holding on to old versions",
+                    summary: "Old versions of packages you still have, plus Homebrew's download cache, are taking up room. They are not used by anything today; removing them does not touch the current version of anything.",
+                    evidence: ([freed].compactMap { $0 } + removable.prefix(20)).map { "brew cleanup: \($0)" },
+                    steps: [
+                        "# See exactly what would go, without removing anything:",
+                        "brew cleanup --dry-run"
+                    ],
+                    fix: .brewCleanup,
+                    isSelected: false
+                ))
+            }
+        }
+
+        if let result = try? await runner.run(
+            executable: brewPath,
+            arguments: ["autoremove", "--dry-run"],
+            environment: environment,
+            timeout: 240
+        ) {
+            let names = result.stdout.split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { line in
+                    !line.isEmpty && !line.hasPrefix("==>") && !line.hasPrefix("Would")
+                        && !line.contains(" ") && !line.hasSuffix(":")
+                }
+            if !names.isEmpty {
+                findings.append(EnvironmentFinding(
+                    id: "maintenance:autoremove",
+                    category: .maintenance,
+                    severity: .untidy,
+                    title: names.count == 1
+                        ? "1 dependency is no longer needed"
+                        : "\(names.count) dependencies are no longer needed",
+                    summary: "These were installed only because another package needed them, and nothing needs them any more. Removing them does not touch the packages you asked for.",
+                    evidence: names.prefix(30).map { "brew autoremove: \($0)" },
+                    steps: [
+                        "# See the list without removing anything:",
+                        "brew autoremove --dry-run"
+                    ],
+                    fix: .brewAutoremove,
+                    isSelected: false
+                ))
+            }
+        }
+
+        // A snapshot, not a repair: every installed formula, cask and tap in one
+        // file, so there is a record to compare against after a bad install.
+        let inventory = CleanupEngine.supportDirectoryURL()
+            .appendingPathComponent("Inventory", isDirectory: true)
+        let brewfile = inventory.appendingPathComponent("Brewfile")
+        do {
+            try FileManager.default.createDirectory(at: inventory, withIntermediateDirectories: true)
+            let dump = try await runner.run(
+                executable: brewPath,
+                arguments: ["bundle", "dump", "--force", "--file=\(brewfile.path)"],
+                environment: environment,
+                timeout: 180
+            )
+            if !dump.succeeded {
+                notes.append("The Brewfile snapshot could not be written, so this reading has no package inventory to compare against later.")
+            }
+        } catch {
+            notes.append("The Brewfile snapshot could not be written: \(error.localizedDescription)")
         }
 
         return findings

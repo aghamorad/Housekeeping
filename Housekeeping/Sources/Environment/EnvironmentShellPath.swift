@@ -127,6 +127,32 @@ struct ShellPathModel {
                 continue
             }
 
+            // zsh's array form: `path=(/a /b $path)`. Elements are separated by
+            // spaces rather than colons, so reading it with the scalar parser
+            // below turns `($path)` into a folder with that literal name. It is
+            // a splice of whatever is already there, which is what the
+            // uniqueness line above it asks for.
+            if let elements = Self.pathArrayAssignment(trimmed) {
+                if trimmed != line { skippedIndented.append("\((file as NSString).abbreviatingWithTildeInPath):\(index + 1)"); continue }
+                var next: [String] = []
+                for raw in elements {
+                    var token = raw
+                    if token.count >= 2, (token.hasPrefix("\"") && token.hasSuffix("\"") || token.hasPrefix("'") && token.hasSuffix("'")) {
+                        token = String(token.dropFirst().dropLast())
+                    }
+                    if Self.isPathSplice(token) {
+                        next.append(contentsOf: current)
+                    } else {
+                        let expanded = Self.expand(token, homePath: homePath)
+                        guard !expanded.isEmpty else { continue }
+                        next.append(expanded)
+                        additions.append(Addition(path: expanded, file: file, line: index + 1, isLiteral: true))
+                    }
+                }
+                current = next
+                continue
+            }
+
             guard let assignment = Self.pathAssignment(trimmed) else { continue }
             if assignment.rhs.contains("$(") || assignment.rhs.contains("`") {
                 skippedCommands.append("\(((file as NSString).abbreviatingWithTildeInPath)):\(index + 1)")
@@ -201,7 +227,22 @@ struct ShellPathModel {
     }
 
     static func isPathSplice(_ token: String) -> Bool {
-        ["$PATH", "${PATH}", "$path", "${path}", "$Path"].contains(token)
+        ["$PATH", "${PATH}", "$path", "${path}", "$Path", "$path[@]", "${path[@]}"].contains(token)
+    }
+
+    /// `path=(...)`, the zsh array that is tied to PATH. Elements are separated
+    /// by whitespace — a folder named with a space is quoted — so this is a
+    /// separate reading from the colon-split one above, not a variation of it.
+    static func pathArrayAssignment(_ line: String) -> [String]? {
+        var body: String?
+        for leader in ["export path=(", "path=("] where line.hasPrefix(leader) {
+            body = String(line.dropFirst(leader.count))
+            break
+        }
+        guard let body, let closing = body.lastIndex(of: ")") else { return nil }
+        return body[body.startIndex..<closing]
+            .split(whereSeparator: { $0 == " " || $0 == "\t" })
+            .map(String.init)
     }
 
     /// `$HOME`, `${HOME}`, and a leading `~`, which is every way a profile file
@@ -365,6 +406,48 @@ struct ShellPathModel {
     /// One folder moved to the end of the search path, in whichever line names
     /// it. Used for the case where two package managers both provide a command:
     /// the one that should lose is the one that goes last.
+    /// Moves one directory to the front of every PATH assignment in a file that
+    /// mentions it. Used when a launcher the package manager installed is being
+    /// beaten by an older copy earlier on the path: the file already adds the
+    /// right folder, it just adds it at the wrong end.
+    ///
+    /// Only literal lines are touched. An indented assignment lives inside a
+    /// conditional or a function and may never run, and a line whose value comes
+    /// from a command's output is not something this can reorder honestly.
+    /// Returns nil when the file does not mention the directory in a form that
+    /// can be reordered, so the caller can try the next file rather than offer a
+    /// rewrite that would change nothing.
+    func promoting(_ directory: String, in file: String) -> String? {
+        guard let text = contentsByFile[file] else { return nil }
+        var output: [String] = []
+        var changed = false
+
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed == line, let assignment = ShellPathModel.pathAssignment(trimmed) else {
+                output.append(line)
+                continue
+            }
+            let tokens = ShellPathModel.split(assignment.rhs)
+            let matches = { (token: String) in token == directory || token == directory + "/" }
+            guard tokens.contains(where: matches) else {
+                output.append(line)
+                continue
+            }
+            let moving = tokens.filter(matches)
+            var staying = tokens.filter { !matches($0) }
+            // Without a splice the inherited path would be dropped, which would
+            // make this a different fix from the one the row describes.
+            if !staying.contains(where: ShellPathModel.isPathSplice) {
+                staying.append("$PATH")
+            }
+            let rewritten = assignment.prefix + (moving + staying).joined(separator: ":") + assignment.suffix
+            if rewritten != line { changed = true }
+            output.append(rewritten)
+        }
+        return changed ? output.joined(separator: "\n") : nil
+    }
+
     func demoting(_ directory: String, in file: String) -> String {
         guard let text = contentsByFile[file] else { return "" }
         let stem = (directory as NSString).deletingLastPathComponent  // "/opt/local" for "/opt/local/bin"

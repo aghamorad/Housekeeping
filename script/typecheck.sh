@@ -49,6 +49,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Housekeeper/*.swift \
-  "$ROOT_DIR"/Housekeeping/Sources/Routes/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/Routes/*.swift \
+  "$ROOT_DIR"/Housekeeping/Sources/Phone/*.swift
 
 echo "Housekeeping GUI source type-check passed with warnings treated as errors"

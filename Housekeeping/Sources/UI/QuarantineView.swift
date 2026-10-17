@@ -90,7 +90,7 @@ struct QuarantineView: View {
             }
         }
         .padding(16)
-        .frame(minWidth: 760, minHeight: 540)
+        .frame(minWidth: 760, maxWidth: 760, minHeight: 540)
         .preferredColorScheme(style.isRetro ? .light : nil)
         .onAppear { reload() }
         .alert("Delete permanently?", isPresented: Binding(

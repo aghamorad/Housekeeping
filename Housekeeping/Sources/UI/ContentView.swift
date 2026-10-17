@@ -12,6 +12,37 @@ struct ContentView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.openWindow) private var openWindow
 
+
+    /// The view a sheet shows, one screen per case. Each is given the
+    /// appearance explicitly — a sheet is presented in its own window, and one
+    /// attached here outside the `.environment(\.uiStyle, …)` call above would
+    /// not inherit it: the content falls back to `UIStyleKey.defaultValue`,
+    /// which is Classic 9, so a Liquid Glass window opened a retro sheet.
+    private func sheetBody(_ screen: AppState.Screen) -> some View {
+        let style = UIStyle.resolve(appState.currentTheme)
+        return Group {
+            switch screen {
+            case .cleanupConfirmation: CleanupView()
+            case .guidedCleanup: GuidedCleanupView(items: appState.guidedCleanupItems)
+            case .cleanupPreview: CleanupPreviewView(items: appState.recommendedCleanupItems)
+            case .quarantine: QuarantineView()
+            case .protectionList: ProtectionView()
+            case .diskBrowser: DiskBrowserView()
+            case .reconcile: ReconcileView()
+            case .updateList: UpdateView()
+            case .setupCheck: EnvironmentView()
+            case .housekeeper: HousekeeperView()
+            case .routes: RoutesView()
+            case .phone: PhoneView()
+            case .extras: ExtrasView()
+            case .selfUpdate: SelfUpdateView()
+            }
+        }
+        .environment(\.uiStyle, style)
+        .environmentObject(appState)
+        .housekeepingSurface(style)
+    }
+
     var body: some View {
         let style = UIStyle.resolve(appState.currentTheme)
 
@@ -34,111 +65,24 @@ struct ContentView: View {
             // content silently falls back to `UIStyleKey.defaultValue`, which is
             // Classic 9. The effect was a Liquid Glass window opening a retro
             // sheet, with every colour and font in it hardcoded to Mac OS 9.
-            .sheet(isPresented: $appState.showCleanupConfirmation) {
-                CleanupView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            .sheet(isPresented: $appState.showGuidedCleanup) {
-                GuidedCleanupView(items: appState.guidedCleanupItems)
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            .sheet(isPresented: $appState.showCleanupPreview) {
-                CleanupPreviewView(items: appState.recommendedCleanupItems)
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            .sheet(isPresented: $appState.showQuarantineManagement) {
-                QuarantineView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            .sheet(isPresented: $appState.showProtectionList) {
-                ProtectionView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            // The disk browser measures and navigates, and it never acts on what it
-            // finds, so it holds none of the cleanup state. It is handed `appState`
-            // for one thing only: the housekeeper's subject slot, because the
-            // housekeeper is a sheet on this window and this screen is a sheet too,
-            // so it is the one that has to step aside and ask.
-            .sheet(isPresented: $appState.showDiskBrowser) {
-                DiskBrowserView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            // Like the disk browser this is its own job, but unlike it this one
-            // acts: it runs Homebrew, the store's tool, and swaps bundles. So it
-            // gets the state, and it starts its own reading rather than showing
-            // rows from a scan that was about something else entirely.
-            // Comparing two folders reads both libraries and can then write to
-            // one of them, so it is its own sheet with its own model. It is the
-            // only screen in the app that copies anything, which is why it keeps
-            // its own state rather than borrowing the cleanup list's.
-            .sheet(isPresented: $appState.showReconcile) {
-                ReconcileView()
-                    .environment(\.uiStyle, style)
-                    .housekeepingSurface(style)
-            }
-            .sheet(isPresented: $appState.showUpdateList) {
-                UpdateView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            // The setup check gets the state for the update feature's reason: it
-            // reads the machine and then acts on it, so the ticks and the list
-            // they are ticks on have to outlive the sheet being redrawn.
-            .sheet(isPresented: $appState.showSetupCheck) {
-                EnvironmentView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            // The housekeeper gets the state because it has to know which finding
-            // is on screen and what Housekeeping decided about it — that pairing is
-            // the whole of what it explains.
-            .sheet(isPresented: $appState.showHousekeeper) {
-                HousekeeperView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            // The one sheet that goes out to the network rather than the disk,
-            // and the only one that drives its own model. Keeping the run, its
-            // settings and its results out of `AppState` is what stops a route
-            // test from disturbing the scan, the disk measurements or the
-            // quarantine — the run keeps going while it has anything left to
-            // try, and it puts the machine back to disconnected when it stops.
-            .sheet(isPresented: $appState.showRoutes) {
-                RoutesView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
-            }
-            // Housekeeping updating itself, which is a different job from the one
-            // above: that one updates other applications, this one replaces the
-            // bundle the reader is looking at. It is the only sheet that can end
-            // with the app quitting itself, so it owns its own run and its own
-            // failures rather than sharing the app's.
-            .sheet(isPresented: $appState.showSelfUpdate) {
-                SelfUpdateView()
-                    .environment(\.uiStyle, style)
-                    .environmentObject(appState)
-                    .housekeepingSurface(style)
+            // One sheet, not fourteen. AppKit attaches a single sheet to a
+            // window, so separate `isPresented` flags queued invisibly: asking
+            // for Extras while Update Apps was open put Extras behind it, and
+            // closing Update Apps then opened Extras as though the click had
+            // only just happened. `appState.screen` makes the flags exclusive,
+            // so the screen asked for last is the one that shows.
+            .sheet(item: $appState.screen) { screen in
+                sheetBody(screen)
             }
             // Asked after the first screen is already drawn, not before it: the
             // answer is a line in a footer, and a launch should never wait on the
             // network to show itself.
             .task { await appState.startSelfUpdateCheck() }
+            // The weekly terminal check. On most launches this is one
+            // UserDefaults read; when it is due it reads the setup in the
+            // background, changes nothing, uses no network, and stays silent
+            // unless something is broken or running the wrong copy.
+            .task { appState.runWeeklyTerminalHealthCheckIfNeeded() }
             // The menu bar holds no reference to this view, so it asks by
             // notification. Both are only posted once a window is up, because it
             // is the one that delivers them — see `WindowOpener`. What that means
@@ -152,6 +96,12 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingScanNow)) { _ in
                 appState.startScan()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenPhone)) { _ in
+                appState.showPhone = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenExtras)) { _ in
+                appState.showExtras = true
             }
     }
 }
@@ -315,7 +265,7 @@ struct ScreenChrome<Content: View>: View {
 
 /// One door into one job, described once for both appearances.
 ///
-/// The bar and the rail carry the same ten jobs, and the help text is not
+/// The bar and the rail carry the same eleven doors, and the help text is not
 /// decoration on either one — a button says what it does, and the tooltip is the
 /// only place that says what it costs. Test Routes warns there that the
 /// connection will drop; Look Everywhere says there that it changes nothing. Two
@@ -330,9 +280,9 @@ private struct Job: Identifiable {
     let help: String
     let action: () -> Void
 
-    /// How long each door waits behind the one above it. Ten doors arriving at
-    /// once is a rail switching on; ten arriving in a run is a rail being built,
-    /// which is the half-second that tells a reader there are ten of them and in
+    /// How long each door waits behind the one above it. Eleven doors arriving at
+    /// once is a rail switching on; eleven arriving in a run is a rail being built,
+    /// which is the half-second that tells a reader there are eleven of them and in
     /// what order. Short enough to be over before anyone has finished reading the
     /// first label.
     static let stagger: Double = 0.035
@@ -343,11 +293,13 @@ private struct Job: Identifiable {
     enum Zone {
         case reading
         case route
+        case device
         case holding
         case app
+        case extra
 
         /// The reading zone borrows the theme's own accent, so the rail always
-        /// agrees with everything else on the screen. The other three need to be
+        /// agrees with everything else on the screen. The other four need to be
         /// told apart from it and from each other, so they are hues of their own
         /// — dark enough to carry a white glyph, light enough to read as a disc
         /// rather than a hole.
@@ -355,8 +307,10 @@ private struct Job: Identifiable {
             switch self {
             case .reading: return style.accent
             case .route: return Color(red: 0.36, green: 0.63, blue: 0.94)
+            case .device: return Color(red: 0.66, green: 0.50, blue: 0.24)
             case .holding: return Color(red: 0.40, green: 0.76, blue: 0.58)
             case .app: return Color(red: 0.64, green: 0.55, blue: 0.94)
+            case .extra: return Color(red: 0.91, green: 0.60, blue: 0.36)
             }
         }
     }
@@ -371,20 +325,21 @@ private struct Job: Identifiable {
 /// hidden. The bar hangs off `ScreenChrome`, so every screen carries it in both
 /// appearances, and no appearance can quietly lose a button the other has.
 ///
-/// The row is four zones, and the zones are the point — a flat run of buttons
+/// The row is five zones, and the zones are the point — a flat run of buttons
 /// with no shape to it is a list to be read, while each of these is the same kind
 /// of thing. On the left, what looks at the Mac and changes nothing: the sweep
 /// first, because it is every reading at once, then the same readings one at a
 /// time. Behind the first rule, the one job that is about the network rather than
 /// the disk, and the only button here that changes the machine while it works.
-/// Behind the second rule, the two drawers holding what Housekeeping has already
-/// done to the Mac. On the right, apart from all of it, the two things that are
+/// Behind the second rule, the one job that acts on another device rather than on
+/// this Mac. Behind the third, the two drawers holding what Housekeeping has
+/// already done. On the right, apart from all of it, the two things that are
 /// about the app itself rather than the Mac: its settings, and the housekeeper
 /// you can ask.
 ///
 /// The two appearances then disagree about the one thing they are allowed to:
 /// the shape. Classic 9 draws the row it always drew. Liquid Glass stands the
-/// same four zones on their end as a rail of coloured discs down the left edge,
+/// same five zones on their end as a rail of coloured discs down the left edge,
 /// because a run of buttons read left to right is a sequence to be walked, and
 /// these were never steps — see `rail`.
 ///
@@ -413,6 +368,10 @@ private struct JobBar: View {
             rule
 
             themeButtons(routeJobs)
+
+            rule
+
+            themeButtons(deviceJobs)
 
             rule
 
@@ -461,7 +420,7 @@ private struct JobBar: View {
     /// A row across the top is read left to right, and reading left to right is
     /// how one reads a sequence — as though Look Everywhere came before Browse
     /// the Disk, and that before Two Folders. Nothing on this bar is a step
-    /// after anything: they are ten separate places, of four kinds, and the
+    /// after anything: they are eleven separate places, of five kinds, and the
     /// column is the shape that says so. It also gives the width back. Every
     /// screen behind it is wide and short, so the edge costs nothing and the top
     /// of the window was being spent on buttons rather than on the reading.
@@ -473,16 +432,17 @@ private struct JobBar: View {
     private var rail: some View {
         // The stagger counts down the column rather than restarting in each
         // group, so the rail fills in from the top as one run of doors instead of
-        // four runs that happen to be adjacent. The groups are contiguous, so each
+        // five runs that happen to be adjacent. The groups are contiguous, so each
         // one simply starts where the last one ended.
         let routeBase = readingJobs.count
-        let holdingBase = routeBase + routeJobs.count
+        let deviceBase = routeBase + routeJobs.count
+        let holdingBase = deviceBase + deviceJobs.count
         let appBase = holdingBase + holdingJobs.count
         let housekeeperBase = appBase + appJobs.count
 
         return VStack(spacing: 6) {
             // The sweep is the one door the app wants pressed, and the only one
-            // whose disc never stops moving. Ten equals in a column is a column
+            // whose disc never stops moving. Eleven equals in a column is a column
             // with no front page; a slow halo says which one it is without a
             // word, and it says it from across the room.
             railGroup(readingJobs, from: 0, breathesFirst: true)
@@ -490,6 +450,10 @@ private struct JobBar: View {
             railRule
 
             railGroup(routeJobs, from: routeBase)
+
+            railRule
+
+            railGroup(deviceJobs, from: deviceBase)
 
             railRule
 
@@ -504,7 +468,7 @@ private struct JobBar: View {
             // somebody in it. So the door is named after the somebody, and its
             // disc is the somebody — the one disc on the rail that is a drawn
             // character rather than a glyph, in the app's own red rather than a
-            // zone colour, because the housekeeper is not one of the four kinds
+            // zone colour, because the housekeeper is not one of the five kinds
             // of job, it is who you go and ask when none of them is the answer.
             AskHousekeeperButton(
                 topic: housekeeperTopic,
@@ -606,10 +570,10 @@ private struct JobBar: View {
 
             Job(
                 id: "check-my-setup",
-                title: "Check My Setup",
+                title: "Terminal Health",
                 systemImage: "wrench.and.screwdriver",
                 zone: .reading,
-                help: "Look at the tools and commands Housekeeping itself depends on: which one a command really runs, whether a link leads anywhere, whether something installed is properly in reach. Every finding says what it would change before you can agree to it.",
+                help: "Audit the tools and commands on this Mac: which copy of each one really runs, whether a link leads anywhere, what Homebrew reports about itself, and which updates are waiting. Every finding says what it would change before you can agree to it.",
                 action: { appState.showSetupCheck = true }
             ),
 
@@ -644,6 +608,26 @@ private struct JobBar: View {
         ]
     }
 
+    /// The one job that acts on something other than this Mac.
+    ///
+    /// It is not a reading — it changes where a phone says it is — and it is not
+    /// a drawer of things Housekeeping has done, because nothing is kept. It
+    /// stands apart from the route test for the same reason that one stands apart
+    /// from the readings: it changes a device, and the help text has to say what
+    /// has to be true before that can happen.
+    private var deviceJobs: [Job] {
+        [
+            Job(
+                id: "spoof-location",
+                title: "Spoof Location",
+                systemImage: "location.slash",
+                zone: .device,
+                help: "Tell a plugged-in iPhone that it is standing somewhere else. Plug it in with a USB cable, unlock it, and tap Trust if the Mac asks. Nothing is installed on the phone and nothing on it is changed; Real GPS puts it back, and the fake location also ends when the phone is unplugged or restarted.",
+                action: { appState.showPhone = true }
+            )
+        ]
+    }
+
     /// What Housekeeping has already done, and where the doing can be taken back.
     private var holdingJobs: [Job] {
         [
@@ -674,6 +658,18 @@ private struct JobBar: View {
     /// reachable from the app.
     private var appJobs: [Job] {
         [
+            // The other apps built here. They are not jobs, but they are the
+            // same kind of thing as Settings: about this app and the collection
+            // it belongs to rather than about the Mac.
+            Job(
+                id: "extras",
+                title: "Extras",
+                systemImage: "square.grid.2x2",
+                zone: .extra,
+                help: "The other apps built here — MediaDock 9 and Bookbind — carried inside this one so they are found in the same place. Opening one starts it as its own app; Housekeeping changes nothing about it.",
+                action: { appState.showExtras = true }
+            ),
+
             Job(
                 id: "settings",
                 title: "Settings",
@@ -1080,17 +1076,19 @@ private struct WelcomeScreen: View {
     var body: some View {
         ScreenChrome(title: "Housekeeping", subtitle: "Safety-first cleanup") {
             ScrollView {
-                VStack(alignment: style.isRetro ? .leading : .center, spacing: 18) {
+                VStack(alignment: style.isRetro ? .leading : .center, spacing: 16) {
                     masthead
                         .entrance()
-                    ThemePanel { scanControls }
+                    WelcomeRing()
                         .entrance(delay: 0.08)
-                    ThemePanel { scope }
+                    ThemePanel { scanOptions }
                         .entrance(delay: 0.16)
+                    ThemePanel { scope }
+                        .entrance(delay: 0.20)
                     footer
-                        .entrance(delay: 0.22)
+                        .entrance(delay: 0.24)
                 }
-                .frame(maxWidth: 700)
+                .frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
                 .padding(24)
             }
@@ -1098,14 +1096,14 @@ private struct WelcomeScreen: View {
     }
 
     private var masthead: some View {
-        VStack(alignment: style.isRetro ? .leading : .center, spacing: 8) {
+        VStack(alignment: style.isRetro ? .leading : .center, spacing: 6) {
             // Her, not a stand-in glyph. This screen is the first thing anyone
             // sees and the one place the app gets to say what it is, so it says it
             // with the mark rather than with a sparkle that every other cleaner
             // also has. `working: false` keeps her to the slow breath: she is
             // waiting to be asked for something, and a figure mid-task on an
             // untouched screen would claim work that has not started.
-            WorkingOctopus(size: style.isRetro ? 72 : 84, working: false)
+            WorkingOctopus(size: style.isRetro ? 60 : 68, working: false)
                 .padding(.bottom, 2)
             Text("Housekeeping")
                 .font(style.titleFont)
@@ -1119,64 +1117,36 @@ private struct WelcomeScreen: View {
         .frame(maxWidth: .infinity, alignment: style.isRetro ? .leading : .center)
     }
 
-    private var scanControls: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Two ways in, and they differ only in how much is read. The sweep is
-            // the default because it is the one that answers the question a
-            // reader arrives with — what is on this Mac — and it is safe to make
-            // the default precisely because it decides nothing: it reads the
-            // disk, the setup and the update list and hands back one account of
-            // what it found.
-            ThemeButton(
-                title: "Look Everywhere",
-                systemImage: "sparkle.magnifyingglass",
-                isPrimary: true,
-                help: "Read everything Housekeeping can read — the disk, the setup, and which of your apps and packages have updates — and come back with one list of what it found. It only reads: nothing is ticked, moved, installed or changed, and every screen it hands you still asks before anything happens."
-            ) {
-                appState.startSweep()
+    /// The one switch the ring does not carry. Both ways into a scan — Look
+    /// Everywhere and Scan My Mac — are doors on the ring now, so what is left
+    /// here is the choice about how far a scan reaches, which is a setting rather
+    /// than an action and belongs in a panel of its own.
+    private var scanOptions: some View {
+        Toggle(isOn: Binding(
+            get: { appState.deepSweep },
+            set: { appState.setDeepSweep($0) }
+        )) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Also measure folders that belong to no known app")
+                    .font(style.bodyFont)
+                    .foregroundStyle(style.text)
+                // Said in the reader's terms rather than the app's. The first
+                // draft of this line talked about "folders Housekeeping can't
+                // name" and "undeclared data", which is the vocabulary the
+                // code uses and no vocabulary a reader has — it described the
+                // mechanism to someone who wanted to know what the switch
+                // would do to their Mac. So: what Housekeeping knows, what
+                // this adds, what it costs, and the one thing that makes it
+                // safe. The count is read rather than written down, because
+                // it is also shown on the Settings screen and a number typed
+                // into two places is a number that will disagree with itself.
+                Text("Housekeeping knows where \(RuleEngine.shared.applications.count) apps and tools keep their files, and normally measures only those. This also measures the folders that belong to none of them — often where the space is, since nothing else reports it. It costs up to a minute a scan, and what it finds is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside.")
+                    .font(style.smallFont)
+                    .foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .keyboardShortcut(.defaultAction)
-            .breathingHalo(style.accent, radius: 16, active: !style.isRetro)
-
-            ThemeButton(
-                title: "Scan My Mac",
-                systemImage: "magnifyingglass",
-                isPrimary: false,
-                help: appState.deepSweep
-                    ? "Measure the apps and tools Housekeeping knows, and the folders that belong to none of them as well. It takes longer and finds more. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
-                    : "Measure the apps and tools Housekeeping knows about. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway."
-            ) {
-                appState.startScan()
-            }
-
-            Divider()
-
-            Toggle(isOn: Binding(
-                get: { appState.deepSweep },
-                set: { appState.setDeepSweep($0) }
-            )) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Also measure folders that belong to no known app")
-                        .font(style.bodyFont)
-                        .foregroundStyle(style.text)
-                    // Said in the reader's terms rather than the app's. The first
-                    // draft of this line talked about "folders Housekeeping can't
-                    // name" and "undeclared data", which is the vocabulary the
-                    // code uses and no vocabulary a reader has — it described the
-                    // mechanism to someone who wanted to know what the switch
-                    // would do to their Mac. So: what Housekeeping knows, what
-                    // this adds, what it costs, and the one thing that makes it
-                    // safe. The count is read rather than written down, because
-                    // it is also shown on the Settings screen and a number typed
-                    // into two places is a number that will disagree with itself.
-                    Text("Housekeeping knows where \(RuleEngine.shared.applications.count) apps and tools keep their files, and normally measures only those. This also measures the folders that belong to none of them — often where the space is, since nothing else reports it. It costs up to a minute a scan, and what it finds is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside.")
-                        .font(style.smallFont)
-                        .foregroundStyle(style.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .toggleStyle(.checkbox)
         }
+        .toggleStyle(.checkbox)
     }
 
     private var scope: some View {
@@ -1245,6 +1215,195 @@ private struct WelcomeScreen: View {
             // screen. It used to be here, which meant the first screen signed the
             // app and the other six did not.
             Spacer()
+        }
+    }
+}
+
+/// The doors, arranged in a ring.
+///
+/// The bar above carries every job the app has, which is the right shape for a
+/// reader who already knows what they are looking for and the wrong shape for
+/// someone opening this for the first time: a list of eleven names tells you what
+/// the app is called, not what it does. So the first screen says it the other
+/// way — six discs around the mark, each one an action with its name under it,
+/// the same arrangement the Jeopardy board uses to say "these are the categories"
+/// before any of them is opened.
+///
+/// The six are the things a reader comes here to do. The rest (Two Folders,
+/// Update Apps, Check My Setup, Quarantine, Left Alone, Settings) stay on the bar,
+/// where they are a glance away rather than a second ring.
+private struct WelcomeRing: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.uiStyle) private var style
+    @State private var hovered: String?
+
+    private struct Door: Identifiable {
+        let id: String
+        let title: String
+        let systemImage: String
+        let zone: Job.Zone
+        let help: String
+        let action: () -> Void
+    }
+
+    private var doors: [Door] {
+        [
+            Door(
+                id: "sweep",
+                title: "Look Everywhere",
+                systemImage: "sparkle.magnifyingglass",
+                zone: .reading,
+                help: "Read the disk, the setup, and which of your apps and packages have updates — then come back with one list of what it found. It only reads: nothing is ticked, moved, installed or changed.",
+                action: { appState.startSweep() }
+            ),
+            Door(
+                id: "scan",
+                title: "Scan My Mac",
+                systemImage: "magnifyingglass",
+                zone: .reading,
+                help: "Measure the apps and tools Housekeeping knows. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway.",
+                action: { appState.startScan() }
+            ),
+            Door(
+                id: "phone",
+                title: "Spoof Location",
+                systemImage: "location.slash",
+                zone: .device,
+                help: "Tell a plugged-in iPhone it is standing somewhere else. It walks you through the cable, the Trust prompt and the way back to real GPS, and changes nothing on the phone itself.",
+                action: { appState.showPhone = true }
+            ),
+            Door(
+                id: "extras",
+                title: "Extras",
+                systemImage: "square.grid.2x2",
+                zone: .extra,
+                help: "MediaDock 9 and Bookbind — the other apps built here — carried inside this one so they are found in the same place. Opening one starts it as its own app.",
+                action: { appState.showExtras = true }
+            ),
+            Door(
+                id: "routes",
+                title: "Test Routes",
+                systemImage: "network",
+                zone: .route,
+                help: "Check whether the network paths this Mac can take actually work — which services answer, and which do not. It reads and reports; nothing is reconfigured.",
+                action: { appState.showRoutes = true }
+            ),
+            Door(
+                id: "disk",
+                title: "Browse the Disk",
+                systemImage: "internaldrive",
+                zone: .reading,
+                help: "Look through the folders Housekeeping measured, by size, and open any of them in Finder. Browsing changes nothing.",
+                action: { appState.showDiskBrowser = true }
+            )
+        ]
+    }
+
+    private var diameter: CGFloat { style.isRetro ? 448 : 482 }
+    private var discSize: CGFloat { style.isRetro ? 72 : 78 }
+    private var orbitRadius: CGFloat { diameter / 2 - discSize / 2 - 30 }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(
+                    style.border.opacity(style.isRetro ? 0.45 : 0.30),
+                    style: StrokeStyle(lineWidth: 1, dash: [3, 7])
+                )
+                .frame(width: orbitRadius * 2, height: orbitRadius * 2)
+
+            centre
+
+            ForEach(Array(doors.enumerated()), id: \.element.id) { index, door in
+                // Starting at the top and running clockwise. The first door is the
+                // one a reader should try, so it gets the position the eye lands on
+                // first and the only halo on the screen.
+                let angle = -CGFloat.pi / 2 + CGFloat(index) * (2 * .pi / CGFloat(doors.count))
+                doorView(door, isPrimary: index == 0)
+                    .position(
+                        x: diameter / 2 + cos(angle) * orbitRadius,
+                        // Lifted by half the label so the disc — not the disc and
+                        // its caption together — sits on the orbit.
+                        y: diameter / 2 + sin(angle) * orbitRadius + 15
+                    )
+            }
+        }
+        .frame(width: diameter, height: diameter + 34)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("What Housekeeping can do")
+    }
+
+    private var centre: some View {
+        ZStack {
+            Circle()
+                .fill(style.accent.opacity(style.isRetro ? 0.10 : 0.13))
+            Circle()
+                .stroke(style.accent.opacity(0.30), lineWidth: 1)
+            WorkingOctopus(size: discSize * 0.86, working: false)
+        }
+        .frame(width: discSize * 1.74, height: discSize * 1.74)
+    }
+
+    private func doorView(_ door: Door, isPrimary: Bool) -> some View {
+        let tint = door.zone.tint(style)
+        let isHot = hovered == door.id
+
+        return VStack(spacing: 6) {
+            Button {
+                door.action()
+            } label: {
+                Image(systemName: door.systemImage)
+                    .font(.system(size: discSize * 0.34, weight: .medium))
+                    .foregroundColor(style.isRetro ? .white : tint)
+                    .frame(width: discSize, height: discSize)
+                    .background(
+                        Circle().fill(
+                            style.isRetro
+                                ? tint.opacity(isHot ? 1.0 : 0.88)
+                                : tint.opacity(isHot ? 0.30 : 0.15)
+                        )
+                    )
+                    .overlay(
+                        Circle().stroke(
+                            style.isRetro ? tint : tint.opacity(isHot ? 0.85 : 0.40),
+                            lineWidth: style.isRetro ? 1 : 1.5
+                        )
+                    )
+                    .shadow(color: tint.opacity(isHot ? 0.50 : 0.0), radius: 14)
+                    .scaleEffect(isHot ? 1.06 : 1.0)
+                    .animation(.easeOut(duration: 0.14), value: isHot)
+            }
+            .buttonStyle(.plain)
+            .modifier(ReturnKey(enabled: isPrimary))
+            .breathingHalo(tint, radius: 12, active: isPrimary && !style.isRetro)
+            .onHover { hovered = $0 ? door.id : nil }
+            .help(door.help)
+            .accessibilityLabel(door.title)
+
+            Text(door.title)
+                .font(style.smallFont.weight(isHot ? .semibold : .regular))
+                .foregroundColor(isHot ? style.text : style.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(width: 106)
+                .animation(.easeOut(duration: 0.14), value: isHot)
+        }
+        .frame(width: 112)
+        .contentShape(Rectangle())
+    }
+}
+
+/// Return opens the first door. `keyboardShortcut` has no "sometimes" form, so
+/// this applies it to one disc and leaves the other five alone — a return key
+/// that fired whichever disc happened to be last would be worse than none.
+private struct ReturnKey: ViewModifier {
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.keyboardShortcut(.defaultAction)
+        } else {
+            content
         }
     }
 }

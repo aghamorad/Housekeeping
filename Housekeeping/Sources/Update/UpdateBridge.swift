@@ -215,6 +215,18 @@ extension AppState {
         updateRows[index].isSelected.toggle()
     }
 
+    /// Ticks or unticks a set of rows at once. The caller names the rows — a whole
+    /// group heading, or everything the screen is showing — and this applies it.
+    /// Rows Housekeeping cannot finish are skipped rather than silently ticked:
+    /// a tick box that the update button then ignores would be a lie.
+    func setUpdateSelection(ids: some Sequence<String>, selected: Bool) {
+        let wanted = Set(ids)
+        for index in updateRows.indices where wanted.contains(updateRows[index].id) {
+            guard updateRows[index].canUpdate, updateRows[index].channel.canInstall else { continue }
+            updateRows[index].isSelected = selected
+        }
+    }
+
     // MARK: - Doing it
 
     /// Runs one row's update. The row keeps its own action, so this needs no
@@ -254,12 +266,16 @@ extension AppState {
         }
     }
 
-    /// Runs every ticked row Housekeeping can finish itself. The App Store, macOS,
-    /// and unidentified groups are never included — not because they were filtered
-    /// out of the list, but because `canInstall` is false for them, and this filter
-    /// and the footer's count are the same filter.
-    func runUpdateAll() {
-        let targets = updateRows.filter { $0.isSelected && $0.canUpdate && $0.channel.canInstall }
+    /// Runs every ticked row Housekeeping can finish itself, or every ticked row in
+    /// one channel when a group heading was pressed. The App Store, macOS, and
+    /// unidentified groups are never included — not because they were filtered out
+    /// of the list, but because `canInstall` is false for them, and this filter and
+    /// the footer's count are the same filter.
+    func runUpdateAll(in channel: UpdateChannel? = nil) {
+        let targets = updateRows.filter {
+            $0.isSelected && $0.canUpdate && $0.channel.canInstall
+                && (channel == nil || $0.channel == channel)
+        }
         guard !targets.isEmpty, !updateIsWorking, !updateIsReading else { return }
 
         updateOutcomes = []

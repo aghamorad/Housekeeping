@@ -7,6 +7,7 @@
 // show a window, which is every launch but one.
 
 import SwiftUI
+import AppKit
 
 struct HousekeepingApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -25,7 +26,48 @@ struct HousekeepingApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
 
-            CommandMenu("Housekeeping") {
+            // Left to itself the View menu is the stock single-window one and
+            // every item in it is greyed out: tab bar, tabs, full screen — none
+            // of which this window has. A menu of disabled items reads as a
+            // broken app; one item that closes whatever screen is open is the
+            // only thing here a reader would actually use. The tab items are
+            // removed at the source, in `AppDelegate`.
+            CommandGroup(replacing: .toolbar) {
+                Button("Close This Screen") {
+                    appState.screen = nil
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+                .disabled(appState.screen == nil)
+            }
+
+            // "Housekeeping Help" is the stock item, and with no help book behind
+            // it it is a menu entry that does nothing. These three do something.
+            CommandGroup(replacing: .help) {
+                Button("How Housekeeping Works") {
+                    if let url = URL(string: "https://github.com/aghamorad/Housekeeping#readme") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
+                Button("Report a Problem or Ask a Question") {
+                    if let url = URL(string: "https://github.com/aghamorad/Housekeeping/issues/new") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
+                Divider()
+
+                Button("Show the Quarantine Folder in Finder") {
+                    CleanupEngine().revealQuarantine()
+                }
+            }
+
+            // Named "Jobs", not "Housekeeping": SwiftUI puts the app's own menu
+            // first under the app name, so a command menu of the same name puts
+            // "Housekeeping" in the menu bar twice and neither reading tells you
+            // which one is which. Everything in here is a job you go and ask for,
+            // which is what the name says.
+            CommandMenu("Jobs") {
                 Button("Scan My Mac") {
                     appState.startScan()
                 }
@@ -97,7 +139,7 @@ struct HousekeepingApp: App {
                 Button("Left Alone") {
                     appState.showProtectionList = true
                 }
-                .keyboardShortcut("l", modifiers: [.command, .shift])
+                .keyboardShortcut("a", modifiers: [.command, .shift])
 
                 // Reading the disk, which is not the same job as cleaning it. The
                 // scan above decides what Housekeeping would offer to remove; this
@@ -131,7 +173,7 @@ struct HousekeepingApp: App {
                 // the thing that runs when you type its name — which is a
                 // different bug with the same symptom, and the one that made a
                 // stale yt-dlp run for months without anything announcing it.
-                Button("Check My Setup…") {
+                Button("Terminal Health…") {
                     appState.showSetupCheck = true
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
@@ -148,6 +190,24 @@ struct HousekeepingApp: App {
                     appState.showRoutes = true
                 }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
+
+                // The one job that acts on something other than this Mac. It
+                // belongs in the same menu because it is the same kind of thing —
+                // a job you go and ask for — and because it changes a device, so
+                // it lives beside the route test rather than among the readings.
+                Button("Spoof Location…") {
+                    appState.showPhone = true
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+
+                // MediaDock 9 and Bookbind. Not jobs this app performs, so they
+                // are set apart from the readings and the two that touch a
+                // device — what they have in common with the rest is only where
+                // they are found.
+                Button("Extras…") {
+                    appState.showExtras = true
+                }
+                .keyboardShortcut("x", modifiers: [.command, .shift])
 
                 Divider()
 

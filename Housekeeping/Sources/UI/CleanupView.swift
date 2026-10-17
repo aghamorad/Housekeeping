@@ -151,7 +151,7 @@ struct CleanupView: View {
                     .keyboardShortcut(.return)
             }
         }
-        .frame(minWidth: 620, minHeight: 520)
+        .frame(minWidth: 620, maxWidth: 620, minHeight: 520)
         .padding(16)
         .preferredColorScheme(style.isRetro ? .light : nil)
     }
@@ -240,7 +240,7 @@ struct GuidedCleanupView: View {
                 completion
             }
         }
-        .frame(minWidth: 660, minHeight: 580)
+        .frame(minWidth: 660, maxWidth: 660, minHeight: 580)
         .padding(18)
         .preferredColorScheme(style.isRetro ? .light : nil)
     }
@@ -618,7 +618,7 @@ struct CleanupPreviewView: View {
         // it does not fit, the scroll is there and the buttons stay put — but a
         // screen that is meant to be read should not open on a sentence sliced
         // through the middle.
-        .frame(minWidth: 720, minHeight: 650, maxHeight: 700)
+        .frame(minWidth: 720, maxWidth: 720, minHeight: 650, maxHeight: 700)
         .padding(16)
         .preferredColorScheme(style.isRetro ? .light : nil)
         // Escape closes the rehearsal from anywhere in it, keyboard focus or not.
