@@ -6,6 +6,7 @@ struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var loginItem = LoginItem.shared
     @Environment(\.uiStyle) private var style
+    @AppStorage("housekeeping.appearance") private var appearance = "system"
 
     var body: some View {
         Form {
@@ -19,6 +20,14 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+
+                if !style.isRetro {
+                    Picker("Appearance", selection: $appearance) {
+                        Text("System").tag("system")
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                    }.pickerStyle(.segmented)
+                }
 
                 Text(themeDescription)
                     .font(.callout)
@@ -134,10 +143,7 @@ struct SettingsView: View {
             }
 
             Section("Housekeeper") {
-                Text("The housekeeper is the reader that explains what Housekeeping is showing you. It is a small model running on this Mac, and it explains; Housekeeping is the one that decides and the one that runs anything.")
-                    .font(.callout)
-                    .foregroundStyle(style.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                HousekeeperModelControls(showsDownloadsInline: true)
 
                 AskHousekeeperButton(
                     topic: housekeeperTopic,
@@ -216,7 +222,7 @@ struct SettingsView: View {
     /// rather than stepping a sheet aside — there is no sheet here to step aside.
     private var housekeeperTopic: HousekeeperTopic {
         var facts: [String] = []
-        facts.append("These are Housekeeping's own settings. Nothing on this screen cleans anything or changes anything on disk; every switch here changes how Housekeeping behaves and nothing else.")
+        facts.append("These are Housekeeping's settings. Model downloads and removals change only Housekeeping's managed model files after the reader chooses those actions. Other settings control the app's appearance and behavior; they do not clean personal files.")
         facts.append("Theme: \(appState.currentTheme.displayName). \(themeDescription)")
         facts.append(appState.deepSweep
                      ? "It also looks in the folders that belong to no app, not just the folders it knows an app owns. That is usually where the missing space is, and it is why a scan takes about a minute longer. Anything found that way is only listed: you tick it, then type a word to confirm."
@@ -247,9 +253,9 @@ struct SettingsView: View {
     private var themeDescription: String {
         switch appState.currentTheme {
         case .classic9:
-            return "Mac OS 9 is the original look: monospaced type, drawn buttons, a light background. Both themes run the same screens, so nothing changes but the appearance — except for where the jobs are. Here they run across the top of the window."
+            return "Platinum uses compact system type, beveled controls, gray panels, and a striped title bar. The same tools stay visible in a toolbar across the top of the window."
         case .liquidGlass:
-            return "Liquid Glass uses the Mac's own modern materials and controls. Both themes run the same screens, so nothing changes but the appearance — except for where the jobs are. Here they run down the left side as a column of coloured buttons."
+            return "Modern keeps the burgundy palette with a grouped sidebar, readable tables, and restrained controls. Follow your Mac’s appearance or choose Light or Dark here."
         }
     }
 }

@@ -15,7 +15,7 @@ import SwiftUI
 struct RoutesView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
-    @StateObject private var model = RoutesModel()
+    @ObservedObject var model: RoutesModel
 
     @State private var sort: ResultSort = .best
     @State private var selectedResultID: String?
@@ -46,8 +46,8 @@ struct RoutesView: View {
             footer
         }
         .frame(minWidth: 1040, maxWidth: 1040, minHeight: 680)
-        .background(style.windowBackground)
-        .preferredColorScheme(style.isRetro ? .light : .dark)
+        .background { HousekeepingBackdrop(style: style) }
+        .preferredColorScheme(style.isRetro ? .light : nil)
         // A run that is allowed to disappear closes nothing: the engine finishes
         // in the background and leaves the VPN disconnected, so nothing is left
         // hanging. What would be lost is the result — and the ability to stop it —

@@ -30,11 +30,13 @@ final class LlamaServer: ObservableObject {
     enum Failure: LocalizedError {
         case notRunning
         case unreadableAnswer
+        case rejected(String)
 
         var errorDescription: String? {
             switch self {
             case .notRunning: return "The housekeeper is not running yet."
-            case .unreadableAnswer: return "The housekeeper said something Housekeeping could not read. Asking again usually settles it."
+            case .unreadableAnswer: return "The local model returned an empty or unreadable response."
+            case .rejected(let reason): return reason
             }
         }
     }
@@ -45,6 +47,7 @@ final class LlamaServer: ObservableObject {
     private var logHandle: FileHandle?
     private var launching: Task<Void, Never>?
     private var isStopping = false
+    private var modelPath: String?
 
     /// The runtime ships inside the bundle. It links nothing but system frameworks,
     /// so there is no pile of dylibs to sign beside it.
@@ -65,8 +68,15 @@ final class LlamaServer: ObservableObject {
     /// Starts the server if it is not already up. Safe to call on every appearance
     /// of the housekeeper; every call after the first does nothing.
     func start(model: URL) {
-        if case .ready = state { return }
-        if case .starting = state { return }
+        // A completed model upgrade must not keep serving the previous model.
+        if modelPath == model.path {
+            if case .ready = state { return }
+            if case .starting = state { return }
+        }
+        if process != nil { stopAndWait() }
+        process = nil
+        isStopping = false
+        modelPath = model.path
 
         guard let executable = Self.executable else {
             state = .failed("This copy of Housekeeping has no model runtime inside it, so the housekeeper cannot wake up. A fresh download of the app will have one.")
@@ -118,22 +128,21 @@ final class LlamaServer: ObservableObject {
 
     /// One turn. `history` is already in OpenAI chat form, oldest first, and `system`
     /// carries the housekeeper's standing instructions.
-    func complete(system: String, history: [[String: String]], maxTokens: Int = 320) async throws -> String {
+    func complete(messages: [[String: String]], maxTokens: Int = 512) async throws -> String {
         guard let port = state.port,
               let url = URL(string: "http://127.0.0.1:\(port)/v1/chat/completions") else {
             throw Failure.notRunning
         }
 
         let payload: [String: Any] = [
-            "messages": [["role": "system", "content": system]] + history,
+            "messages": messages,
             "max_tokens": maxTokens,
-            // A 0.6B model at 0.3 settles on the briefing's own sentences and says
-            // them again turn after turn. Grease plus a penalty on repeated tokens
-            // is what actually stops the parroting; the prompt rule alone does not.
-            "temperature": 0.6,
+            // Explanations should track the supplied evidence closely.
+            "temperature": 0.4,
             "top_p": 0.9,
-            "repeat_penalty": 1.2,
+            "repeat_penalty": 1.05,
             "stream": false,
+            "chat_template_kwargs": ["enable_thinking": false],
         ]
 
         var request = URLRequest(url: url)
@@ -143,13 +152,15 @@ final class LlamaServer: ObservableObject {
         request.timeoutInterval = 120
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = root["choices"] as? [[String: Any]],
-              let message = choices.first?["message"] as? [String: Any],
-              let content = message["content"] as? String else {
-            throw Failure.unreadableAnswer
+        guard let http = response as? HTTPURLResponse else { throw Failure.unreadableAnswer }
+        let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        guard http.statusCode == 200 else {
+            let error = (root?["error"] as? [String: Any])?["message"] as? String
+            throw Failure.rejected("Local model request failed (HTTP \(http.statusCode)): \(String((error ?? "No error details returned.").prefix(500)))")
         }
+        guard let choices = root?["choices"] as? [[String: Any]],
+              let message = choices.first?["message"] as? [String: Any],
+              let content = message["content"] as? String else { throw Failure.unreadableAnswer }
 
         let answer = Self.tidy(content)
         guard !answer.isEmpty else { throw Failure.unreadableAnswer }
@@ -171,7 +182,7 @@ final class LlamaServer: ObservableObject {
             "-m", model.path,
             "--host", "127.0.0.1",
             "--port", "\(port)",
-            "--ctx-size", "4096",
+            "--ctx-size", "8192",
             "--threads", "\(max(2, ProcessInfo.processInfo.activeProcessorCount / 2))",
             "--n-gpu-layers", "999",
             "--no-webui",
@@ -190,8 +201,12 @@ final class LlamaServer: ObservableObject {
             process.standardError = FileHandle.nullDevice
         }
 
-        process.terminationHandler = { [weak self] _ in
-            Task { @MainActor in self?.childExited() }
+        process.terminationHandler = { [weak self] child in
+            let pid = child.processIdentifier
+            Task { @MainActor in
+                guard self?.process?.processIdentifier == pid else { return }
+                self?.childExited()
+            }
         }
 
         do {
@@ -204,7 +219,9 @@ final class LlamaServer: ObservableObject {
 
         self.process = process
 
-        if await waitUntilAnswering(port: port) {
+        let becameReady = await waitUntilAnswering(port: port)
+        guard self.process === process, !Task.isCancelled else { return }
+        if becameReady {
             state = .ready(port: port)
         } else if case .starting = state {
             state = .failed("The housekeeper's runtime started but never became ready. Its log is at \(logURL.path).")
@@ -212,7 +229,7 @@ final class LlamaServer: ObservableObject {
     }
 
     /// llama-server answers 200 on `/health` once the model is loaded, and 503 while
-    /// it is still reading the file. A 0.6B takes a couple of seconds; the deadline
+    /// it is still reading the file. Model loading can take several seconds; the deadline
     /// is generous because a cold disk on an Intel Mac is not.
     private func waitUntilAnswering(port: Int) async -> Bool {
         guard let health = URL(string: "http://127.0.0.1:\(port)/health") else { return false }

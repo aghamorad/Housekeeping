@@ -11,37 +11,55 @@ import Foundation
 struct CleanerScanner {
     let home: URL
     let quarantine: URL
+    let progress: @Sendable (String) -> Void
 
-    init(home: URL = FileManager.default.homeDirectoryForCurrentUser) {
+    init(home: URL = FileManager.default.homeDirectoryForCurrentUser, progress: @escaping @Sendable (String) -> Void = { _ in }) {
+        self.progress = progress
         self.home = home.standardizedFileURL
         self.quarantine = CleanupEngine.quarantineURL(homeDirectory: home.standardizedFileURL)
     }
 
     // MARK: - The whole reading
 
-    static func scanAll(progress: @Sendable (String) -> Void) -> CleanerSnapshot {
-        let scanner = CleanerScanner()
+    static func scanAll(progress: @escaping @Sendable (String) -> Void, partial: @Sendable (CleanerSnapshot, Set<CleanCategory>) -> Void = { _, _ in }) -> CleanerSnapshot {
+        let scanner = CleanerScanner(progress: progress)
+        let protection = ProtectionList()
+        var completed: Set<CleanCategory> = []
+        func publish(_ candidates: [CleanCandidate], category: CleanCategory) {
+            completed.insert(category)
+            partial(CleanerSnapshot(candidates: CleanCandidate.nonOverlapping(candidates).filter { !protection.isProtected($0.url) }, apps: [], trash: TrashSummary(), notes: []), completed)
+        }
         progress("Looking through caches and logs…")
         var candidates = scanner.everydayJunk()
+        publish(candidates, category: .everydayJunk)
 
         progress("Looking through developer caches…")
         candidates += scanner.developerCaches()
 
         progress("Looking through project folders for build leftovers…")
         candidates += scanner.projectArtifacts()
+        publish(candidates, category: .developerLeftovers)
 
         progress("Looking for installers…")
         let installers = scanner.installers()
         candidates += installers
+        publish(candidates, category: .installers)
 
         progress("Looking for large files…")
         var seen = Set(candidates.map(\.id))
         let large = scanner.largeFiles(excluding: seen)
         candidates += large
         seen.formUnion(large.map(\.id))
+        publish(candidates, category: .largeFiles)
 
         progress("Listing your applications…")
-        let apps = Uninstaller.installed(progress: progress)
+        let apps = Uninstaller.installed(progress: progress).filter { !protection.isProtected($0.url) }.map { app in
+            var copy = app
+            copy.leftovers.removeAll { protection.isProtected($0.url) }
+            return copy
+        }
+        completed.insert(.uninstall)
+        partial(CleanerSnapshot(candidates: CleanCandidate.nonOverlapping(candidates).filter { !protection.isProtected($0.url) }, apps: apps, trash: TrashSummary(), notes: []), completed)
 
         progress("Counting the Trash…")
         let trash = TrashService.summary()
@@ -49,13 +67,12 @@ struct CleanerScanner {
         // Anything already on the left-alone list is not offered again. The
         // list is read fresh from disk so a path protected a moment ago in a
         // context menu is honoured by the very next scan.
-        let protection = ProtectionList()
         if !protection.isEmpty {
             candidates.removeAll { protection.isProtected($0.url) }
         }
 
         return CleanerSnapshot(
-            candidates: candidates.sorted { $0.size > $1.size },
+            candidates: CleanCandidate.nonOverlapping(candidates).sorted { $0.size > $1.size },
             apps: apps,
             trash: trash,
             // macOS guards the Trash behind Full Disk Access. That is a
@@ -86,6 +103,7 @@ struct CleanerScanner {
 
         var found: [CleanCandidate] = []
         for root in roots {
+                if Task.isCancelled { break }
             let directory = home.appendingPathComponent(root.relative, isDirectory: true)
             let children = (try? FileManager.default.contentsOfDirectory(
                 at: directory,
@@ -94,6 +112,7 @@ struct CleanerScanner {
             )) ?? []
 
             for child in children {
+                if Task.isCancelled { break }
                 let name = child.lastPathComponent
                 guard name != ".DS_Store", !name.hasPrefix(".") else { continue }
                 let values = try? child.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
@@ -101,7 +120,7 @@ struct CleanerScanner {
                 guard !isInsideQuarantine(child) else { continue }
                 if child.lastPathComponent == "Housekeeping" { continue }
 
-                let size = Self.size(of: child)
+                let size = measure(child)
                 guard size >= root.leastSize else { continue }
                 guard size > 0 else { continue }
 
@@ -151,7 +170,7 @@ struct CleanerScanner {
             let url = home.appendingPathComponent(relative, isDirectory: true)
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
             guard !isInsideQuarantine(url) else { continue }
-            let size = Self.size(of: url)
+            let size = measure(url)
             guard size > 0 else { continue }
             found.append(CleanCandidate(
                 url: url,
@@ -180,6 +199,7 @@ struct CleanerScanner {
 
         var found: [CleanCandidate] = []
         for relative in roots {
+                if Task.isCancelled { break }
             let root = home.appendingPathComponent(relative, isDirectory: true)
             guard FileManager.default.fileExists(atPath: root.path) else { continue }
             found += artifacts(under: root)
@@ -203,6 +223,7 @@ struct CleanerScanner {
         var budget = 60_000
 
         while let entry = walk.nextObject() as? URL {
+            if Task.isCancelled { break }
             budget -= 1
             if budget <= 0 { break }
 
@@ -221,7 +242,7 @@ struct CleanerScanner {
             }
 
             if let note = Self.artifactNote(name: name, at: entry) {
-                let size = Self.size(of: entry)
+                let size = measure(entry)
                 if size > 0 {
                     found.append(CleanCandidate(
                         url: entry,
@@ -316,6 +337,7 @@ struct CleanerScanner {
 
         var found: [CleanCandidate] = []
         for root in roots {
+                if Task.isCancelled { break }
             guard FileManager.default.fileExists(atPath: root.path) else { continue }
             guard let walk = FileManager.default.enumerator(
                 at: root,
@@ -325,6 +347,7 @@ struct CleanerScanner {
             ) else { continue }
 
             while let entry = walk.nextObject() as? URL {
+            if Task.isCancelled { break }
                 if walk.level > 3 { walk.skipDescendants(); continue }
                 let name = entry.lastPathComponent
                 let ext = entry.pathExtension.lowercased()
@@ -334,7 +357,7 @@ struct CleanerScanner {
                 guard values?.isDirectory != true, values?.isSymbolicLink != true else { continue }
                 guard !isInsideQuarantine(entry) else { continue }
 
-                let size = Self.size(of: entry)
+                let size = measure(entry)
                 // An ordinary zip has to be big to be worth a row; a disk image
                 // or installer is always worth one, because that is what the
                 // shelf is for.
@@ -368,6 +391,7 @@ struct CleanerScanner {
 
         var found: [CleanCandidate] = []
         for relative in roots {
+                if Task.isCancelled { break }
             let root = home.appendingPathComponent(relative, isDirectory: true)
             guard FileManager.default.fileExists(atPath: root.path) else { continue }
             guard let walk = FileManager.default.enumerator(
@@ -379,6 +403,7 @@ struct CleanerScanner {
 
             var budget = 120_000
             while let entry = walk.nextObject() as? URL {
+            if Task.isCancelled { break }
                 budget -= 1
                 if budget <= 0 { break }
                 guard let values = try? entry.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey, .totalFileAllocatedSizeKey, .contentModificationDateKey, .isSymbolicLinkKey]) else { continue }
@@ -435,7 +460,12 @@ struct CleanerScanner {
     /// actually returns to the disk. Symbolic links are never followed: a link
     /// is not the thing it points at, and counting it twice would overstate what
     /// can be freed.
-    static func size(of url: URL) -> Int64 {
+    private func measure(_ url: URL) -> Int64 {
+        progress("Measuring " + url.homeAbbreviatedPath)
+        return Self.size(of: url, progress: progress)
+    }
+
+    static func size(of url: URL, progress: (@Sendable (String) -> Void)? = nil) -> Int64 {
         let keys: Set<URLResourceKey> = [
             .isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey,
             .totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .fileSizeKey
@@ -456,7 +486,10 @@ struct CleanerScanner {
         ) else { return 0 }
 
         var total: Int64 = 0
+        var files = 0
+        var lastReport = Date()
         while let entry = walk.nextObject() as? URL {
+            if Task.isCancelled { break }
             guard let child = try? entry.resourceValues(forKeys: keys) else { continue }
             if child.isSymbolicLink == true {
                 walk.skipDescendants()
@@ -464,6 +497,11 @@ struct CleanerScanner {
             }
             guard child.isDirectory != true else { continue }
             total += Int64(child.totalFileAllocatedSize ?? child.fileAllocatedSize ?? child.fileSize ?? 0)
+            files += 1
+            if progress != nil, files % 512 == 0, Date().timeIntervalSince(lastReport) > 0.4 {
+                progress?("Measuring \(url.homeAbbreviatedPath) · \(files.formatted()) files · \(total.humanReadable)")
+                lastReport = Date()
+            }
         }
         return total
     }

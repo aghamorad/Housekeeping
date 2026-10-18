@@ -23,6 +23,7 @@ struct HousekeeperView: View {
     @ObservedObject private var weights = HousekeeperWeights.shared
 
     @State private var draft = ""
+    @State private var showContext = false
 
     /// Whether there is anything for the housekeeper to be asked about. Set once,
     /// as the sheet opens, from what is on screen at that moment.
@@ -40,7 +41,7 @@ struct HousekeeperView: View {
             rule
             footer
         }
-        .background(style.windowBackground)
+        .background { HousekeepingBackdrop(style: style) }
         .frame(minWidth: 620, idealWidth: 680, minHeight: 540, idealHeight: 660)
         .onAppear {
             // A screen that is not about a scanned path hands over its own topic
@@ -116,7 +117,7 @@ struct HousekeeperView: View {
                 Text("The Housekeeper")
                     .font(style.titleFont)
                     .foregroundStyle(style.text)
-                Text("I explain what Housekeeping found. Housekeeping is the one that decides.")
+                Text("Ask about your Mac, your files, or the task you want to do.")
                     .font(style.smallFont)
                     .foregroundStyle(style.secondaryText)
             }
@@ -139,7 +140,17 @@ struct HousekeeperView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     verdictStrip
-                    topicStrip
+                    if let path = housekeeper.inspectedQuestionFolder {
+                        Text("Discussing: " + path).font(style.smallFont).foregroundStyle(style.secondaryText).textSelection(.enabled)
+                    }
+                    DisclosureGroup("Context from Housekeeping", isExpanded: $showContext) { topicStrip }
+                        .font(style.smallFont)
+                    if housekeeper.turns.count <= 1 {
+                        HStack(spacing: 8) {
+                            Button("What can you help me with?") { ask("What can you help me with?") }
+                            Button("Help me free space") { ask("Help me free space. Where should I start?") }
+                        }.font(style.smallFont).disabled(!runtimeReady)
+                    }
 
                     ForEach(housekeeper.turns) { turn in
                         TurnRow(turn: turn).id(turn.id)
@@ -148,9 +159,11 @@ struct HousekeeperView: View {
                     if housekeeper.isAnswering {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
-                            Text("The Housekeeper is reading…")
+                            Text("Thinking…")
                                 .font(style.smallFont)
                                 .foregroundStyle(style.secondaryText)
+                            Spacer()
+                            Button("Stop") { housekeeper.stopAnswer() }.font(style.smallFont)
                         }
                     }
 
@@ -256,105 +269,27 @@ struct HousekeeperView: View {
 
     // MARK: - Getting the model, and talking to it
 
-    @ViewBuilder
     private var footer: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let problem = housekeeper.problem {
-                note(problem, colour: style.negative)
-            }
-
-            if housekeeper.runtimeIsAvailable {
-                // Nothing found yet is a state the reader can still talk in — the
-                // octopus in the menu bar opens the housekeeper with no window and
-                // often no scan behind it, and a sheet that greets you and then
-                // offers no way to answer is worse than one that says what it is
-                // missing.
-                //
-                // The honesty is not left to the field being absent. The model is
-                // told the same thing in its briefing — that Housekeeping has
-                // nothing on screen, that the list is a sample, and never to
-                // describe a folder it was not given — and it is told what to say
-                // when it is asked about something it cannot see.
-                if !hasGrounding {
-                    note(
-                        "Housekeeping has not found anything yet, so there is nothing in front of me. Ask anyway — but if your question is about a particular folder, point it out on screen with Talk to the Housekeeper, so that I can actually see it.",
-                        colour: style.secondaryText
-                    )
+            if let problem = housekeeper.problem { note(problem, colour: style.negative) }
+            HousekeeperModelControls(onNotNow: { appState.showHousekeeper = false })
+            HStack {
+                Button("New conversation") { housekeeper.clear() }
+                    .disabled(housekeeper.isAnswering)
+                Spacer()
+                Menu("Open a tool") {
+                    Button("Disk Browser") { appState.screen = .diskBrowser }
+                    Button("Clean Up") { appState.screen = .clean }
+                    Button("Update Apps") { appState.screen = .updateList }
+                    Button("Terminal Health") { appState.screen = .setupCheck }
+                    Button("Two Folders") { appState.screen = .reconcile }
+                    Button("Quarantine") { appState.screen = .quarantine }
                 }
-                weightsArea
-                askRow
-            } else {
-                note(
-                    "This copy of Housekeeping has no model runtime inside it, so the housekeeper cannot wake up. A fresh download of the app will have one.",
-                    colour: style.caution
-                )
-            }
+            }.font(style.smallFont)
+            if housekeeper.canChat { askRow }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var weightsArea: some View {
-        switch weights.state {
-        case .ready:
-            EmptyView()
-
-        case .missing:
-            offer(resuming: weights.partialBytes)
-
-        case .downloading(let written, let expected):
-            RetroProgressView(
-                progress: Float(Double(written) / Double(max(expected, 1))),
-                label: "Downloading the Housekeeper — \(Self.bytes(written)) of \(Self.bytes(expected))"
-            )
-
-        case .failed(let reason):
-            VStack(alignment: .leading, spacing: 8) {
-                note(reason, colour: style.negative)
-                ThemeButton(
-                    title: "Continue",
-                    systemImage: "arrow.clockwise",
-                    isPrimary: true,
-                    help: "Picks the download up from what has already arrived."
-                ) {
-                    housekeeper.retry()
-                }
-            }
-        }
-    }
-
-    private func offer(resuming partial: Int64) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            note(
-                partial > 0
-                    ? "The Housekeeper's model is partway here — \(Self.bytes(partial)) of about 380 MB. Continuing picks up from where it stopped rather than starting again."
-                    : "The Housekeeper is a small language model, about 380 MB, that runs on this Mac. Housekeeping downloads it once, and from then on it works with no connection at all.",
-                colour: style.secondaryText
-            )
-
-            HStack(spacing: 10) {
-                ThemeButton(
-                    title: partial > 0 ? "Continue the Download" : "Download the Housekeeper",
-                    systemImage: "arrow.down.circle",
-                    isPrimary: true,
-                    help: "Downloads the model into your Library. It is a download and nothing else — no scan, no cleanup, no change to any file of yours."
-                ) {
-                    weights.download()
-                }
-
-                if partial > 0 {
-                    ThemeButton(
-                        title: "Start Over",
-                        help: "Throws away what has arrived and downloads the model from the beginning. Worth trying if the connection keeps stopping in the same place."
-                    ) {
-                        weights.removeInstalled()
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
     }
 
     private var askRow: some View {
@@ -388,14 +323,14 @@ struct HousekeeperView: View {
         // from the reader's side they are the same situation.
         housekeeper.subject == nil && housekeeper.topic == nil
             ? "Talk to the Housekeeper…"
-            : "Ask about this…"
+            : "Ask a question…"
     }
 
     /// The model is here and not already busy. This is what the question field
     /// itself waits on, and it is the whole of what the Ask button needs minus
     /// the question.
     private var runtimeReady: Bool {
-        weights.state.isReady && !housekeeper.isAnswering
+        housekeeper.canChat && !housekeeper.isAnswering
     }
 
     /// Nothing to send, or the model is not up yet, or it is still answering the
@@ -408,7 +343,92 @@ struct HousekeeperView: View {
         guard canAsk else { return }
         let question = draft
         draft = ""
-        housekeeper.ask(question)
+        ask(question)
+    }
+
+    private func ask(_ question: String) {
+        guard runtimeReady else { return }
+        housekeeper.ask(question, context: liveContext, assessment: housekeeper.subject.map { appState.cleanupAssessment(for: $0) }, folderRequest: folderRequest)
+    }
+
+    private var folderRequest: HousekeeperFolderEvidence.Request {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var locations: [HousekeeperFolderEvidence.Location] = []
+        for rule in RuleEngine.shared.applications {
+            for known in rule.knownPaths {
+                locations.append(.init(path: known.expand(to: home).path, purpose: known.description, owner: rule.name, source: rule.documentationURL ?? rule.homepageURL))
+            }
+        }
+        if let snapshot = appState.diskBrowser.snapshot {
+            locations.append(contentsOf: snapshot.nodes.values.map { .init(path: $0.path, bytes: $0.isUnmeasured ? nil : $0.size, measuredAt: snapshot.measuredAt, isPartial: $0.isPartial) })
+        }
+        locations.append(contentsOf: appState.cleaner.candidates.map { .init(path: $0.url.path, bytes: $0.size) })
+        locations.append(contentsOf: (appState.scanResults?.foundItems ?? []).map { .init(path: $0.path.path, bytes: $0.size) })
+        let topicPath = housekeeper.topic.flatMap { topic -> String? in
+            let prefix = "disk-browser-"
+            guard topic.id.hasPrefix(prefix) else { return nil }
+            let path = String(topic.id.dropFirst(prefix.count))
+            return path.hasPrefix("/") ? path : nil
+        }
+        let focus = housekeeper.inspectedQuestionFolder ?? housekeeper.subject?.path.path ?? topicPath
+            ?? (appState.workspace == .diskBrowser ? appState.diskBrowser.currentPath : nil)
+        return .init(focusedPath: focus, locations: locations, home: home.path)
+    }
+
+    /// Read at submission time, not frozen when the panel first opened.
+    private var liveContext: String {
+        var lines = ["CURRENT STATUS (refreshed for this question):", "Active local model: " + weights.activeModelName + ". Chat runs on this Mac. No internet browsing or arbitrary file access is available to the model."]
+        lines.append("Screen behind this panel: " + (appState.workspace?.rawValue ?? (appState.showOverview ? "Overview" : "Scan results")))
+        switch appState.scanState {
+        case .idle: lines.append("Main scan: idle; no main scan has run in this session.")
+        case .scanning: lines.append("Main scan: running. " + appState.scanProgress.title)
+        case .complete: lines.append("Main scan: complete; \(appState.scanResults?.foundItems.count ?? 0) findings. This was a bounded scan, not a complete inventory of the entire Mac.")
+        case .error: lines.append("Main scan: failed. " + (appState.lastErrorMessage ?? "No error details recorded."))
+        }
+        let disk = appState.diskBrowser
+        if let snapshot = disk.snapshot {
+            lines.append("Disk Browser snapshot: root \(snapshot.root), measured \(snapshot.measuredAt.formatted()), complete: \(snapshot.isComplete). Recorded apparent size: \(snapshot.totalSize.sizeDescription). This is a dated measurement of folders, not a list of every file or space recoverable by deletion.")
+            lines.append("Disk Browser current folder: \(disk.currentPath). Measurement currently running: \(disk.isScanning). Visible rows below are a sample, in the user's chosen order/filter:")
+            for node in disk.visibleChildren.prefix(6) {
+                lines.append("Folder: \(node.path), \(node.isUnmeasured ? "size unknown" : node.size.sizeDescription), partial: \(node.isPartial).")
+            }
+        } else {
+            lines.append("Disk Browser has no recorded measurement. Measurement currently running: \(disk.isScanning).")
+        }
+        let cleaner = appState.cleaner
+        lines.append("Clean Up scan: \(cleaner.phase). \(cleaner.progressLine) \(cleaner.candidates.count) candidates, \(cleaner.completedCategories.count) of 6 categories checked. \(cleaner.selectedCandidates.count) selected. Partial/stopped: \(cleaner.wasStopped). These numbers are distinct from the main scan.")
+        if cleaner.completedCategories.contains(.trash) {
+            lines.append(cleaner.trash.unreadable ? "Trash count and size are unknown: macOS denied access." : "Trash: \(cleaner.trash.count) items, \(cleaner.trash.size.sizeDescription).")
+        }
+        lines.append(contentsOf: cleaner.notes.prefix(4))
+        lines.append(contentsOf: cleaner.failures.prefix(4))
+        lines.append("Updates: \(appState.updateIsReading ? "reading" : "not reading"), \(appState.updateRows.count) rows currently held.")
+        lines.append("Housekeeper chat cannot run commands or file operations. The Open a tool menu provides navigation. No action has happened just because it was discussed here.")
+        if let item = housekeeper.subject {
+            lines.append("SELECTED FILE:")
+            lines.append(Housekeeper.briefing(for: item, assessment: appState.cleanupAssessment(for: item)))
+        } else if let topic = housekeeper.topic,
+                  !topic.id.hasPrefix("scan-"), !topic.id.hasPrefix("sweep") {
+            lines.append("SUBJECT NOTES (captured when this panel opened; current status above takes priority):")
+            lines.append(contentsOf: topic.facts)
+        }
+        if let results = appState.scanResults {
+            lines.append("MAIN SCAN SAMPLE (up to six findings, not a complete inventory):")
+            for item in results.foundItems.sorted(by: { $0.size > $1.size }).prefix(6) {
+                let assessment = appState.cleanupAssessment(for: item)
+                lines.append("\(item.path.path), \(item.size.sizeDescription). App assessment: \(assessment.decision). \(assessment.reason)")
+            }
+        }
+        lines.append("The following candidates are a sample of up to six measured items, not a full disk inventory:")
+        for candidate in cleaner.candidates.sorted(by: { $0.size > $1.size }).prefix(6) {
+            lines.append("Clean Up candidate: \(candidate.name), \(candidate.size.sizeDescription), \(candidate.category.title). \(candidate.detail)")
+        }
+        if let item = housekeeper.subject {
+            lines.insert(Housekeeper.briefing(for: item, assessment: appState.cleanupAssessment(for: item)), at: 0)
+        } else if let topic = housekeeper.topic, !topic.id.hasPrefix("scan-"), !topic.id.hasPrefix("sweep") {
+            lines.insert(topic.facts.joined(separator: "\n"), at: 0)
+        }
+        return lines.joined(separator: "\n")
     }
 
     private func note(_ text: String, colour: Color) -> some View {
@@ -436,12 +456,12 @@ private struct TurnRow: View {
                 OctopusMark()
                     .frame(width: 22, height: 22)
                 ThemePanel(padding: 10) {
-                    Text(turn.text)
+                    Text((try? AttributedString(markdown: turn.text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(turn.text))
                         .font(style.bodyFont)
                         .foregroundStyle(style.text)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: 430, alignment: .leading)
+                        .frame(maxWidth: 520, alignment: .leading)
                 }
                 Spacer(minLength: 0)
             }
@@ -459,8 +479,158 @@ private struct TurnRow: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .frame(maxWidth: 400, alignment: .leading)
-                    .background(style.rowSelection)
+                    .background(style.rowSelection, in: RoundedRectangle(cornerRadius: 10))
             }
         }
+    }
+}
+
+/// Shared between the chat panel and Settings. All network transfers begin at
+/// the explicit Download/Continue button, never at selection or appearance.
+struct HousekeeperModelControls: View {
+    @Environment(\.uiStyle) private var style
+    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var weights = HousekeeperWeights.shared
+    @ObservedObject private var housekeeper = Housekeeper.shared
+    var onNotNow: (() -> Void)? = nil
+    var showsDownloadsInline = false
+    @State private var showDownloads = false
+    @State private var confirmRemoval = false
+    @State private var pendingRemoval: [HousekeeperWeights.StoredFile] = []
+    @State private var removalProblem: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Optional local chatbot").font(style.labelFont)
+            Text("Would you like a local model to help with your questions? You can ask general questions too. Housekeeping works fully without chat.")
+                .font(style.smallFont).foregroundStyle(style.secondaryText).fixedSize(horizontal: false, vertical: true)
+            Picker("Model", selection: Binding(get: { weights.selection }, set: housekeeper.chooseModel)) {
+                ForEach(HousekeeperModel.allCases) { model in Text(model.choiceLabel).tag(model) }
+            }.disabled(housekeeper.isAnswering || weights.state.isLoading)
+
+            if weights.selection == .none {
+                Text("No model is selected. Nothing will be downloaded unless you choose a model and press Download.")
+                    .font(style.smallFont).foregroundStyle(style.secondaryText)
+                notNow
+            } else if weights.selection == .apple {
+                Text(AppleHousekeeper.status.message).font(style.smallFont).foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("macOS manages the system model's storage. Housekeeping does not download a second copy.")
+                    .font(style.smallFont).foregroundStyle(style.secondaryText)
+                if !AppleHousekeeper.status.isAvailable {
+                    HStack { Button("Check again") { weights.refresh() }; notNow }.font(style.smallFont)
+                }
+            } else if let asset = weights.selection.download {
+                Text(asset.detail).font(style.smallFont).foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                downloadState(asset)
+                Link("Model details and terms", destination: asset.sourcePage).font(style.smallFont)
+            }
+
+            if let removalProblem { Text(removalProblem).font(style.smallFont).foregroundStyle(style.negative) }
+            if showsDownloadsInline {
+                Text("Downloaded models · \(bytes(weights.storedBytes)) on disk").font(style.labelFont)
+                if weights.storedFiles.isEmpty {
+                    Text("No downloaded models. Apple's system model is managed by macOS.")
+                        .font(style.smallFont).foregroundStyle(style.secondaryText)
+                } else {
+                    downloadedModelRows
+                }
+            } else if !weights.storedFiles.isEmpty {
+                DisclosureGroup("Downloaded models · \(bytes(weights.storedBytes)) on disk", isExpanded: $showDownloads) {
+                    downloadedModelRows.padding(.top, 6)
+                }.font(style.smallFont)
+            }
+        }
+        .foregroundStyle(style.text)
+        .onChange(of: scenePhase) { phase in
+            if phase == .active && !weights.state.isLoading { weights.refresh() }
+        }
+        .alert("Delete downloaded models?", isPresented: $confirmRemoval) {
+            Button("Cancel", role: .cancel) { pendingRemoval = [] }
+            Button("Delete", role: .destructive) {
+                do { try housekeeper.removeModels(pendingRemoval.map(\.url)); removalProblem = nil }
+                catch { removalProblem = error.localizedDescription }
+                pendingRemoval = []
+            }
+        } message: {
+            Text("Delete \(bytes(pendingRemoval.reduce(0) { $0 + $1.bytes })) of Housekeeping model downloads?\n\n" + pendingRemoval.map { $0.url.lastPathComponent }.joined(separator: "\n") + "\n\nThese can be downloaded again. Apple's system model and your personal files are not included.")
+        }
+    }
+
+    private var downloadedModelRows: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(weights.storedFiles) { file in
+                HStack(alignment: .top) {
+                    Text(fileLabel(file)).font(style.smallFont).textSelection(.enabled)
+                    Spacer()
+                    Button("Delete model", role: .destructive) { requestRemoval([file]) }
+                        .font(style.smallFont)
+                        .help("Delete this downloaded model after confirmation. It can be downloaded again.")
+                }
+            }
+            if weights.storedFiles.count > 1 {
+                Button("Delete all downloaded models", role: .destructive) { requestRemoval(weights.storedFiles) }
+                    .font(style.smallFont)
+            }
+        }.disabled(housekeeper.isAnswering || weights.state.isLoading)
+    }
+
+    @ViewBuilder private var notNow: some View {
+        if let onNotNow { Button("Not now", action: onNotNow).font(style.smallFont) }
+    }
+
+    @ViewBuilder private func downloadState(_ asset: HousekeeperModel.Download) -> some View {
+        switch weights.state {
+        case .ready:
+            Text("Installed · \(asset.sizeLabel) on disk. Runs locally when you ask a question.")
+                .font(style.smallFont).foregroundStyle(style.secondaryText)
+        case .missing:
+            HStack {
+                Button(weights.partialBytes > 0 ? "Continue download · \(asset.sizeLabel) total" : "Download · \(asset.sizeLabel)") { weights.download() }
+                    .disabled(!LlamaServer.isAvailable)
+                notNow
+            }.font(style.smallFont)
+            if weights.partialBytes > 0 {
+                Text("\(bytes(weights.partialBytes)) already downloaded. You can remove it under Downloaded models.")
+                    .font(style.smallFont).foregroundStyle(style.secondaryText)
+            }
+            if !LlamaServer.isAvailable {
+                Text("This app copy is missing its downloadable-model runtime. Apple Intelligence is a separate option.")
+                    .font(style.smallFont).foregroundStyle(style.caution)
+            }
+        case .downloading(let written, let expected):
+            HStack {
+                if weights.isVerifying {
+                    ProgressView().controlSize(.small)
+                    Text("Verifying model checksum…").font(style.smallFont)
+                } else {
+                    ProgressView(value: Double(written), total: Double(max(expected, 1))) {
+                        Text("\(bytes(written)) of \(bytes(expected))").font(style.smallFont)
+                    }
+                }
+                Button(weights.isVerifying ? "Cancel" : "Pause") { weights.cancel() }.font(style.smallFont)
+            }
+        case .failed(let reason):
+            Text(reason).font(style.smallFont).foregroundStyle(style.negative)
+            HStack {
+                Button("Continue download") { weights.download() }
+                Button("Start over") { weights.removeInstalled(); weights.download() }
+                notNow
+            }.font(style.smallFont)
+        }
+    }
+
+    private func requestRemoval(_ files: [HousekeeperWeights.StoredFile]) {
+        pendingRemoval = files
+        confirmRemoval = true
+    }
+    private func bytes(_ count: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: count, countStyle: .file)
+    }
+    private func fileLabel(_ file: HousekeeperWeights.StoredFile) -> String {
+        let model = HousekeeperModel.allCases.first { file.url.lastPathComponent.hasPrefix($0.download?.fileName ?? "\u{0}") }
+        let name = model?.title ?? "Previous Qwen 0.6B model"
+        return name + (file.url.pathExtension == "partial" ? " (partial download)" : "") + " · " + file.sizeLabel
     }
 }

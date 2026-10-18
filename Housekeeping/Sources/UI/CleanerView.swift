@@ -9,17 +9,23 @@ struct CleanerView: View {
     @ObservedObject var model: CleanerModel
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
+    @State private var expandedApps: Set<String> = []
+    @State private var inspectedCandidate: CleanCandidate?
+    @State private var showScanDetails = false
 
     var body: some View {
         ZStack {
             VStack(spacing: 12) {
                 header
+                if model.phase == .scanning { scanProgress }
+                if model.category != .trash { browsingControls }
                 HStack(alignment: .top, spacing: 12) {
                     sidebar
                         .frame(width: 216)
                     detailPane
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                if showScanDetails { scanDetails }
                 footer
             }
             .padding(16)
@@ -28,9 +34,13 @@ struct CleanerView: View {
                 confirmation(action)
             }
         }
-        .frame(minWidth: 900, maxWidth: 900, minHeight: 620)
+        .frame(minWidth: 900, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity)
         .preferredColorScheme(style.isRetro ? .light : nil)
         .onAppear { model.scanIfNeeded() }
+        .sheet(item: $inspectedCandidate) { candidate in
+            candidateInspector(candidate)
+                .housekeepingSurface(style)
+        }
     }
 
     // MARK: - Header
@@ -64,12 +74,88 @@ struct CleanerView: View {
         case .working:
             return "Moving things into Quarantine…"
         case .ready:
+            if model.wasStopped { return "Partial scan · \(model.completedCategories.count) of \(CleanCategory.allCases.count) categories checked. Look Again to finish a fresh scan." }
             let when = model.lastScan?.formatted(date: .omitted, time: .shortened) ?? "just now"
             if model.cleanerTotal == 0 {
                 return "Last looked at \(when). Nothing to offer this time."
             }
-            return "Last looked at \(when). \(model.cleanerTotal.sizeDescription) across \(model.candidates.count) items — none of it ticked for you."
+            return "Last looked at \(when). \(model.cleanerTotal.sizeDescription) across \(model.candidates.count) items. \(model.selectedCandidates.count) selected."
         }
+    }
+
+
+    private var scanProgress: some View {
+        HStack(spacing: 12) {
+            ProgressView().controlSize(.small)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(model.progressLine).font(style.labelFont)
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text("\(Int(context.date.timeIntervalSince(model.scanStartedAt ?? context.date)))s elapsed · Reading only")
+                        .font(style.smallFont).foregroundColor(style.secondaryText)
+                }
+            }
+            Spacer()
+            ThemeButton(title: "Stop Scan", systemImage: "stop.fill") { model.stopScan() }
+        }.padding(10).background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var browsingControls: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass").foregroundColor(style.secondaryText)
+            TextField("Search names, paths, or explanations", text: $model.query)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityLabel("Search cleanup results")
+            if !model.query.isEmpty {
+                Button("Clear Search") { model.query = "" }
+            }
+            Picker("Sort", selection: $model.order) {
+                ForEach(FileOrder.allCases.filter { model.category != .uninstall || ($0 != .oldest && $0 != .newest) }) { order in
+                    Text(order.shortLabel).tag(order).help(order.rawValue)
+                }
+            }.pickerStyle(.segmented).labelsHidden().frame(width: 360)
+            Button(showScanDetails ? "Hide Scan Details" : "Scan Details") { showScanDetails.toggle() }
+        }
+        .font(style.smallFont)
+        .onChange(of: model.category) { category in
+            if category == .uninstall && (model.order == .oldest || model.order == .newest) { model.order = .largest }
+        }
+    }
+
+    private var scanDetails: some View {
+        ThemePanel(padding: 10) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Scan coverage").font(style.labelFont)
+                    Text("This scan checks common user caches and logs, known developer caches and project roots, downloads and large files, installed third-party applications, and the Trash. It is not a complete inventory of every file on this Mac. Folder sizes are estimates from allocated file sizes; APFS sharing can affect the space recovered.").font(style.smallFont)
+                    Text("Quarantine stays on this disk. Moving items there does not free their storage; review and remove them later when you are sure.").font(style.smallFont)
+                    ForEach(model.notes, id: \.self) { Text($0).font(style.smallFont).foregroundColor(style.caution) }
+                    ForEach(model.failures, id: \.self) { Text($0).font(style.smallFont).foregroundColor(style.caution).textSelection(.enabled) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }.frame(maxHeight: 135)
+        }
+    }
+
+    private func candidateInspector(_ candidate: CleanCandidate) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(candidate.name).font(style.titleFont)
+            Text(candidate.category.title + " · " + candidate.size.sizeDescription).font(style.labelFont)
+            Text(candidate.detail).font(style.bodyFont)
+            Text(candidate.url.path).font(style.pathFont).textSelection(.enabled)
+            if let modified = candidate.modified {
+                Text("Last modified: " + modified.formatted(date: .abbreviated, time: .shortened)).font(style.smallFont)
+            }
+            Text(candidate.category == .largeFiles
+                 ? "Size and age do not establish that a file is disposable. Open it before deciding."
+                 : "Review the contents before moving this item. Folder modification dates do not establish when an application was last used.")
+                .font(style.smallFont).foregroundColor(style.caution)
+            Text("Moving to Quarantine keeps a recoverable copy on this disk and does not immediately free storage.").font(style.smallFont)
+            HStack {
+                ThemeButton(title: "Open") { NSWorkspace.shared.open(candidate.url) }
+                ThemeButton(title: "Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([candidate.url]) }
+                Spacer()
+                ThemeButton(title: "Done", isPrimary: true) { inspectedCandidate = nil }
+            }
+        }.padding(20).frame(width: 620).foregroundColor(style.text)
     }
 
     // MARK: - Sidebar
@@ -121,8 +207,8 @@ struct CleanerView: View {
         // Until the first reading lands, "Nothing found" would be a claim the
         // scan has not made yet — and it is the one claim this screen must
         // never get wrong in the direction of "there is nothing to see".
-        if model.phase == .scanning || model.phase == .idle {
-            return "Reading…"
+        if !model.completedCategories.contains(category) {
+            return model.phase == .scanning ? "Waiting / reading…" : "Not checked"
         }
         switch category {
         case .uninstall:
@@ -154,7 +240,7 @@ struct CleanerView: View {
     }
 
     private func listPane(_ category: CleanCategory) -> some View {
-        let rows = model.candidates(in: category)
+        let rows = model.visibleCandidates(in: category)
         return VStack(spacing: 10) {
             ThemePanel(padding: 10) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -162,25 +248,27 @@ struct CleanerView: View {
                         Text(category.title)
                             .font(style.labelFont)
                         Spacer()
-                        let selected = model.selected(in: category)
-                        let allSelected = model.allInCategorySelected
+                        let selected = rows.filter(\.isSelected)
+                        let allSelected = !rows.isEmpty && rows.allSatisfy(\.isSelected)
                         HStack(spacing: 6) {
                             ThemeCheckbox(
                                 isChecked: allSelected,
                                 isMixed: !selected.isEmpty && !allSelected,
                                 help: "Ticks or unticks everything on this shelf. Nothing is moved until you press the button at the bottom."
                             ) {
-                                model.setAll(in: category, selected: !allSelected)
+                                model.setVisible(selected: !allSelected)
                             }
-                            Text(allSelected ? "Untick all" : "Tick all")
+                            Text(allSelected ? "Untick shown" : "Tick shown")
                                 .font(style.smallFont)
                                 .foregroundColor(style.secondaryText)
                                 .onTapGesture {
-                                    model.setAll(in: category, selected: !allSelected)
+                                    model.setVisible(selected: !allSelected)
                                 }
                                 .help("Same as the box beside it: ticks or unticks every item on this shelf.")
                         }
                     }
+                    Text("\(rows.count) shown of \(model.count(in: category)) · \(rows.reduce(Int64(0)) { $0 + $1.size }.sizeDescription)")
+                        .font(style.smallFont).foregroundColor(style.secondaryText)
                     Text(category.explanation)
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
@@ -192,11 +280,11 @@ struct CleanerView: View {
             if rows.isEmpty {
                 Spacer()
                 VStack(spacing: 6) {
-                    Text(model.phase == .scanning ? "Still looking…" : "Nothing on this shelf.")
+                    Text(!model.completedCategories.contains(category) ? "This category has not finished scanning." : model.query.isEmpty ? "Nothing on this shelf." : "No matching items.")
                         .font(style.bodyFont)
-                    Text(model.phase == .scanning
-                         ? "The answer will appear here when the reading finishes."
-                         : "There is nothing here to offer right now. That usually means a cleaner Mac than average, not a failed scan.")
+                    Text(!model.completedCategories.contains(category)
+                         ? "Let the scan finish, or use Look Again after stopping."
+                         : model.query.isEmpty ? "No candidates were reported in this category. Check Scan Details for coverage and access limits." : "Change or clear the search to see the other items.")
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
                         .multilineTextAlignment(.center)
@@ -233,6 +321,15 @@ struct CleanerView: View {
                         .foregroundColor(style.secondaryText)
                         .monospacedDigit()
                 }
+                HStack {
+                    if let date = candidate.modified {
+                        Text("Modified " + date.formatted(date: .abbreviated, time: .omitted))
+                            .font(style.smallFont).foregroundColor(style.secondaryText)
+                    }
+                    Spacer()
+                    Button("Inspect…") { inspectedCandidate = candidate }
+                    Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([candidate.url]) }
+                }.font(style.smallFont)
                 Text(candidate.detail)
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
@@ -249,7 +346,7 @@ struct CleanerView: View {
         // Without this the row only answers a right-click where it has drawn
         // text, so the empty right half of a row would do nothing.
         .contentShape(Rectangle())
-        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+        .hoverHighlight(cornerRadius: 10, normal: style.rowBackground, hovered: style.groupingBackground, stroke: style.border)
         .contextMenu {
             Button("Show in Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([candidate.url])
@@ -285,16 +382,16 @@ struct CleanerView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            if model.apps.isEmpty {
+            if model.visibleApps.isEmpty {
                 Spacer()
-                Text(model.phase == .scanning ? "Still reading…" : "No applications found outside Apple's own.")
+                Text(model.phase == .scanning ? "Still reading…" : model.query.isEmpty ? "No applications found outside Apple's own." : "No applications match this search.")
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
                 Spacer()
             } else {
                 ScrollView {
                     LazyVStack(spacing: 6) {
-                        ForEach(model.apps) { app in
+                        ForEach(model.visibleApps) { app in
                             appRow(app)
                         }
                     }
@@ -304,106 +401,62 @@ struct CleanerView: View {
     }
 
     private func appRow(_ app: InstalledApp) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
-                    .resizable()
-                    .frame(width: 28, height: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(app.name)
-                        .font(style.labelFont)
-                        .lineLimit(1)
-                    HStack(spacing: 6) {
-                        if let version = app.version {
-                            Text("Version \(version)")
-                        }
-                        if !app.leftovers.isEmpty {
-                            Text("·")
-                            Text("\(app.leftovers.count) file\(app.leftovers.count == 1 ? "" : "s") left behind")
-                        }
-                    }
-                    .font(style.smallFont)
-                    .foregroundColor(style.secondaryText)
+                    .resizable().frame(width: 28, height: 28)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(app.name).font(style.labelFont)
+                    Text("App \(app.size.sizeDescription) · Related data \(app.leftoverSize.sizeDescription)")
+                        .font(style.smallFont).foregroundColor(style.secondaryText)
+                    if let version = app.version { Text("Version " + version).font(style.smallFont) }
                 }
                 Spacer()
-                if app.isRunning {
-                    Text("Open now — quit it first")
-                        .font(style.smallFont)
-                        .foregroundColor(style.caution)
+                if app.isRunning { Text("Running").font(style.smallFont).foregroundColor(style.caution) }
+                Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([app.url]) }
+                ThemeButton(title: "Uninstall…", isEnabled: !app.isRunning && model.phase == .ready) {
+                    model.requestUninstall(app)
                 }
-                Text(app.totalSize.sizeDescription)
-                    .font(style.smallFont)
-                    .foregroundColor(style.secondaryText)
-                    .monospacedDigit()
-                ThemeButton(
-                    title: "Uninstall…",
-                    isEnabled: !app.isRunning,
-                    help: app.isRunning
-                        ? "Quit the application first. macOS will not let it be moved while it is running."
-                        : "Move the application and everything listed under it into Quarantine."
-                ) { model.requestUninstall(app) }
             }
-
+            Text(app.url.homeAbbreviatedPath).font(style.pathFont).foregroundColor(style.secondaryText).textSelection(.enabled)
             if !app.leftovers.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    ForEach(app.leftovers.prefix(6)) { leftover in
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(leftover.name)
-                                .font(style.pathFont)
-                                .lineLimit(1)
-                            Spacer(minLength: 6)
-                            Text(leftover.size.sizeDescription)
-                                .font(style.pathFont)
-                                .monospacedDigit()
-                        }
-                        .foregroundColor(style.secondaryText)
+                Button {
+                    if !expandedApps.insert(app.id).inserted { expandedApps.remove(app.id) }
+                } label: {
+                    Label("\(expandedApps.contains(app.id) ? "Hide" : "Review") \(app.leftovers.count) related items · \(app.leftovers.filter { model.includedRelatedPaths.contains($0.id) }.count) chosen",
+                          systemImage: expandedApps.contains(app.id) ? "chevron.down" : "chevron.right")
+                        .font(style.smallFont).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                if expandedApps.contains(app.id) {
+                    Text("These belong to an installed app. Some can hold personal or shared data. Only checked items join the uninstall.")
+                        .font(style.smallFont).foregroundColor(style.caution)
+                    ForEach(app.leftovers) { related in
+                        HStack(alignment: .top, spacing: 8) {
+                            ThemeCheckbox(isChecked: model.includedRelatedPaths.contains(related.id)) { model.toggleRelated(related) }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(related.name).font(style.labelFont)
+                                Text(related.url.homeAbbreviatedPath).font(style.pathFont).textSelection(.enabled)
+                                Text(related.detail).font(style.smallFont).foregroundColor(style.secondaryText)
+                            }
+                            Spacer()
+                            Text(related.size.sizeDescription).font(style.smallFont).monospacedDigit()
+                            Button("Inspect…") { inspectedCandidate = related }
+                        }.padding(6).background(style.groupingBackground, in: RoundedRectangle(cornerRadius: 6))
                         .contextMenu {
-                            Button("Show in Finder") {
-                                NSWorkspace.shared.activateFileViewerSelecting([leftover.url])
-                            }
-                            Button("Copy Path") {
-                                copyToPasteboard(leftover.url.path)
-                            }
-                            Divider()
-                            Button("Leave This Alone") {
-                                leaveAlone(leftover.url, kind: "Uninstall Apps")
-                            }
+                            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([related.url]) }
+                            Button("Leave This Alone") { leaveAlone(related.url, kind: "Uninstall Apps") }
                         }
-                    }
-                    if app.leftovers.count > 6 {
-                        Text("and \(app.leftovers.count - 6) more")
-                            .font(style.pathFont)
-                            .foregroundColor(style.secondaryText)
                     }
                 }
-                .padding(.leading, 38)
             }
         }
-        .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Without this the row only answers a right-click where it has drawn
-        // text, so the empty right half of a row would do nothing.
-        .contentShape(Rectangle())
-        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+        .hoverHighlight(cornerRadius: 10, normal: style.rowBackground, hovered: style.groupingBackground, stroke: style.border)
         .contextMenu {
-            Button("Open") {
-                NSWorkspace.shared.open(app.url)
-            }
-            Button("Show in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([app.url])
-            }
-            Button("Ask the Housekeeper About This App…") {
-                askHousekeeper(topic(for: app))
-            }
-            Divider()
-            Button("Copy Path") {
-                copyToPasteboard(app.url.path)
-            }
-            if let bundleIdentifier = app.bundleIdentifier {
-                Button("Copy Bundle Identifier") {
-                    copyToPasteboard(bundleIdentifier)
-                }
-            }
+            Button("Open") { NSWorkspace.shared.open(app.url) }
+            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([app.url]) }
+            Button("Ask the Housekeeper About This App…") { askHousekeeper(topic(for: app)) }
+            Button("Copy Path") { copyToPasteboard(app.url.path) }
         }
     }
 
@@ -472,12 +525,12 @@ struct CleanerView: View {
         if app.leftovers.isEmpty {
             facts.append("Housekeeping found no files left behind beside it.")
         } else {
-            facts.append("Housekeeping also found \(app.leftovers.count) file\(app.leftovers.count == 1 ? "" : "s") belonging to it in the home folder, \(app.leftoverSize.sizeDescription) together.")
+            facts.append("Housekeeping also matched \(app.leftovers.count) related item\(app.leftovers.count == 1 ? "" : "s") that may belong to it in the home folder, \(app.leftoverSize.sizeDescription) together.")
         }
         facts.append(app.isRunning
                      ? "It is open right now, so macOS will not let it be moved until it is quit."
                      : "It is not open.")
-        facts.append("Uninstalling moves the application and everything found with it into Quarantine together, so the whole thing can be put back.")
+        facts.append("Uninstalling moves the application and only the related items explicitly checked by the user into Quarantine. Matching support files does not prove that they are disposable.")
         return HousekeeperTopic(
             id: "clean-app-\(app.id)",
             title: app.name,
@@ -527,7 +580,7 @@ struct CleanerView: View {
                         ThemeButton(
                             title: "Empty Trash…",
                             systemImage: "trash",
-                            isEnabled: !model.trash.isEmpty && model.phase != .working,
+                            isEnabled: !model.trash.isEmpty && model.phase == .ready,
                             help: "Asks for a typed confirmation first. This is the one action in Housekeeping that cannot be undone."
                         ) { model.requestEmptyTrash() }
                         ThemeButton(
@@ -565,45 +618,44 @@ struct CleanerView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        HStack(spacing: 10) {
-            statusLine
-                .font(style.smallFont)
-                .foregroundColor(model.failures.isEmpty ? style.secondaryText : style.caution)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            AskHousekeeperButton(topic: housekeeperTopic, closing: { appState.showClean = false })
-            ThemeButton(
-                title: "Open Quarantine",
-                systemImage: "archivebox",
-                help: "Quarantine is where everything this screen moves ends up, and where it can be put back."
-            ) {
-                appState.screen = .quarantine
+        VStack(spacing: 12) {
+            Divider()
+            HStack {
+                statusLine
+                    .font(style.smallFont)
+                    .foregroundStyle(model.failures.isEmpty ? style.secondaryText : style.caution)
+                    .lineLimit(2)
+                Spacer()
+                if !model.selectedCandidates.isEmpty {
+                    Button("Clear selection") { model.clearSelection() }.font(style.smallFont)
+                }
             }
-            if model.category != .uninstall && model.category != .trash {
-                ThemeButton(
-                    title: cleanButtonTitle,
-                    systemImage: "arrow.down.to.line",
-                    isPrimary: true,
-                    isEnabled: !model.selectedCandidates.isEmpty && model.phase != .working,
-                    help: "Moves what is ticked into Quarantine. Nothing is deleted, and everything can be put back."
-                ) { model.requestClean() }
-            }
-            ThemeButton(title: "Done", isPrimary: model.category == .uninstall || model.category == .trash) {
-                appState.showClean = false
+            HStack(spacing: 10) {
+                AskHousekeeperButton(topic: housekeeperTopic, title: "Explain this screen")
+                Spacer()
+                ThemeButton(title: "Quarantine", systemImage: "archivebox",
+                            help: "Review or restore items previously moved into Quarantine.") {
+                    appState.screen = .quarantine
+                }
+                if model.category != .uninstall && model.category != .trash {
+                    ThemeButton(title: cleanButtonTitle, systemImage: "checklist", isPrimary: true,
+                                isEnabled: !model.selectedCandidates.isEmpty && model.phase == .ready,
+                                help: "Review the selected paths before anything moves.") { model.requestClean() }
+                }
             }
         }
+        .padding(.top, 4)
     }
 
     private var cleanButtonTitle: String {
         let count = model.selectedCandidates.count
-        guard count > 0 else { return "Clean Up…" }
-        return "Clean Up \(count) Item\(count == 1 ? "" : "s")…"
+        guard count > 0 else { return "Review selection…" }
+        return "Review \(count) selected…"
     }
 
     private var statusLine: Text {
         if !model.failures.isEmpty {
-            return Text("\(model.failures.count) thing\(model.failures.count == 1 ? "" : "s") could not be moved. The reason is listed below or on the Trash shelf.")
+            return Text("\(model.failures.count) thing\(model.failures.count == 1 ? "" : "s") could not be moved. Open Scan Details to read the reasons.")
         }
         if let outcome = model.outcome {
             return Text(outcome)
@@ -613,9 +665,10 @@ struct CleanerView: View {
         }
         let count = model.selectedCandidates.count
         if count == 0 {
-            return Text("Nothing is ticked. Ticking costs nothing; nothing moves until the button is pressed.")
+            return Text("Select items to review. Nothing moves until you confirm the exact paths.")
         }
-        return Text("\(count) item\(count == 1 ? "" : "s") ticked, \(model.selectedSize.sizeDescription).")
+        let hidden = model.selectedCandidates.filter { $0.category != model.category || !model.matches($0.name, path: $0.url.path, detail: $0.detail) }.count
+        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription)\(hidden > 0 ? " · \(hidden) outside this view" : "").")
     }
 
     // MARK: - Confirmation
@@ -635,6 +688,19 @@ struct CleanerView: View {
                         .foregroundColor(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    if !model.pendingPaths.isEmpty {
+                        Text("Exact paths to move (\(model.pendingPaths.count))").font(style.labelFont)
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(model.pendingPaths, id: \.self) { path in
+                                    Text(path).font(style.pathFont).textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }.frame(maxHeight: 200)
+                        Text("Quarantine retains these files on this disk. It does not immediately free storage.")
+                            .font(style.smallFont).foregroundColor(style.caution)
+                    }
                     HStack(spacing: 8) {
                         Text("Type “\(action.word)” to confirm:")
                             .font(style.smallFont)

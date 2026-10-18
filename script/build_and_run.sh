@@ -8,7 +8,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 XCODE_DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 XCODEBUILD="$XCODE_DEVELOPER_DIR/usr/bin/xcodebuild"
 DERIVED_DATA="$ROOT_DIR/.build/DerivedData"
-APP_BUNDLE="$DERIVED_DATA/Build/Products/Debug/$APP_NAME.app"
+CONFIGURATION="${HOUSEKEEPING_BUILD_CONFIGURATION:-Debug}"
+APP_BUNDLE="$DERIVED_DATA/Build/Products/$CONFIGURATION/$APP_NAME.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
 if [[ ! -x "$XCODEBUILD" ]]; then
@@ -21,9 +22,20 @@ pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 DEVELOPER_DIR="$XCODE_DEVELOPER_DIR" "$XCODEBUILD" \
   -project "$ROOT_DIR/Housekeeping.xcodeproj" \
   -scheme "$APP_NAME" \
-  -configuration Debug \
+  -configuration "$CONFIGURATION" \
   -derivedDataPath "$DERIVED_DATA" \
   build
+
+# Keep the runnable development bundle equivalent to packaged builds. These
+# optional Bookbind resources live beside this repository, outside Swift sources.
+BOOKBIND_SOURCE="${HOUSEKEEPING_BOOKBIND_SRC:-$ROOT_DIR/../Bookbind}"
+if [[ -f "$BOOKBIND_SOURCE/app.py" && -f "$BOOKBIND_SOURCE/bookbind_cli.py" && -d "$BOOKBIND_SOURCE/static" ]]; then
+  mkdir -p "$APP_BUNDLE/Contents/Resources/Bookbind"
+  cp "$BOOKBIND_SOURCE/app.py" "$BOOKBIND_SOURCE/bookbind_cli.py" "$APP_BUNDLE/Contents/Resources/Bookbind/"
+  ditto "$BOOKBIND_SOURCE/static" "$APP_BUNDLE/Contents/Resources/Bookbind/static"
+fi
+/usr/bin/codesign --force --deep --sign - "$APP_BUNDLE"
+/usr/bin/codesign --verify --deep --strict "$APP_BUNDLE"
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"

@@ -416,6 +416,10 @@ struct AskHousekeeperButton: View {
 
     private func open() {
         appState.housekeeperTopic = topic
+        if appState.workspace != nil && appState.presentedScreen == nil {
+            appState.showHousekeeper = true
+            return
+        }
 
         if let closing {
             // The sheet that carried this button has to go before the next one is

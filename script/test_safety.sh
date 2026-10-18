@@ -26,6 +26,10 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   -target arm64-apple-macosx13.0 \
   -module-cache-path "$BUILD_DIR/ModuleCache" \
   "$ROOT_DIR/Housekeeping/Sources/Core/Models.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/Housekeeper/HousekeeperConversation.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/Housekeeper/HousekeeperModel.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/Housekeeper/HousekeeperFolderEvidence.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/Housekeeper/HousekeeperWeights.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Core/GlobMatcher.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Core/ApplicationRules.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Core/RuleEngine.swift" \
@@ -38,6 +42,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/CleanupModels.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafeCleanupEngine.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerModels.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerModel.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerScanner.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/Uninstaller.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/TrashService.swift" \

@@ -2,6 +2,7 @@
 // Mac OS 9 / Platinum interface styling for SwiftUI
 
 import SwiftUI
+import AppKit
 
 // MARK: - Color Palette (Mac OS 9)
 
@@ -69,13 +70,31 @@ struct HousekeepingInk {
     static let negative = Color(red: 255/255, green: 108/255, blue: 86/255)
 }
 
+/// The burgundy identity is shared by the modern window and its controls.
+/// Light mode keeps the same warm undertone with sufficient text contrast.
+enum HousekeepingPalette {
+    private static func adaptive(dark: (CGFloat, CGFloat, CGFloat), light: (CGFloat, CGFloat, CGFloat)) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let rgb = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            return NSColor(srgbRed: rgb.0 / 255, green: rgb.1 / 255, blue: rgb.2 / 255, alpha: 1)
+        })
+    }
+
+    static let background = adaptive(dark: (38, 12, 16), light: (249, 244, 241))
+    static let sidebar = adaptive(dark: (28, 14, 17), light: (239, 229, 224))
+    static let panel = adaptive(dark: (51, 29, 33), light: (255, 252, 250))
+    static let raised = adaptive(dark: (64, 37, 41), light: (240, 228, 223))
+    static let accent = adaptive(dark: (234, 177, 158), light: (158, 47, 39))
+    static let button = adaptive(dark: (151, 57, 58), light: (158, 47, 39))
+}
+
 // MARK: - Retro Typography
 
 struct RetroTypography {
-    static let titleFont = Font.system(size: 15, weight: .bold, design: .monospaced)
-    static let bodyFont = Font.system(size: 14, weight: .regular, design: .monospaced)
-    static let smallFont = Font.system(size: 12, weight: .regular, design: .monospaced)
-    static let buttonFont = Font.system(size: 13, weight: .semibold, design: .monospaced)
+    static let titleFont = Font.system(size: 14, weight: .bold)
+    static let bodyFont = Font.system(size: 13)
+    static let smallFont = Font.system(size: 12)
+    static let buttonFont = Font.system(size: 13, weight: .semibold)
 }
 
 // MARK: - Retro Views
@@ -116,34 +135,28 @@ struct TitleBarView: View {
     var onClose: (() -> Void)? = nil
 
     var body: some View {
-        LinearGradient(
-            colors: [RetroColors.titleBarGradientStart, RetroColors.titleBarGradientEnd],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay(
-            HStack {
-                if onClose != nil {
-                    CloseButton()
-                        .frame(width: 16, height: 16)
-                        .padding(2)
+        ZStack {
+            LinearGradient(colors: [Color(white: 0.91), Color(white: 0.75)], startPoint: .top, endPoint: .bottom)
+            VStack(spacing: 2) {
+                ForEach(0..<6, id: \.self) { _ in
+                    Rectangle().fill(Color.black.opacity(0.16)).frame(height: 1)
                 }
-                Spacer()
-                VStack(alignment: .leading) {
-                    Text(title)
-                        .font(RetroTypography.titleFont)
-                        .foregroundColor(RetroColors.darkText)
-                    if let subtitle = subtitle {
-                        Text(subtitle)
-                            .font(RetroTypography.smallFont)
-                            .foregroundColor(RetroColors.secondaryText)
-                    }
+            }.padding(.horizontal, 12)
+            HStack(spacing: 8) {
+                Text(title).font(RetroTypography.titleFont)
+                if let subtitle {
+                    Text("·").foregroundStyle(RetroColors.secondaryText)
+                    Text(subtitle).font(RetroTypography.smallFont)
                 }
-                .padding(.trailing, 8)
-                Spacer()
             }
-            .padding(.leading, 4)
-        )
+            .foregroundStyle(RetroColors.darkText)
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 3)
+            .background(Color(white: 0.85))
+        }
+        .overlay(alignment: .top) { Rectangle().fill(.white).frame(height: 1) }
+        .overlay(alignment: .bottom) { Rectangle().fill(RetroColors.insetBorder).frame(height: 1) }
     }
 }
 
@@ -175,35 +188,9 @@ struct RetroButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(label)
-                .font(RetroTypography.buttonFont)
-                .foregroundColor(RetroColors.darkText)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(RetroButtonBorder(isDefault: isDefault))
+            Text(label).lineLimit(1)
         }
-        .buttonStyle(.plain)
-    }
-}
-
-struct RetroButtonBorder: View {
-    let isDefault: Bool
-
-    var body: some View {
-        let light = Color.white
-        let dark = Color(red: 128/255, green: 128/255, blue: 128/255)
-        let shadow = Color(red: 96/255, green: 96/255, blue: 96/255)
-
-        return ZStack(alignment: .topLeading) {
-            Rectangle().fill(shadow).offset(x: 2, y: 2)
-            Rectangle().fill(RetroColors.buttonFace).border(dark, width: 1)
-            Rectangle().fill(light).frame(width: 2).offset(x: -1)
-            Rectangle().fill(light).frame(height: 1).offset(y: -1)
-            if isDefault {
-                Rectangle().fill(light).scaleEffect(0.95)
-                    .overlay(Rectangle().stroke(light, lineWidth: 1).scaleEffect(0.95))
-            }
-        }
+        .buttonStyle(RetroButtonStyle(isDefault: isDefault))
     }
 }
 
@@ -352,36 +339,32 @@ struct UIStyle {
                 positive: Color(red: 22/255, green: 108/255, blue: 54/255),
                 caution: RetroColors.warningText,
                 negative: RetroColors.criticalText,
-                titleFont: Font.system(size: 22, weight: .bold, design: .monospaced),
+                titleFont: Font.system(size: 22, weight: .bold),
                 bodyFont: RetroTypography.bodyFont,
                 smallFont: RetroTypography.smallFont,
                 labelFont: RetroTypography.smallFont.bold(),
                 pathFont: Font.system(size: 11, weight: .regular, design: .monospaced)
             )
         case .liquidGlass:
-            // Housekeeping's own colour, not the system's. Text is stated rather
-            // than taken from `.labelColor` because these surfaces do not follow
-            // the system appearance — see `HousekeepingSurface`, which fixes this
-            // window to dark so the two can never disagree.
             return UIStyle(
                 theme: theme,
-                text: HousekeepingInk.text,
-                secondaryText: HousekeepingInk.secondaryText,
-                accent: HousekeepingInk.red,
-                accentLifted: HousekeepingInk.redLifted,
-                accentShaded: HousekeepingInk.redShaded,
-                border: HousekeepingInk.hairline,
-                rowSelection: HousekeepingInk.red.opacity(0.24),
-                rowBackground: Color.clear,
-                windowBackground: HousekeepingInk.surface,
-                groupingBackground: HousekeepingInk.surfaceRaised,
-                positive: HousekeepingInk.positive,
-                caution: HousekeepingInk.caution,
-                negative: HousekeepingInk.negative,
-                titleFont: .system(size: 26, weight: .semibold),
-                bodyFont: .system(size: 13),
-                smallFont: .system(size: 11),
-                labelFont: .system(size: 11, weight: .semibold),
+                text: .primary,
+                secondaryText: .secondary,
+                accent: HousekeepingPalette.accent,
+                accentLifted: HousekeepingPalette.accent,
+                accentShaded: HousekeepingPalette.button,
+                border: Color.primary.opacity(0.10),
+                rowSelection: HousekeepingPalette.accent.opacity(0.13),
+                rowBackground: HousekeepingPalette.panel,
+                windowBackground: HousekeepingPalette.background,
+                groupingBackground: HousekeepingPalette.raised,
+                positive: .green,
+                caution: .orange,
+                negative: .red,
+                titleFont: .system(size: 27, weight: .semibold),
+                bodyFont: .system(size: 14),
+                smallFont: .system(size: 12),
+                labelFont: .system(size: 13, weight: .semibold),
                 pathFont: .system(size: 11, design: .monospaced)
             )
         }
@@ -401,54 +384,19 @@ extension EnvironmentValues {
 
 // MARK: - Theme-aware chrome
 
-/// Draws the surface a screen sits on. Retro gets a drawn panel; Liquid Glass
-/// gets a real glass surface on macOS 26 and a material fallback below it.
-///
-/// The modern branch is not just a fill. Glass on its own reads as a hole cut in
-/// the window — flat, and with no edge, so a stack of panels turns into a stack
-/// of nothing. What makes a card look like a card is three things: a light wash
-/// down its face, a lit top edge, and a shadow underneath.
+/// Shared panels keep a thin border and a restrained raised surface.
 private struct ThemePanelChrome: ViewModifier {
+    @Environment(\.uiStyle) private var style
     let isRetro: Bool
-
-    private var panelShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-    }
-
-    private var wash: LinearGradient {
-        LinearGradient(
-            colors: [Color.white.opacity(0.07), Color.white.opacity(0.012)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    private var edge: LinearGradient {
-        LinearGradient(
-            colors: [Color.white.opacity(0.18), Color.white.opacity(0.03)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if isRetro {
-            content
-                .background(RetroColors.panelBackground)
+            content.background(RetroColors.panelBackground)
                 .overlay(Rectangle().stroke(RetroColors.insetBorder, lineWidth: 1))
-        } else if #available(macOS 26.0, *) {
-            content
-                .glassEffect(.regular, in: panelShape)
-                .overlay(panelShape.fill(wash).allowsHitTesting(false))
-                .overlay(panelShape.strokeBorder(edge, lineWidth: 1).allowsHitTesting(false))
-                .shadow(color: Color.black.opacity(0.32), radius: 16, y: 7)
         } else {
             content
-                .background(.ultraThinMaterial, in: panelShape)
-                .background(panelShape.fill(wash))
-                .overlay(panelShape.strokeBorder(edge, lineWidth: 1))
-                .shadow(color: Color.black.opacity(0.32), radius: 16, y: 7)
+                .housekeepingCard(cornerRadius: 12)
         }
     }
 }
@@ -531,8 +479,8 @@ struct ThemeCheckbox: View {
                 RetroCheckbox(isChecked: isChecked, isMixed: isMixed, action: action)
             } else {
                 Button(action: action) {
-                    Image(systemName: isChecked ? "checkmark.circle.fill"
-                                          : (isMixed ? "minus.circle.fill" : "circle"))
+                    Image(systemName: isChecked ? "checkmark.square.fill"
+                                          : (isMixed ? "minus.square.fill" : "square"))
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(isChecked ? style.accent : (isMixed ? style.accent : style.secondaryText))
                 }
@@ -572,13 +520,12 @@ struct RetroButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(RetroTypography.buttonFont)
-            .foregroundColor(RetroColors.darkText)
-            .padding(.horizontal, 14).padding(.vertical, 7)
-            .background(ZStack(alignment: .topLeading) {
-                Rectangle().fill(RetroColors.buttonFace).border(isDefault ? RetroColors.darkText : Color(red: 96/255, green: 96/255, blue: 96/255), width: isDefault ? 2 : 1)
-                Rectangle().fill(Color.white).frame(width: 1)
-                Rectangle().fill(Color.white).frame(height: 1).offset(y: -1)
-            })
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .foregroundStyle(RetroColors.darkText)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(configuration.isPressed ? Color(white: 0.76) : RetroColors.buttonFace)
+            .overlay(Rectangle().strokeBorder(Color(white: isDefault ? 0.18 : 0.4), lineWidth: isDefault ? 2 : 1))
+            .overlay(alignment: .top) { Rectangle().fill(configuration.isPressed ? Color(white: 0.5) : .white).frame(height: 1).padding(.horizontal, 2).padding(.top, 2) }
+            .overlay(alignment: .leading) { Rectangle().fill(configuration.isPressed ? Color(white: 0.5) : .white).frame(width: 1).padding(.vertical, 2).padding(.leading, 2) }
+            .overlay(alignment: .bottom) { Rectangle().fill(configuration.isPressed ? .white : Color(white: 0.6)).frame(height: 1).padding(.horizontal, 2).padding(.bottom, 2) }
     }
 }
