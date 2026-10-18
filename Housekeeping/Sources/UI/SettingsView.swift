@@ -58,14 +58,14 @@ struct SettingsView: View {
             }
 
             Section("Scanning") {
-                Toggle("Also measure folders that belong to no known app", isOn: Binding(
+                Toggle("Also look in folders that belong to no app", isOn: Binding(
                     get: { appState.deepSweep },
                     set: { appState.setDeepSweep($0) }
                 ))
 
                 Text(appState.deepSweep
-                     ? "This is on. Housekeeping measures the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows, and the folders that belong to none of them as well — often where the space is, since nothing else reports it. It adds up to a minute to a scan, and what it finds is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside."
-                     : "This is off. Housekeeping measures only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows, so a scan stays quick — and any space held by folders it does not recognise will not appear in the results.")
+                     ? "On. Housekeeping checks the folders it knows an app owns, and also opens the folders that belong to no app — usually where missing space is hiding, because nothing else reports it. A scan takes about a minute longer. Anything found that way is only listed: you tick it, then type a word to confirm."
+                     : "Off. Housekeeping only checks the folders it knows an app owns, so a scan stays quick — but space inside other folders won't show up in the results.")
                     .font(.callout)
                     .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -149,7 +149,7 @@ struct SettingsView: View {
                 LabeledContent("App", value: "Housekeeping")
                 LabeledContent("Version", value: AppState.currentVersion.isEmpty ? "Unknown" : AppState.currentVersion)
                 updateRow
-                LabeledContent("Rules loaded", value: "\(RuleEngine.shared.applications.count)")
+                LabeledContent("Apps it knows", value: "\(RuleEngine.shared.applications.count)")
                 LabeledContent("Purpose", value: "Find storage, explain it, and move nothing without you.")
             }
         }
@@ -219,8 +219,8 @@ struct SettingsView: View {
         facts.append("These are Housekeeping's own settings. Nothing on this screen cleans anything or changes anything on disk; every switch here changes how Housekeeping behaves and nothing else.")
         facts.append("Theme: \(appState.currentTheme.displayName). \(themeDescription)")
         facts.append(appState.deepSweep
-                     ? "It is also measuring the folders that belong to no known app, not just the \(RuleEngine.shared.applications.count) apps and tools it knows. That is where the space usually is, and it is why a scan takes up to a minute longer. Anything found that way is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside."
-                     : "It is measuring only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows. Folders belonging to anything else are left alone, so a scan stays quick and any space they hold does not appear in the results.")
+                     ? "It also looks in the folders that belong to no app, not just the folders it knows an app owns. That is usually where the missing space is, and it is why a scan takes about a minute longer. Anything found that way is only listed: you tick it, then type a word to confirm."
+                     : "It only looks in the folders it knows an app owns. Everything else is left alone, so a scan stays quick — and space inside those other folders will not appear in the results.")
         facts.append("The safety promises are: Housekeeping never ticks anything on the reader's behalf; cleaning moves items into Quarantine and deletes nothing, and everything moved can be put back; and anything it cannot prove is replaceable is shown but locked, with the reason stated.")
         facts.append("Quarantine is at \(CleanupEngine().quarantineURL.path), a normal folder in plain sight at the top of the home folder\(CleanupEngine().quarantineExists ? "" : " — it does not exist yet because nothing has been quarantined, and it is created the first time something is")")
         if appState.updateExceptionEntries.isEmpty {
@@ -232,7 +232,7 @@ struct SettingsView: View {
             }
             facts.append("“Offer Again” puts one back in the list. It installs nothing; it only stops Housekeeping from hiding it.")
         }
-        facts.append("This is Housekeeping \(AppState.currentVersion.isEmpty ? "of unknown version" : AppState.currentVersion), with \(RuleEngine.shared.applications.count) rules loaded.")
+        facts.append("This is Housekeeping \(AppState.currentVersion.isEmpty ? "of unknown version" : AppState.currentVersion), and it knows \(RuleEngine.shared.applications.count) apps and tools by name.")
 
         return HousekeeperTopic(
             id: "settings",

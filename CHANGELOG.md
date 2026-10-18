@@ -1,3 +1,37 @@
+# Housekeeping 0.16.0
+
+A Clean Up screen, built the way a cleaner is expected to work: everything on one page, each
+shelf named, and nothing moved without a tick and a typed word.
+
+- **Clean Up is a screen now, not a suggestion.** A new door on the ring and a job in the bar
+  open one page with six shelves: everyday junk (caches, logs, saved state, crash reports),
+  developer caches (npm, pip, cargo, Gradle, Xcode, Homebrew and the rest), project build
+  folders (`node_modules`, `build`, `dist` and friends), installers (`dmg`, `pkg`, `iso`, and
+  archives over 200 MB), large files over 500 MB or over 200 MB and more than a year old, and
+  apps you no longer need together with the files they left behind. Each shelf says how much
+  it holds and how many items, and every row can be read before it is ticked.
+- **Nothing here deletes anything.** Every move goes through the same engine the rest of the
+  app uses: the manifest is written first, the files go to Quarantine, and they can be put
+  back. Emptying the Trash is the one exception, and it is in the screen as its own shelf with
+  its own warning, because macOS really does delete that.
+- **Three confirmations, each in a word.** Cleaning asks for "clean", uninstalling for
+  "uninstall", emptying the Trash for "delete". A run that only part-succeeds says which files
+  stayed where they were instead of reporting success.
+- **Right-click anything on the shelf.** Every row answers a right-click with Show in Finder,
+  Ask the Housekeeper About This, Copy Path, and Leave This Alone. Leaving something alone puts
+  it on the Left Alone list and takes it off the screen immediately — a file that stayed
+  visible after being protected would make the reader doubt the list, not the file. The next
+  scan honours it without being told.
+- **The housekeeper explains and still does not decide.** Its prompt now refuses to offer a
+  verdict of its own: it may only repeat the one Housekeeping gives it, and when there is no
+  verdict in the briefing it says what the item is and leaves the decision alone. The opener
+  on the Clean Up screen no longer invites a recommendation.
+- **Copy that reads like a person wrote it.** "Folders that belong to no known app" is now
+  "folders that belong to no app", the deep-sweep switch says what it does before it says what
+  it costs, and every scan note is a sentence rather than a status line. The Trash note now
+  says the real reason it can be unreadable — Full Disk Access — instead of guessing at a
+  locked file.
+
 # Housekeeping 0.15.0
 
 MediaDock 9 and Bookbind are screens in this app now, not two other apps it kept in a drawer.
