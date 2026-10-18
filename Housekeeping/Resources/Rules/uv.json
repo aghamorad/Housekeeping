@@ -11,7 +11,7 @@
     {
       "relativePath": ".local/share/uv",
       "category": "shared",
-      "description": "uv local share data."
+      "description": "uv persistent local data, including managed Python installations and tool environments. This is distinct from its package cache."
     }
   ],
   "filePatterns": [],
@@ -25,5 +25,7 @@
   ],
   "installMethod": null,
   "category": "system",
-  "description": "uv package cache \u2014 the faster Python package manager's cache."
+  "description": "uv package cache \u2014 the faster Python package manager's cache.",
+  "documentationURL": "https://docs.astral.sh/uv/concepts/cache/",
+  "homepageURL": "https://docs.astral.sh/uv/"
 }

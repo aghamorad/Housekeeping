@@ -1,17 +1,12 @@
 // Housekeeping — The housekeeper's weights
 //
-// The model is deliberately not inside the .app. Bundling it would add ~400 MB to
-// each of the three release zips — around 1.2 GB re-uploaded on every release — and
-// would re-download the weights on every update. Fetching it once into Application
-// Support turns that into a single download, which is also the direction that is
-// fast from here.
-//
-// The download resumes. A filtered connection that drops at 90% otherwise costs the
-// whole 400 MB again, and a transfer that can never finish is the same as one that
-// never started.
+// Model weights are downloaded separately, so app updates do not repeatedly
+// transfer gigabytes. Previous weights are retained on disk for rollback, but
+// the inadequate 0.6B model is not silently used for chat.
 
 import Foundation
 import Combine
+import CryptoKit
 
 @MainActor
 final class HousekeeperWeights: ObservableObject {
@@ -33,17 +28,15 @@ final class HousekeeperWeights: ObservableObject {
 
     static let shared = HousekeeperWeights()
 
-    /// Qwen3 0.6B at Q4_K_M. Apache 2.0, so redistribution stays clean and this is
-    /// the kind of asset that can be re-hosted if the mirror ever moves.
-    static let fileName = "Qwen3-0.6B-Q4_K_M.gguf"
-    /// Only used before the server has said how big the file is, so the offer can
-    /// name a figure rather than showing a bar with no end.
-    static let approximateSize: Int64 = 396_705_472
-    static let source = URL(
-        string: "https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf"
-    )!
+    static let legacyFileName = "Qwen3-0.6B-Q4_K_M.gguf"
+    @Published private(set) var selection: HousekeeperModel
+    private let defaults: UserDefaults
+    private let storageDirectory: URL
 
     @Published private(set) var state: State = .missing
+    @Published private(set) var isVerifying = false
+    private var verificationTask: Task<String?, Never>?
+    private var transferID = UUID()
     /// How much of a part-finished download is already on disk, so the offer can
     /// say "carry on" rather than "start again" after the app has been quit.
     @Published private(set) var partialBytes: Int64 = 0
@@ -51,22 +44,67 @@ final class HousekeeperWeights: ObservableObject {
     private var session: URLSession?
     private var writer: ChunkWriter?
 
-    private var directory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("Housekeeping/Models", isDirectory: true)
+    private var directory: URL { storageDirectory }
+    private var partialURL: URL { directory.appendingPathComponent(selection.download!.fileName + ".partial") }
+    private var installedURL: URL { directory.appendingPathComponent(selection.download!.fileName) }
+
+    init(directory: URL? = nil, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        selection = HousekeeperModel.savedChoice(defaults.string(forKey: HousekeeperModel.preferenceKey))
+        storageDirectory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Housekeeping/Models", isDirectory: true)
+        refresh()
     }
 
-    private var partialURL: URL { directory.appendingPathComponent(Self.fileName + ".partial") }
-    private var installedURL: URL { directory.appendingPathComponent(Self.fileName) }
+    var activeModelName: String {
+        selection == .none ? "Chat is off" : selection.title
+    }
 
-    private init() {
+    struct StoredFile: Identifiable {
+        let url: URL
+        let bytes: Int64
+        var id: String { url.path }
+        var sizeLabel: String { ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) }
+    }
+
+    var storedFiles: [StoredFile] {
+        let names = HousekeeperModel.allCases.compactMap { $0.download?.fileName }
+        return (names + names.map { $0 + ".partial" } + [Self.legacyFileName]).compactMap { name in
+            let url = directory.appendingPathComponent(name)
+            guard let bytes = Self.size(of: url) else { return nil }
+            return StoredFile(url: url, bytes: bytes)
+        }
+    }
+    var storedBytes: Int64 { storedFiles.reduce(0) { $0 + $1.bytes } }
+
+    func select(_ model: HousekeeperModel) {
+        guard model != selection else { return }
+        cancel()
+        selection = model
+        defaults.set(model.rawValue, forKey: HousekeeperModel.preferenceKey)
+        refresh()
+    }
+
+    /// Only exact managed model files are eligible. Never removes another app's
+    /// model directory or Apple's system-managed Foundation Model.
+    func removeDownloads(_ files: [URL]) throws {
+        let allowed = Set(storedFiles.map(\.url))
+        guard files.allSatisfy(allowed.contains) else {
+            throw NSError(domain: "HousekeepingModels", code: 1, userInfo: [NSLocalizedDescriptionKey: "The removal included a file outside Housekeeping's managed downloads."])
+        }
+        cancel()
+        for file in files { try FileManager.default.removeItem(at: file) }
         refresh()
     }
 
     /// What the disk already has. Never touches the network, so it is safe to call
     /// at launch and on every appearance of the housekeeper.
     func refresh() {
-        if FileManager.default.fileExists(atPath: installedURL.path) {
+        guard let asset = selection.download else {
+            state = .missing
+            partialBytes = 0
+            return
+        }
+        if Self.size(of: installedURL) == asset.bytes {
             state = .ready(installedURL)
             partialBytes = 0
         } else {
@@ -76,7 +114,9 @@ final class HousekeeperWeights: ObservableObject {
     }
 
     func download() {
-        if state.isReady || state.isLoading { return }
+        guard let asset = selection.download, !state.isReady, !state.isLoading else { return }
+        transferID = UUID()
+        let id = transferID
 
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -103,7 +143,7 @@ final class HousekeeperWeights: ObservableObject {
         }
         if already > 0 { _ = try? handle.seekToEnd() }
 
-        var request = URLRequest(url: Self.source)
+        var request = URLRequest(url: asset.source)
         request.timeoutInterval = 30
         if already > 0 {
             request.setValue("bytes=\(already)-", forHTTPHeaderField: "Range")
@@ -111,23 +151,25 @@ final class HousekeeperWeights: ObservableObject {
 
         let writer = ChunkWriter(handle: handle, startingAt: already, requestedRange: already > 0)
         writer.onRestart = { [weak self] in
+            guard self?.transferID == id else { return }
             self?.partialBytes = 0
         }
         writer.onProgress = { [weak self] written, expected in
-            guard let self else { return }
+            guard let self, self.transferID == id else { return }
             self.partialBytes = written
             self.state = .downloading(
                 written: written,
-                expected: expected > 0 ? expected : Self.approximateSize
+                expected: expected > 0 ? expected : asset.bytes
             )
         }
         writer.onFinish = { [weak self] error in
+            guard self?.transferID == id else { return }
             self?.finish(error: error)
         }
 
         self.writer = writer
         partialBytes = already
-        state = .downloading(written: already, expected: Self.approximateSize)
+        state = .downloading(written: already, expected: asset.bytes)
 
         let session = URLSession(configuration: .ephemeral, delegate: writer, delegateQueue: nil)
         self.session = session
@@ -135,15 +177,21 @@ final class HousekeeperWeights: ObservableObject {
     }
 
     func cancel() {
+        transferID = UUID()
+        verificationTask?.cancel()
+        verificationTask = nil
+        isVerifying = false
         session?.invalidateAndCancel()
         session = nil
         writer?.closeHandle()
         writer = nil
-        partialBytes = Self.size(of: partialURL) ?? 0
+        partialBytes = selection.download == nil ? 0 : (Self.size(of: partialURL) ?? 0)
         state = .missing
     }
 
     func removeInstalled() {
+        guard selection.download != nil else { return }
+        cancel()
         try? FileManager.default.removeItem(at: installedURL)
         try? FileManager.default.removeItem(at: partialURL)
         state = .missing
@@ -151,6 +199,7 @@ final class HousekeeperWeights: ObservableObject {
     }
 
     private func finish(error: Error?) {
+        guard let asset = selection.download else { return }
         let expected = writer?.expected ?? 0
         writer?.closeHandle()
         writer = nil
@@ -173,16 +222,43 @@ final class HousekeeperWeights: ObservableObject {
             return
         }
 
-        do {
-            if FileManager.default.fileExists(atPath: installedURL.path) {
-                try FileManager.default.removeItem(at: installedURL)
+        isVerifying = true
+        let id = transferID
+        let url = partialURL
+        let task = Task.detached(priority: .utility) { Self.digest(url) }
+        verificationTask = task
+        Task { @MainActor [weak self] in
+            let digest = await task.value
+            guard let self, self.transferID == id else { return }
+            self.isVerifying = false
+            self.verificationTask = nil
+            guard digest == asset.sha256 else {
+                self.state = .failed("The downloaded model did not match its published SHA-256 checksum. Use Start Over to fetch a fresh copy.")
+                return
             }
-            try FileManager.default.moveItem(at: partialURL, to: installedURL)
-            partialBytes = 0
-            state = .ready(installedURL)
-        } catch {
-            state = .failed("The download finished but Housekeeping could not put it in place: \(error.localizedDescription)")
+            do {
+                if FileManager.default.fileExists(atPath: self.installedURL.path) {
+                    try FileManager.default.removeItem(at: self.installedURL)
+                }
+                try FileManager.default.moveItem(at: self.partialURL, to: self.installedURL)
+                self.partialBytes = 0
+                self.state = .ready(self.installedURL)
+            } catch {
+                self.state = .failed("The verified model could not be put in place: \(error.localizedDescription)")
+            }
         }
+    }
+
+    nonisolated private static func digest(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        var hash = SHA256()
+        while !Task.isCancelled {
+            guard let bytes = try? handle.read(upToCount: 8 * 1_024 * 1_024) else { return nil }
+            if bytes.isEmpty { return hash.finalize().map { String(format: "%02x", $0) }.joined() }
+            hash.update(data: bytes)
+        }
+        return nil
     }
 
     private static func describe(_ error: Error) -> String {

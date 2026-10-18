@@ -1,4 +1,122 @@
-# Housekeeping 0.16.0
+# Housekeeping changelog
+
+## 0.18.5 — Platinum layout repair
+
+Platinum uses the shared storage overview and a wrapping tool grid so every tool
+stays reachable without horizontal scrolling. Repairs the compressed title strip,
+uses compact system typography and responsive beveled buttons, and keeps shared
+cards square and unlit. Backgrounds receive the resolved theme explicitly so
+modern lighting does not leak into Platinum windows. Settings uses the native
+SettingsLink, repairing the inactive toolbar action on current macOS.
+
+## 0.18.4 — Burgundy surface refinement
+
+Adds soft directional lighting to the burgundy workspace and sidebar, fine
+highlighted edges and shaded panels, and a satin finish on primary controls.
+The overview uses quieter typography, inset tool symbols, a graduated storage
+meter, and subtle card hover feedback that respects Reduce Motion.
+
+## 0.18.3 — Update-list caption
+
+Adds “(probably pirated?)” beside the Unclear origin group heading.
+
+## 0.18.2 — Visible model deletion in Settings
+
+Settings shows downloaded models and their disk usage directly, with Delete model
+and Delete all downloaded models actions. Confirmation lists the exact files and
+size before removal. Empty storage is shown explicitly. Apple's system-managed
+model is excluded.
+
+## 0.18.1 — Specific folder explanations
+
+Folder questions resolve against the complete held inventory and known app
+locations, with the discussed path shown in chat. Exact paths and matching
+selected folder names receive a read-only check of directory metadata and up to
+16 immediate child names. File contents are not read. Missing and ambiguous
+paths remain explicit; a short name cannot silently identify an unrelated folder.
+
+Relevant folder facts and recorded app assessments precede general scan status,
+so narrow provider contexts retain the subject. Explain this folder opens with
+the path and known purpose where available. uv package-cache explanations cover
+Python packages and versioned cache buckets; persistent uv Python installations
+and tool data are identified separately, with official documentation references.
+Chat remains optional, and no models are downloaded by folder lookup.
+
+## 0.18.0 — Optional chatbot and model choices
+
+Chat starts Off on fresh installations and upgrades without an explicit saved
+choice. Choosing a model never downloads it. A separate Download button shows
+the file size, and Not now leaves all Housekeeping tools available. Model choice
+and download management are available in both the chat panel and Settings.
+
+Choices include Gemma 3 1B (806 MB), Qwen 2.5 1.5B (986 MB), Qwen 3 1.7B
+(1.11 GB), Gemma 2 2B (1.71 GB), and the optional Qwen 3 4B (2.50 GB).
+Each download has its own resumable partial and pinned SHA-256. Users can pause,
+switch, and remove individual downloads or all app-managed model files after
+confirmation. Older weights are counted in the storage display.
+
+Apple Intelligence uses the on-device system Foundation Model on eligible Macs
+running macOS 26 or later, with availability checks and no separate Housekeeping
+model download or cloud fallback. Other Macs retain the downloadable options.
+Conversation framing supports general questions and Gemma's documented role
+format. All chat providers share the app's recorded-assessment protections.
+
+## 0.17.1 — Housekeeper conversation repair
+
+Housekeeper uses Qwen3 4B Instruct in place of the previous 0.6B model. Downloads
+are checked against the published SHA-256 before installation. Previous weights
+are retained for rollback and are never silently used for new conversations.
+
+Removal questions about a selected path quote the app's recorded assessment and
+risk directly. Generated explanations cannot replace that recorded verdict.
+
+Each question receives current app status and a bounded sample of recorded
+findings. Context is carried as context, with complete recent conversation pairs
+and the actual latest question. Repeated long answers are retried once and then
+reported as an error. Responses can be stopped, conversations reset, and tools
+opened directly from the panel. The model loads on the first question and releases
+its memory 45 seconds after the panel closes. The burgundy appearance is retained.
+
+## 0.17.0 — Modern desktop redesign
+
+The modern appearance now uses a compact grouped sidebar with a visible current
+selection, a retained burgundy palette with a warm light variant, larger shared typography, flat controls,
+square selection boxes, and quiet panel borders. The animated circular launcher
+is replaced by an overview showing live volume capacity and available storage,
+with direct cleanup, disk, update, and utility actions. Active cleanup readings
+can be reopened from the overview without starting over.
+
+Cleanup actions sit below a separate selection summary. Rows and navigation
+respond on hover, and tools remain accessible while work is running. The window
+uses normal desktop resizing. Settings opens through the native SettingsLink on
+macOS 14+, and includes System, Light, and Dark appearance choices. The classic
+appearance remains available.
+
+## 0.16.1 — Navigable tools and inspectable cleanup
+
+Tools share the main window with persistent navigation. Disk, folder comparison,
+route testing, and phone controllers retain state when switching tools. Contextual
+help opens above the active tool. Update and environment readings survive navigation.
+
+Clean Up gains search, largest/smallest/name/date sorting, per-category results as
+scanning progresses, current-path measurement feedback, cancellation, visible-item
+selection, and a count of selections outside the current view. Every candidate has
+an inspector and Finder reveal. App-related files expand without truncation and
+must be explicitly included in uninstall; confirmations list every exact path.
+Matching no longer accepts an arbitrary embedded bundle-ID substring. Duplicate
+and nested candidates are counted once. Protected apps and related data are filtered.
+
+Disk browsing gains filtering and five sort orders. Main findings default to largest
+first with smallest and name ordering available. Text distinguishes incomplete scans,
+installed-app support data, unverified installers, and storage retained in Quarantine.
+
+Assistant opening explanations now quote recorded facts directly. Answers from an
+older subject are discarded after changing subjects.
+
+Xcode now includes all six cleaner sources, all 23 rule files, and the assistant
+runtime. The run script also stages Bookbind resources and verifies the app signature.
+
+## 0.16.0 — Clean Up screen
 
 A Clean Up screen, built the way a cleaner is expected to work: everything on one page, each
 shelf named, and nothing moved without a tick and a typed word.

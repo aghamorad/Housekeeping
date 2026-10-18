@@ -101,7 +101,7 @@ final class PhoneModel: ObservableObject {
 struct PhoneView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
-    @StateObject private var model = PhoneModel()
+    @ObservedObject var model: PhoneModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -120,8 +120,8 @@ struct PhoneView: View {
             footer
         }
         .frame(minWidth: 620, minHeight: 660)
-        .background(style.windowBackground)
-        .preferredColorScheme(style.isRetro ? .light : .dark)
+        .background { HousekeepingBackdrop(style: style) }
+        .preferredColorScheme(style.isRetro ? .light : nil)
         .interactiveDismissDisabled(model.busy)
         .task { await model.refresh() }
     }

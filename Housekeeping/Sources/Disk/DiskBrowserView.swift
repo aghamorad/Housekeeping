@@ -11,13 +11,12 @@ import SwiftUI
 
 struct DiskBrowserView: View {
     @Environment(\.uiStyle) private var style
-    @Environment(\.dismiss) private var dismiss
     // Nothing here acts on what it finds, and it still takes no cleanup state: the
     // only thing it reads off `appState` is the slot the housekeeper's subject goes
     // in, because the housekeeper is a sheet on the main window and this screen is
     // the one asking for it.
     @EnvironmentObject private var appState: AppState
-    @StateObject private var model = DiskBrowserModel()
+    @ObservedObject var model: DiskBrowserModel
 
     @State private var rootChoice: DiskBrowserModel.RootChoice = .home
     @State private var showLimits = false
@@ -34,7 +33,7 @@ struct DiskBrowserView: View {
             footer
         }
         .frame(minWidth: 860, minHeight: 620)
-        .background(style.windowBackground)
+        .background { HousekeepingBackdrop(style: style) }
         .background(keyboardShortcuts)
     }
 
@@ -58,65 +57,39 @@ struct DiskBrowserView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Browsing the disk")
-                    .font(style.titleFont)
-                    .foregroundStyle(style.text)
-                Text(model.measurementDescription ?? "Measure once, then move around freely — in and back out again.")
-                    .font(style.smallFont)
-                    .foregroundStyle(style.secondaryText)
-            }
-
-            Spacer()
-
-            if model.isScanning {
-                ThemeButton(title: "Stop", systemImage: "stop.circle", help: "Stop measuring and keep what has been measured so far.") {
-                    model.stopScan()
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Disk Browser").font(style.titleFont).foregroundStyle(style.text)
+                    Text(model.measurementDescription ?? "Measure a folder, then explore its contents.")
+                        .font(style.smallFont).foregroundStyle(style.secondaryText)
                 }
-            } else {
-                Picker("", selection: $rootChoice) {
-                    ForEach(DiskBrowserModel.RootChoice.allCases) { choice in
-                        Text(choice.title).tag(choice)
+                Spacer()
+                AskHousekeeperButton(topic: housekeeperTopic, title: "Explain this folder")
+            }
+            HStack(spacing: 10) {
+                if model.isScanning {
+                    ProgressView().controlSize(.small)
+                    Text("Measuring storage…").font(style.bodyFont).foregroundStyle(style.secondaryText)
+                    Spacer()
+                    ThemeButton(title: "Stop", systemImage: "stop.circle") { model.stopScan() }
+                } else {
+                    Picker("Location", selection: $rootChoice) {
+                        ForEach(DiskBrowserModel.RootChoice.allCases) { choice in Text(choice.title).tag(choice) }
+                    }
+                    .labelsHidden().pickerStyle(.segmented).frame(width: 270)
+                    ThemeButton(title: "Choose folder…", systemImage: "folder") { chooseFolder() }
+                    ThemeButton(title: model.snapshot == nil ? "Measure" : "Measure again", systemImage: "arrow.clockwise",
+                                isPrimary: true, help: "Read this location again. This only measures files.") { scan(rootChoice.url) }
+                    Spacer()
+                    if model.snapshot != nil {
+                        Button("Clear measurement") { model.forgetSnapshot() }
+                            .font(style.smallFont).foregroundStyle(style.secondaryText)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 260)
-                .help("Which part of the disk to measure. The measurement is taken once and everything after it is navigation.")
-
-                ThemeButton(title: "Choose…", help: "Measure a folder of your own choosing.") {
-                    chooseFolder()
-                }
-
-                ThemeButton(
-                    title: model.snapshot == nil ? "Measure" : "Measure Again",
-                    systemImage: "gauge.with.dots.needle.bottom.50percent",
-                    isPrimary: true,
-                    help: "Read the disk once, from here down, and hold the result so that moving between folders costs nothing."
-                ) {
-                    scan(rootChoice.url)
-                }
-            }
-
-            if model.snapshot != nil, !model.isScanning {
-                ThemeButton(title: "Forget", help: "Throw the held measurement away. It can be taken again at any time, so nothing is lost by this.") {
-                    model.forgetSnapshot()
-                }
-            }
-
-            AskHousekeeperButton(
-                topic: housekeeperTopic,
-                closing: { appState.showDiskBrowser = false },
-                title: "Ask About This Folder"
-            )
-
-            ThemeButton(title: "Done", help: "Close the disk browser.") {
-                dismiss()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20).padding(.vertical, 20)
     }
 
     // MARK: - Where you are, and the way back
@@ -234,6 +207,13 @@ struct DiskBrowserView: View {
 
     private var listing: some View {
         VStack(spacing: 0) {
+            HStack {
+                TextField("Filter this folder", text: $model.query).textFieldStyle(.roundedBorder)
+                Picker("Sort", selection: $model.order) {
+                    ForEach(FileOrder.allCases) { Text($0.shortLabel).tag($0).help($0.rawValue) }
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 360)
+                Text("\(model.visibleChildren.count) shown").font(style.smallFont)
+            }.padding(10)
             if showBiggest { biggestPanel }
 
             ScrollView {
@@ -412,16 +392,17 @@ struct DiskBrowserView: View {
                     Text(model.summary(for: node))
                         .font(style.smallFont)
                         .foregroundStyle(style.secondaryText)
+                        .lineLimit(1).truncationMode(.tail)
                 }
 
                 Spacer()
 
-                ThemeButton(title: showBiggest ? "Hide the biggest folders" : "Where did it all go?", help: "List the largest folders anywhere below the measurement, without having to click into anything.") {
+                ThemeButton(title: showBiggest ? "Hide largest folders" : "Largest folders", help: "List the largest folders anywhere below the measurement, without having to click into anything.") {
                     showBiggest.toggle()
                 }
 
                 if !model.limits.isEmpty {
-                    ThemeButton(title: "What was left out", help: "The folders this measurement deliberately did not count, and why.") {
+                    ThemeButton(title: "Scan limits", help: "The folders this measurement deliberately did not count, and why.") {
                         showLimits.toggle()
                     }
                 }
@@ -501,6 +482,15 @@ struct DiskBrowserView: View {
         }
         if let note = model.note { facts.append(note) }
 
+        if let node = model.currentNode {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            let known = RuleEngine.shared.applications.flatMap { rule in
+                rule.knownPaths.map { (rule.name, $0, $0.expand(to: home).path) }
+            }.filter { node.path == $0.2 || node.path.hasPrefix($0.2 + "/") }
+                .max { $0.2.count < $1.2.count }
+            if let known { facts.insert("Known location: \(known.0). \(known.1.description)", at: 0) }
+            facts.insert("Folder: \(node.path)", at: 0)
+        }
         facts.append("This screen measures and navigates only. Nothing here deletes, moves, or cleans anything.")
 
         return HousekeeperTopic(

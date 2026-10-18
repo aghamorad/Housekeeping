@@ -1,158 +1,110 @@
 import SwiftUI
 
-// MARK: - Buttons
+/// Static lighting gives the burgundy surfaces depth without an animation loop.
+struct HousekeepingBackdrop: View {
+    let style: UIStyle
+    @Environment(\.colorScheme) private var scheme
+    var sidebar = false
 
-/// The modern replacement for stock `.borderedProminent` / `.bordered`.
-///
-/// CleanMyMac and Mole both make the primary action read as a lit object: a
-/// filled gradient pill with a halo, a slight lift under the pointer, and a
-/// spring on release. Stock AppKit buttons have none of that, which is most of
-/// why the app read as "system dialogue box" rather than "finished product".
-///
-/// Classic 9 never reaches here — `ThemeButton` sends it to `RetroButton`.
-struct HousekeepingButtonStyle: ButtonStyle {
-    enum Kind {
-        case primary
-        case secondary
-        /// For dense toolbars: no chrome until the pointer arrives.
-        case quiet
+    var body: some View {
+        let base = sidebar ? HousekeepingPalette.sidebar : style.windowBackground
+        ZStack {
+            base
+            if !style.isRetro {
+                LinearGradient(colors: [style.accent.opacity(sidebar ? 0.045 : 0.075), .clear, .black.opacity(scheme == .dark ? 0.12 : 0.025)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [style.accentShaded.opacity(sidebar ? 0.06 : 0.13), .clear],
+                               center: .topTrailing, startRadius: 0, endRadius: 650)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct HousekeepingCardChrome: ViewModifier {
+    @Environment(\.uiStyle) private var style
+    @Environment(\.colorScheme) private var scheme
+    let radius: CGFloat
+    let highlighted: Bool
+    let prominent: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if style.isRetro {
+            content
+                .background(style.rowBackground)
+                .overlay(Rectangle().strokeBorder(style.border, lineWidth: 1))
+                .overlay(alignment: .top) { Rectangle().fill(.white).frame(height: 1).padding(.horizontal, 1).padding(.top, 1) }
+                .overlay(alignment: .leading) { Rectangle().fill(.white).frame(width: 1).padding(.vertical, 1).padding(.leading, 1) }
+        } else {
+            modern(content)
+        }
     }
 
+    private func modern(_ content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return content
+            .background {
+                shape.fill(style.rowBackground)
+                shape.fill(LinearGradient(
+                    colors: [style.accent.opacity(prominent ? 0.12 : (highlighted ? 0.09 : 0.035)), .clear, .black.opacity(scheme == .dark ? 0.06 : 0.015)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing))
+            }
+            .overlay {
+                shape.strokeBorder(LinearGradient(
+                    colors: [Color.white.opacity(scheme == .dark ? 0.16 : 0.9), style.accent.opacity(highlighted ? 0.28 : 0.08), Color.primary.opacity(0.045)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.75)
+            }
+            .shadow(color: .black.opacity(scheme == .dark ? (prominent ? 0.18 : 0.10) : 0.035),
+                    radius: prominent ? 20 : 10, x: 0, y: prominent ? 10 : 5)
+    }
+}
+
+extension View {
+    func housekeepingCard(cornerRadius: CGFloat = 14, highlighted: Bool = false, prominent: Bool = false) -> some View {
+        modifier(HousekeepingCardChrome(radius: cornerRadius, highlighted: highlighted, prominent: prominent))
+    }
+}
+
+// MARK: - Buttons
+
+/// Quiet shared controls with visible hover and press feedback. Classic 9
+/// keeps its own drawn buttons.
+struct HousekeepingButtonStyle: ButtonStyle {
+    enum Kind { case primary, secondary, quiet }
     let style: UIStyle
     let kind: Kind
-
     @Environment(\.isEnabled) private var enabled
     @State private var hovering = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(style.labelFont)
-            .foregroundStyle(foreground)
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, verticalPadding)
-            .background(fill)
-            .overlay(border)
-            .clipShape(shape)
-            .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
-            .scaleEffect(configuration.isPressed ? 0.965 : (hovering && enabled ? 1.02 : 1))
-            .animation(HousekeepingMotion.press, value: configuration.isPressed)
-            .animation(HousekeepingMotion.hover, value: hovering)
+            .foregroundStyle(kind == .primary && enabled ? Color.white : style.text)
+            .padding(.horizontal, kind == .quiet ? 9 : 13)
+            .padding(.vertical, 7)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(kind == .primary ? style.accentShaded.opacity(enabled ? 1 : 0.22)
+                          : Color.primary.opacity(hovering ? 0.08 : (kind == .quiet ? 0 : 0.04)))
+                if kind == .primary {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(LinearGradient(colors: [.white.opacity(hovering ? 0.17 : 0.11), .clear, .black.opacity(0.09)],
+                                             startPoint: .top, endPoint: .bottom))
+                }
+            }
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(LinearGradient(colors: [.white.opacity(kind == .primary ? 0.28 : 0.12), Color.primary.opacity(0.06)],
+                                             startPoint: .top, endPoint: .bottom), lineWidth: kind == .quiet ? 0 : 0.75))
+            .shadow(color: .black.opacity(kind == .primary && enabled ? 0.16 : 0), radius: 4, y: 2)
+            .opacity(enabled ? 1 : 0.45)
+            .brightness(configuration.isPressed ? -0.07 : 0)
+            .animation(.easeOut(duration: 0.12), value: hovering)
             .onHover { hovering = $0 && enabled }
-    }
-
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: kind == .quiet ? 7 : 10, style: .continuous)
-    }
-
-    private var horizontalPadding: CGFloat {
-        switch kind {
-        case .primary: return 16
-        case .secondary: return 14
-        case .quiet: return 10
-        }
-    }
-
-    private var verticalPadding: CGFloat {
-        switch kind {
-        case .primary: return 8
-        case .secondary: return 7
-        case .quiet: return 5
-        }
-    }
-
-    private var foreground: Color {
-        guard enabled else { return style.secondaryText }
-        switch kind {
-        case .primary: return .white
-        case .secondary: return style.text
-        case .quiet: return hovering ? style.text : style.secondaryText
-        }
-    }
-
-    @ViewBuilder
-    private var fill: some View {
-        switch kind {
-        case .primary:
-            shape
-                .fill(
-                    LinearGradient(
-                        colors: [style.accentLifted, style.accent],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .brightness(hovering ? 0.06 : 0)
-        case .secondary:
-            shape.fill(hovering ? style.accent.opacity(0.16) : Color.white.opacity(0.07))
-        case .quiet:
-            shape.fill(hovering ? Color.white.opacity(0.09) : Color.clear)
-        }
-    }
-
-    @ViewBuilder
-    private var border: some View {
-        switch kind {
-        case .primary:
-            // Light along the top edge, absent along the bottom — the cheap
-            // trick that makes a flat fill read as a raised surface.
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [Color.white.opacity(0.42), Color.white.opacity(0.04)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ),
-                lineWidth: 1
-            )
-        case .secondary:
-            shape.strokeBorder(style.border.opacity(hovering ? 0.55 : 0.28), lineWidth: 1)
-        case .quiet:
-            EmptyView()
-        }
-    }
-
-    private var shadowColor: Color {
-        guard enabled else { return .clear }
-        switch kind {
-        case .primary: return style.accent.opacity(hovering ? 0.55 : 0.36)
-        case .secondary: return Color.black.opacity(0.25)
-        case .quiet: return .clear
-        }
-    }
-
-    private var shadowRadius: CGFloat {
-        switch kind {
-        case .primary: return hovering ? 15 : 9
-        case .secondary: return 3
-        case .quiet: return 0
-        }
-    }
-
-    private var shadowY: CGFloat {
-        switch kind {
-        case .primary: return hovering ? 6 : 4
-        case .secondary: return 1
-        case .quiet: return 0
-        }
     }
 }
 
-// MARK: - Rail
-
-/// One destination on the navigation rail: a coloured disc with its name beside
-/// it.
-///
-/// The bar the rail replaces was a row of rectangles reading left to right,
-/// which is the shape of a toolbar and therefore the shape of a sequence — as
-/// though the buttons were steps and one followed another. They are not: they
-/// are separate doors into separate jobs, and a column says so.
-///
-/// Most of the drawing here is depth, and deliberately. A flat circle with a
-/// glyph in it reads as a sticker printed on the rail; a disc that is lit along
-/// its top edge, drops a shadow of its own colour, and sits inside a darker
-/// socket reads as something raised off the surface and pressable — which is
-/// the reason the lift under the pointer and the spring on release are worth
-/// having at all. The hue is the other half: it says which kind of door this is
-/// without the reader having to check which group of the rail they are in.
 struct RailButton: View {
     let title: String
     let systemImage: String
@@ -189,7 +141,7 @@ struct RailButton: View {
             HStack(spacing: 11) {
                 disc
                 Text(title)
-                    .font(.system(size: 10.5, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(labelColor)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)

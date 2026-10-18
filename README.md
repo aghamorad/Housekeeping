@@ -6,9 +6,9 @@ Housekeeping is my attempt to make that whole business legible. It scans a defin
 
 I also did not want to make one of those cleaners that announces that it has found “47 GB OF JUNK” in alarming red letters and then expects you to trust a single enormous Clean button. Housekeeping deliberately slows the process down. Nothing is selected automatically. Most personal data is inspection-only. When something genuinely low-risk is eligible for cleanup, you still review it one item at a time, read the explanation again, and decide whether to keep it or move it into Housekeeping's reversible quarantine. The app does not permanently delete it.
 
-The interface looks like an old Mac utility because I miss the peculiar honesty of those applications: they showed you files, paths, sizes, and consequences. They did not pretend the computer possessed mystical knowledge. The retro icon is original too, with a platinum storage drawer, blue inspection lens, broom, and caution badge. The octopus who lives in the menu bar is the housekeeper: many arms, many jobs, which is rather the point of the thing.
+Housekeeping has two appearances: a burgundy desktop interface with a grouped sidebar, and a Platinum skin with beveled controls, gray panels, and a striped title bar. Both use the same storage overview and tools. The octopus in the menu bar is the housekeeper.
 
-[Download Housekeeping 0.8.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.8.0)
+[Download Housekeeping 0.18.5](https://github.com/aghamorad/Housekeeping/releases/tag/v0.18.5) · [Release notes](releases/v0.18.5.md)
 
 ## What you actually do with it
 
@@ -31,7 +31,7 @@ Housekeeping 0.11.0 adds **Two Folders**: comparing two folders that are meant t
 
 0.10.0 also puts every reading behind one button, and every job on one row. **Look Everywhere** runs the disk scan, the setup check and the update reading one after another — the octopus visibly working while it goes — and hands back a single account of what each found. It is automated exactly as far as reading: nothing is ticked, moved, installed or fixed, and each count on the screen it leaves behind is a door to the screen that already asks per item before it changes anything. Stopping it stops the reading in flight and nothing else, because nothing had been changed for the stop to undo. Alongside it, the row across the top of every screen now carries **every** job the app has rather than four of them: the setup check — which had a menu item and no button anywhere in the window — and the app's own Settings stand on it beside the others, and the row is grouped rather than one flat run, so what reads the Mac sits together, the two drawers holding what Housekeeping has already moved or been told to leave sit together, and the two things that are about the app itself sit apart from both. The app menu still carries every one of them as a shortcut; nothing is reachable *only* from the menu any more, and nothing is on the row that is not also in the menu.
 
-The AI model is local, small, and subordinate. The Housekeeper — an octopus who lives in the menu bar and in a chat bubble you can open with ⌘K — is a 0.6-billion-parameter model that runs on your Mac and explains any finding in plain English. It does not decide anything. It is handed Housekeeping's own hand-written account of a finding, along with Housekeeping's verdict, and it is never asked whether something should be deleted, never sees what is ticked, and is never given a control. The verdict you act on is drawn by Housekeeping, always, above whatever the octopus says — which is exactly why a model that small is enough, and why the scanner, path-safety rules, quarantine records, explanations, and restore tests came first. A cleanup app has to earn trust at the boring filesystem level before its opinions mean very much.
+The Housekeeper is an optional local chatbot, available with ⌘K. Chat starts off. Choose a downloadable Gemma or Qwen model, review its size, and press Download, or use Apple's on-device Foundation Model on an eligible Mac. It can explain a selected folder and answer general questions. Housekeeping's recorded safety assessment remains separate from generated answers, and the chatbot has no controls for moving or deleting files.
 
 The downloadable build is a universal binary for both Apple-silicon and Intel Macs running macOS 13 or later, and downloads are offered universal as well as separately for each architecture. It is ad-hoc signed for local use and has not been Apple-notarized, so macOS may warn you when you first open it. The source is here for anyone who would prefer to inspect and build it themselves.
 
@@ -106,13 +106,23 @@ Housekeeping's own records live in the same folder as this file, which is a path
 
 The octopus in the menu bar is the housekeeper. Click it and you get a small chat bubble; press ⌘K and you get the same bubble from anywhere in the app, opened on whatever you have selected. Ask what a folder is, why it is on your disk, or what would happen if it went, and it answers in plain English.
 
-It is a 0.6B model — Qwen3 0.6B, quantised to about 380 MB — running through a copy of `llama-server` that travels inside the app bundle. It is not downloaded with the app. The first time you open the Housekeeper it offers to fetch the model once, shows you the progress, and keeps it in `~/Library/Application Support/Housekeeping/`. After that it works with no network at all. The download is resumable, and a connection that drops halfway through is picked up where it stopped rather than started again.
+Chat is off until you choose a provider. Selecting a downloadable model does not download it: a separate Download button shows the size first. Downloads resume after interruption and are checked against a pinned SHA-256 before use.
 
-**The division of labour is the whole design.** Housekeeping already works out what a thing is, why it exists, and whether it is safe — that lives in hand-written, testable code. The model is handed that account as a briefing, together with Housekeeping's verdict, and asked to say it in sentences. It never sees a checkbox, never sees what is ticked, is never asked whether something should go, and has no way to move a file. The verdict you act on is drawn by Housekeeping and printed above the model's paragraph, in the same words used everywhere else in the app. The menu bar's *Ask the Housekeeper* opens the bubble with nothing selected, in which case it introduces itself and waits.
+| Model | Approximate download |
+| --- | ---: |
+| Gemma 3 1B | 806 MB |
+| Qwen 2.5 1.5B | 986 MB |
+| Qwen 3 1.7B | 1.11 GB |
+| Gemma 2 2B | 1.71 GB |
+| Qwen 3 4B Instruct | 2.50 GB |
 
-This is a cue taken from the same place the working-copy rule came from, turned around: [Mole](https://github.com/tw93/mole) put a character in the menu bar and made the tool feel like something that lives on your Mac. Housekeeping's character is allowed to be charming. It is not allowed to be the one deciding.
+Apple Intelligence is another option on eligible Macs running macOS 26 or later, with Apple Intelligence enabled and its system model ready. It uses Apple's on-device Foundation Model without a separate Housekeeping model download. It has no cloud fallback. Downloadable models also work on Macs without Apple Intelligence.
 
-**The housekeeper is reachable from everywhere in the app.** Every screen and every sheet carries a way to open it — the bar across the top of the main screen, the Quarantine screen and each item in it, every update row, the disk browser on the folder you are standing in, the setup check, each cleanup candidate, and the last confirmation before a move. What it is handed is that screen's own subject: the folder it is showing, the batch it is describing, the number it just printed. The facts above the model's answer are the same sentences the screen prints, so the model cannot be told something the reader cannot see.
+Settings shows downloaded models, their disk usage, and controls to delete an individual model or all Housekeeping-managed model files after confirmation. Apple manages its own system model; Housekeeping does not delete it.
+
+Folder questions use the selected folder, known app locations, or a matching path from the held disk inventory. Exact paths can be checked for directory metadata and up to 16 immediate child names. This does not read file contents. Missing or ambiguous paths are stated explicitly. The discussed path is shown in chat, and follow-up questions retain that subject.
+
+Generated answers can be wrong. For removal questions, Housekeeping displays its recorded assessment separately. The model cannot select items, move files, or override the cleanup policy. Conversation replies can be stopped, and downloaded-model runtime memory is released after the panel has been closed for 45 seconds.
 
 ### The setup check
 
@@ -299,13 +309,13 @@ Or use the project-local workflow:
 ./script/build_and_run.sh --verify
 ```
 
-To produce a local Apple-silicon app bundle and ZIP without invoking `xcodebuild`:
+To produce a universal app plus universal, Apple-silicon, and Intel ZIPs without invoking `xcodebuild`:
 
 ```bash
 ./script/package_release.sh /path/to/output-directory
 ```
 
-The package is ad-hoc signed for local use. It is not Developer ID signed or notarized.
+Packaging requires the universal `Housekeeping/Resources/llama-server` runtime and builds both arm64 and x86_64 slices. The packages are ad-hoc signed. They are not Developer ID signed or notarized.
 
 ### Without Xcode
 
@@ -329,7 +339,7 @@ All files in this project parse cleanly with Swift 6.4.
 
 ## Distribution
 
-Distribution signing and notarization have not been completed. Scanning, classification, and the Housekeeper are all local: the model is downloaded once from Hugging Face and then runs on your Mac, and no AI provider, cloud service, or telemetry endpoint is contacted with anything about your files. The only network requests the app makes are that one model download and the optional check for a newer release.
+Developer ID signing and notarization have not been completed. Scanning, classification, and chat inference run locally. Downloadable chat weights are fetched from Hugging Face only after an explicit download. Other tools have their own network activity: release and application-update checks contact their sources, MediaDock downloads requested media, Bookbind can look up metadata and cover art, and route testing contacts the selected endpoints. Chat does not send folder context to a cloud AI provider.
 
 ## Design Philosophy
 
@@ -341,6 +351,8 @@ The Mac OS 9 interface is a deliberate choice. Utilities such as Norton Utilitie
 - **Always reversible:** eligible cleanup goes to recoverable quarantine, and restore refuses to overwrite an existing path
 
 ## Version
+
+**Housekeeping 0.18.5:** Persistent tool navigation, searchable and sortable cleanup results, a refined burgundy interface, repaired Platinum layout, optional Gemma and Qwen chat models, Apple Intelligence support on eligible Macs, specific-folder explanations, and model removal in Settings. See the [release notes](releases/v0.18.5.md).
 
 **Housekeeping 0.11.0:** **Two Folders** — compare a library against its backup and see what is on one side and not the other, matched by content rather than by path, with a frozen side for an archive that is not written to any more, paths marked absent on purpose, an unmounted drive reported as unreachable rather than empty, and the missing copy written into place only when you tick the row and press the button — plus the app's first copy, its run record, and an Xcode project that names every source file again
 

@@ -41,6 +41,15 @@ final class CleanerModel: ObservableObject {
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
 
+    @Published var query = ""
+    @Published var order: FileOrder = .largest
+    @Published private(set) var completedCategories: Set<CleanCategory> = []
+    @Published private(set) var wasStopped = false
+    @Published private(set) var scanStartedAt: Date?
+    @Published private(set) var includedRelatedPaths: Set<String> = []
+    private var scanWorker: Task<CleanerSnapshot, Never>?
+    private var scanID = UUID()
+
     @Published var category: CleanCategory = .everydayJunk
 
     @Published private(set) var pendingAction: PendingAction?
@@ -52,6 +61,10 @@ final class CleanerModel: ObservableObject {
     @Published private(set) var pendingAppName: String?
     @Published private(set) var confirmationHint: String?
 
+    init(snapshot: CleanerSnapshot? = nil) {
+        if let snapshot { apply(snapshot) }
+    }
+
     // MARK: - Reading
 
     func scanIfNeeded() {
@@ -62,22 +75,56 @@ final class CleanerModel: ObservableObject {
     func scan() {
         guard phase != .scanning, phase != .working else { return }
         phase = .scanning
+        wasStopped = false
+        completedCategories = []
+        candidates = []
+        apps = []
+        trash = TrashSummary()
+        notes = []
+        includedRelatedPaths = []
         outcome = nil
         failures = []
         progressLine = "Getting ready…"
+        scanStartedAt = Date()
+        scanID = UUID()
+        let id = scanID
 
         let progress: @Sendable (String) -> Void = { [weak self] line in
             Task { @MainActor in
+                guard self?.scanID == id, self?.phase == .scanning else { return }
                 self?.progressLine = line
             }
         }
 
+        let partial: @Sendable (CleanerSnapshot, Set<CleanCategory>) -> Void = { [weak self] snapshot, completed in
+            Task { @MainActor in
+                guard let self, self.scanID == id, self.phase == .scanning else { return }
+                self.candidates = snapshot.candidates
+                self.apps = snapshot.apps
+                self.completedCategories = completed
+            }
+        }
+        let worker = Task.detached(priority: .userInitiated) {
+            CleanerScanner.scanAll(progress: progress, partial: partial)
+        }
+        scanWorker = worker
         Task { @MainActor [weak self] in
-            let snapshot = await Task.detached(priority: .userInitiated) {
-                CleanerScanner.scanAll(progress: progress)
-            }.value
+            let snapshot = await worker.value
+            guard !worker.isCancelled, self?.scanID == id else { return }
+            self?.scanWorker = nil
             self?.apply(snapshot)
         }
+    }
+
+    func stopScan() {
+        guard phase == .scanning else { return }
+        scanWorker?.cancel()
+        scanWorker = nil
+        scanID = UUID()
+        progressLine = ""
+        phase = .ready
+        wasStopped = true
+        outcome = "Scan stopped. Showing completed categories only; unvisited categories have not been checked."
     }
 
     private func apply(_ snapshot: CleanerSnapshot) {
@@ -86,6 +133,8 @@ final class CleanerModel: ObservableObject {
         trash = snapshot.trash
         notes = snapshot.notes
         lastScan = Date()
+        completedCategories = Set(CleanCategory.allCases)
+        wasStopped = false
         progressLine = ""
         phase = .ready
     }
@@ -94,6 +143,43 @@ final class CleanerModel: ObservableObject {
 
     func candidates(in category: CleanCategory) -> [CleanCandidate] {
         candidates.filter { $0.category == category }
+    }
+
+    func matches(_ name: String, path: String, detail: String = "") -> Bool {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return needle.isEmpty || [name, path, detail].contains { $0.localizedCaseInsensitiveContains(needle) }
+    }
+
+    func visibleCandidates(in category: CleanCategory) -> [CleanCandidate] {
+        candidates(in: category).filter { matches($0.name, path: $0.url.path, detail: $0.detail) }.sorted {
+            order.precedes(name: $0.name, size: $0.size, modified: $0.modified, path: $0.id,
+                           name: $1.name, size: $1.size, modified: $1.modified, path: $1.id)
+        }
+    }
+
+    var visibleApps: [InstalledApp] {
+        apps.filter { matches($0.name, path: $0.url.path, detail: $0.bundleIdentifier ?? "") }.sorted {
+            order.precedes(name: $0.name, size: $0.totalSize, modified: nil, path: $0.id,
+                           name: $1.name, size: $1.totalSize, modified: nil, path: $1.id)
+        }
+    }
+
+    func setVisible(selected: Bool) {
+        guard phase != .working, phase != .scanning else { return }
+        let ids = Set(visibleCandidates(in: category).map(\.id))
+        for index in candidates.indices where ids.contains(candidates[index].id) {
+            candidates[index].isSelected = selected
+        }
+    }
+
+    func toggleRelated(_ candidate: CleanCandidate) {
+        guard phase != .working, !ProtectionList().isProtected(candidate.url) else { return }
+        if !includedRelatedPaths.insert(candidate.id).inserted { includedRelatedPaths.remove(candidate.id) }
+    }
+
+    func clearSelection() {
+        guard phase != .working else { return }
+        for index in candidates.indices { candidates[index].isSelected = false }
     }
 
     func total(in category: CleanCategory) -> Int64 {
@@ -119,6 +205,7 @@ final class CleanerModel: ObservableObject {
     // MARK: - Ticking
 
     func toggle(_ candidate: CleanCandidate) {
+        guard phase != .working, phase != .scanning else { return }
         guard let index = candidates.firstIndex(where: { $0.id == candidate.id }) else { return }
         candidates[index].isSelected.toggle()
     }
@@ -133,6 +220,7 @@ final class CleanerModel: ObservableObject {
     /// gone from the disk — only from this screen, because it is no longer
     /// something the cleaner is offering.
     func forget(path: String) {
+        includedRelatedPaths.remove(path)
         candidates.removeAll { $0.url.path == path }
         apps = apps.map { app in
             var copy = app
@@ -154,7 +242,9 @@ final class CleanerModel: ObservableObject {
     // MARK: - Asking
 
     func requestClean() {
-        let chosen = selectedCandidates
+        guard phase == .ready else { return }
+        let protection = ProtectionList()
+        let chosen = CleanCandidate.nonOverlapping(selectedCandidates.filter { !protection.isProtected($0.url) })
         guard !chosen.isEmpty else { return }
         let size = chosen.reduce(0) { $0 + $1.size }
         let categories = Set(chosen.map(\.category.title)).sorted()
@@ -170,22 +260,29 @@ final class CleanerModel: ObservableObject {
     }
 
     func requestUninstall(_ app: InstalledApp) {
+        guard phase == .ready else { return }
+        guard !ProtectionList().isProtected(app.url) else {
+            failures = ["This application is on the Leave Alone list."]
+            return
+        }
         if app.isRunning {
             outcome = nil
             failures = ["\(app.name) is open. Quit it first — macOS will not let an application be moved while it is running."]
             return
         }
-        let paths = [app.url.path] + app.leftovers.map(\.url.path)
+        let related = app.leftovers.filter { includedRelatedPaths.contains($0.id) && !ProtectionList().isProtected($0.url) }
+        let paths = [app.url.path] + related.map(\.url.path)
+        let size = app.size + related.reduce(0) { $0 + $1.size }
 
         pendingAction = .uninstall
         pendingTitle = "Move \(app.name) to Quarantine?"
-        var detail = "The application and \(app.leftovers.count) file\(app.leftovers.count == 1 ? "" : "s") it left behind, \(app.totalSize.sizeDescription) together."
+        var detail = "The application and \(related.count) explicitly chosen related items, \(size.sizeDescription) together. Unchosen support files stay in place."
         if let version = app.version {
             detail += " Version \(version)."
         }
         pendingDetail = detail
         pendingPaths = paths
-        pendingSize = app.totalSize
+        pendingSize = size
         pendingAppName = app.name
         confirmationText = ""
         confirmationHint = nil
@@ -253,6 +350,12 @@ final class CleanerModel: ObservableObject {
 
     private func absorb(_ result: RepairMoveResult, title: String, noun: String) {
         let moved = Set(result.movedPaths)
+        let movedBytes = candidates.filter { moved.contains($0.id) }.reduce(0) { $0 + $1.size }
+            + apps.reduce(Int64(0)) { total, app in
+                total + (moved.contains(app.id) ? app.size : 0)
+                    + app.leftovers.filter { moved.contains($0.id) }.reduce(0) { $0 + $1.size }
+            }
+        includedRelatedPaths.subtract(moved)
         candidates.removeAll { moved.contains($0.url.path) }
         apps = apps.compactMap { app in
             if moved.contains(app.url.path) { return nil }
@@ -265,7 +368,7 @@ final class CleanerModel: ObservableObject {
         let failed = result.moves.filter { !$0.succeeded }
         failures = failed.map { "\($0.path) — \($0.message ?? "could not be moved")" }
 
-        var sentence = "\(title): \(result.succeededCount) \(noun)\(result.succeededCount == 1 ? "" : "s"), \(pendingSize.sizeDescription), moved to Quarantine."
+        var sentence = "\(title): \(result.succeededCount) \(noun)\(result.succeededCount == 1 ? "" : "s"), \(movedBytes.sizeDescription), moved to Quarantine."
         if !failed.isEmpty {
             sentence += " \(failed.count) could not be moved and are still where they were."
         } else {

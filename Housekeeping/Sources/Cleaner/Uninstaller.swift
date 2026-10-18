@@ -29,6 +29,8 @@ struct Uninstaller {
             )) ?? []
 
             for url in contents where url.pathExtension.lowercased() == "app" {
+                if Task.isCancelled { break }
+                progress("Measuring app " + url.lastPathComponent)
                 guard let app = uninstaller.read(url, index: index) else { continue }
                 apps.append(app)
             }
@@ -93,6 +95,7 @@ struct Uninstaller {
             var seen = Set<String>()
 
             for entry in entries {
+                if Task.isCancelled { break }
                 guard matches(entry, appName: appName, lowerName: lowerName, identifier: identifier) else { continue }
                 guard seen.insert(entry.url.path).inserted else { continue }
                 let size = CleanerScanner.size(of: entry.url)
@@ -103,7 +106,7 @@ struct Uninstaller {
                     modified: CleanerScanner.modified(entry.url),
                     category: .uninstall,
                     name: entry.name,
-                    detail: "Left behind by \(appName), in \(entry.base)."
+                    detail: "Related to installed app \(appName): \(entry.base). Matched by \(identifier.map { entry.name.lowercased().contains($0.lowercased()) ? "bundle identifier " + $0 : "application name" } ?? "application name"). Ownership is inferred; this may contain personal or shared data."
                 ))
             }
             return found.sorted { $0.size > $1.size }
@@ -118,7 +121,7 @@ struct Uninstaller {
                 if lower.hasPrefix(id + ".") { return true }
                 if lower == "group." + id { return true }
                 if lower.hasSuffix("." + id) { return true }
-                if lower.contains(id) { return true }
+
             }
             // A name match is weaker evidence, so it only counts where macOS
             // names the folder after the application itself.

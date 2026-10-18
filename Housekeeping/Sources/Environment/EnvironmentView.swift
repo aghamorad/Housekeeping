@@ -75,13 +75,7 @@ struct EnvironmentView: View {
         // knowing until someone is looking at it — and unlike a cleanup sweep it
         // is a handful of commands, not a walk of the disk.
         .task { appState.beginSetupCheckIfNeeded() }
-        // Closing stops a reading, which costs nothing and answers a question
-        // nobody is looking at any more. A run of fixes is left alone: it changes
-        // the Mac, and the reader who closed the window did not ask for it to
-        // stop halfway.
-        .onDisappear {
-            if appState.environmentIsReading { appState.cancelEnvironmentWork() }
-        }
+
     }
 
     // MARK: - Header and footer

@@ -27,13 +27,13 @@ struct ContentView: View {
             case .cleanupPreview: CleanupPreviewView(items: appState.recommendedCleanupItems)
             case .quarantine: QuarantineView()
             case .protectionList: ProtectionView()
-            case .diskBrowser: DiskBrowserView()
-            case .reconcile: ReconcileView()
+            case .diskBrowser: DiskBrowserView(model: appState.diskBrowser)
+            case .reconcile: ReconcileView(model: appState.reconciler)
             case .updateList: UpdateView()
             case .setupCheck: EnvironmentView()
             case .housekeeper: HousekeeperView()
-            case .routes: RoutesView()
-            case .phone: PhoneView()
+            case .routes: RoutesView(model: appState.routeTester)
+            case .phone: PhoneView(model: appState.phoneController)
             case .mediaDock: mediaDockBody
             case .bookbind: BookbindView(engine: appState.bookbind)
             case .selfUpdate: SelfUpdateView()
@@ -60,32 +60,22 @@ struct ContentView: View {
     var body: some View {
         let style = UIStyle.resolve(appState.currentTheme)
 
-        Screen()
+        Group {
+            if let workspace = appState.workspace {
+                ScreenChrome(title: "Housekeeping") {
+                    sheetBody(workspace)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else {
+                Screen()
+            }
+        }
             .environment(\.uiStyle, style)
             .housekeepingSurface(style)
-            // The job bar is the width of the window at its narrowest, so this
-            // number is set by it and not by the content below. It has been
-            // raised twice now — 1040, then 1100, now here — and both times
-            // because a button was added rather than because the readings
-            // needed the room. Widening is the right answer over the two
-            // alternatives: a horizontal scroller would hide whole buttons off
-            // the end with nothing on screen to say so, and shortening the
-            // labels to fit — "Updates", "Setup" — would take away the one
-            // thing the bar is for, which is naming each job in full.
-            .frame(minWidth: 1420, minHeight: 680)
-            // Each sheet is given the appearance explicitly. A sheet is presented
-            // in its own window, and one attached here — outside the
-            // `.environment(\.uiStyle, …)` call above — does not inherit it: the
-            // content silently falls back to `UIStyleKey.defaultValue`, which is
-            // Classic 9. The effect was a Liquid Glass window opening a retro
-            // sheet, with every colour and font in it hardcoded to Mac OS 9.
-            // One sheet, not fourteen. AppKit attaches a single sheet to a
-            // window, so separate `isPresented` flags queued invisibly: asking
-            // for Update Apps while Check My Setup was open put it behind Setup,
-            // and closing Setup then opened Update Apps as though the click had
-            // only just happened. `appState.screen` makes the flags exclusive,
-            // so the screen asked for last is the one that shows.
-            .sheet(item: $appState.screen) { screen in
+            // The tools share one navigable window; the rail scrolls when needed.
+            .frame(minWidth: 1180, minHeight: 720)
+            // Contextual help and confirmations stay above the active workspace.
+            .sheet(item: $appState.presentedScreen) { screen in
                 sheetBody(screen)
             }
             // Asked after the first screen is already drawn, not before it: the
@@ -146,40 +136,28 @@ struct ContentView: View {
 /// focus rings — which otherwise stay system blue inside a red app.
 struct HousekeepingSurface: ViewModifier {
     let style: UIStyle
+    @AppStorage("housekeeping.appearance") private var appearance = "system"
+
+    private var colorScheme: ColorScheme? {
+        if style.isRetro { return .light }
+        switch appearance {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
 
     func body(content: Content) -> some View {
         content
-            .background(WindowBackground(isRetro: style.isRetro, color: style.windowBackground))
-            .preferredColorScheme(style.isRetro ? .light : .dark)
-            .tint(style.accent)
+            .background { HousekeepingBackdrop(style: style) }
+            .preferredColorScheme(colorScheme)
+            .tint(style.accentShaded)
     }
 }
 
 extension View {
     func housekeepingSurface(_ style: UIStyle) -> some View {
         modifier(HousekeepingSurface(style: style))
-    }
-}
-
-private struct WindowBackground: View {
-    let isRetro: Bool
-    let color: Color
-
-    var body: some View {
-        if isRetro {
-            color
-        } else {
-            // The wash is the icon's red rather than the system accent: it is the
-            // one place the surface is allowed to be more than flat, and it should
-            // be the same red the app is wearing, not a second colour arriving
-            // from System Settings.
-            LinearGradient(
-                colors: [color, HousekeepingInk.red.opacity(0.16), color],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-        }
     }
 }
 
@@ -200,6 +178,9 @@ private struct Screen: View {
 
     @ViewBuilder
     private var scanScreen: some View {
+        if appState.showOverview && appState.scanState != .scanning {
+            WelcomeScreen()
+        } else {
         switch appState.scanState {
         case .idle: WelcomeScreen()
         case .scanning: ScanningScreen()
@@ -210,6 +191,7 @@ private struct Screen: View {
             case .confirm: ConfirmScreen()
             }
         case .error: ErrorScreen()
+        }
         }
     }
 }
@@ -254,7 +236,6 @@ struct ScreenChrome<Content: View>: View {
                     JobBar()
                     VStack(spacing: 0) {
                         screen
-                        credit
                     }
                 }
             }
@@ -264,7 +245,6 @@ struct ScreenChrome<Content: View>: View {
     private var screen: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .entrance()
     }
 
     /// Every screen signs the app, so no screen can be the one that forgot.
@@ -383,61 +363,53 @@ private struct JobBar: View {
         if style.isRetro {
             bar
         } else {
-            rail
+            modernSidebar
+                .frame(width: 224)
         }
     }
 
     // MARK: - Classic 9: the bar across the top
 
     private var bar: some View {
-        HStack(spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 7)], spacing: 7) {
+            ThemeButton(title: "Overview", systemImage: "square.grid.2x2", isPrimary: appState.workspace == nil && appState.showOverview) {
+                appState.workspace = nil
+                appState.showOverview = true
+            }
+            ThemeButton(title: "Scan My Mac", systemImage: "magnifyingglass", isPrimary: appState.workspace == nil && !appState.showOverview) {
+                if appState.scanState == .scanning || appState.scanState == .complete {
+                    appState.workspace = nil
+                    appState.showOverview = false
+                } else { appState.startScan() }
+            }
             themeButtons(readingJobs)
-
-            rule
-
-            themeButtons(routeJobs)
-
-            rule
-
-            themeButtons(deviceJobs)
-
-            rule
-
             themeButtons(holdingJobs)
-
-            Spacer(minLength: 16)
-
+            themeButtons(routeJobs)
+            themeButtons(deviceJobs)
             themeButtons(appJobs)
-
-            // The scan itself had no way to reach the housekeeper from here: the
-            // findings carry one each, but the screen that is about to produce
-            // them did not. This sits on the bar every screen already carries, so
-            // whatever is behind it — an empty first screen, a running scan, the
-            // summary, the list, the last confirmation — is what it opens on.
-            AskHousekeeperButton(
-                topic: housekeeperTopic,
-                title: "Talk to the Housekeeper"
-            )
+            AskHousekeeperButton(topic: housekeeperTopic, title: "Housekeeper")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(10)
         .background(style.rowBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(style.border)
-                .frame(height: 1)
-        }
+        .overlay(alignment: .bottom) { Rectangle().fill(style.border).frame(height: 1) }
     }
 
     private func themeButtons(_ jobs: [Job]) -> some View {
         ForEach(jobs) { job in
-            ThemeButton(
-                title: job.title,
-                systemImage: job.systemImage,
-                isEnabled: job.isEnabled,
-                help: job.help,
-                action: job.action
-            )
+            if job.id == "settings", #available(macOS 14.0, *) {
+                SettingsLink { Text(job.title) }
+                    .buttonStyle(RetroButtonStyle())
+                    .help(job.help)
+            } else {
+                ThemeButton(
+                    title: job.title,
+                    systemImage: job.systemImage,
+                    isPrimary: selectedJobID == job.id,
+                    isEnabled: job.isEnabled,
+                    help: job.help,
+                    action: job.action
+                )
+            }
         }
     }
 
@@ -457,104 +429,103 @@ private struct JobBar: View {
     /// something is, and a reader who never notices them has still been told:
     /// the colour of the disc says the same thing, in the half-second before the
     /// label is read.
-    private var rail: some View {
-        // The stagger counts down the column rather than restarting in each
-        // group, so the rail fills in from the top as one run of doors instead of
-        // five runs that happen to be adjacent. The groups are contiguous, so each
-        // one simply starts where the last one ended.
-        let routeBase = readingJobs.count
-        let deviceBase = routeBase + routeJobs.count
-        let holdingBase = deviceBase + deviceJobs.count
-        let appBase = holdingBase + holdingJobs.count
-        let housekeeperBase = appBase + appJobs.count
-
-        return VStack(spacing: 6) {
-            // The sweep is the one door the app wants pressed, and the only one
-            // whose disc never stops moving. Eleven equals in a column is a column
-            // with no front page; a slow halo says which one it is without a
-            // word, and it says it from across the room.
-            railGroup(readingJobs, from: 0, breathesFirst: true)
-
-            railRule
-
-            railGroup(routeJobs, from: routeBase)
-
-            railRule
-
-            railGroup(deviceJobs, from: deviceBase)
-
-            railRule
-
-            railGroup(holdingJobs, from: holdingBase)
-
-            Spacer(minLength: 14)
-
-            railGroup(appJobs, from: appBase)
-
-            // "Ask About This" was a question about the screen the reader was
-            // looking at, which is not what this door is: it is a room with
-            // somebody in it. So the door is named after the somebody, and its
-            // disc is the somebody — the one disc on the rail that is a drawn
-            // character rather than a glyph, in the app's own red rather than a
-            // zone colour, because the housekeeper is not one of the five kinds
-            // of job, it is who you go and ask when none of them is the answer.
-            AskHousekeeperButton(
-                topic: housekeeperTopic,
-                title: "Talk to the Housekeeper",
-                railTint: OctopusMark.benignMonster,
-                railDelay: Double(housekeeperBase) * Job.stagger
-            )
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 14)
-        .frame(maxHeight: .infinity, alignment: .top)
-        // Wide enough that every label breaks at a space rather than losing its
-        // last letters. Measured, not guessed: at 10.5pt medium the longest word
-        // on most doors is "Everywhere", which needs 58pt, and the longest on any
-        // door is "Housekeeper", which needs 62 — so the label column is 75pt and
-        // the rail is 170. It was 152 when the last door was "Ask About This".
-        .frame(width: 170)
-        .background(
-            ZStack {
-                style.rowBackground
-                // A rail that is the same value from top to bottom reads as a
-                // strip of the window; this gives it a top and a bottom, which
-                // is what makes the discs look like they are sitting on it.
-                LinearGradient(
-                    colors: [Color.white.opacity(0.055), Color.clear, Color.black.opacity(0.15)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+    private var modernSidebar: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 30, height: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Housekeeping").font(.system(size: 14, weight: .bold))
+                    Text("Your Mac, at a glance").font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
             }
-        )
-        .overlay(alignment: .trailing) {
-            Rectangle()
-                .fill(style.border.opacity(0.65))
-                .frame(width: 1)
+            .padding(.horizontal, 18).padding(.top, 24).padding(.bottom, 24)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(spacing: 3) {
+                        SidebarNavigationRow(title: "Overview", icon: "square.grid.2x2",
+                                             selected: appState.workspace == nil && appState.showOverview) {
+                            appState.workspace = nil
+                            appState.showOverview = true
+                            appState.showSweepResults = false
+                        }
+                        SidebarNavigationRow(title: appState.scanState == .complete ? "Scan Results" : "Scan My Mac", icon: "magnifyingglass",
+                                             selected: appState.workspace == nil && !appState.showOverview) {
+                            if appState.scanState == .scanning || appState.scanState == .complete {
+                                appState.workspace = nil
+                                appState.showOverview = false
+                            } else { appState.startScan() }
+                        }
+                    }
+                    sidebarSection("Storage", ids: ["clean", "browse-the-disk", "quarantine", "left-alone"])
+                    sidebarSection("Maintenance", ids: ["look-everywhere", "update-apps", "check-my-setup", "two-folders"])
+                    sidebarSection("Utilities", ids: ["mediadock", "bookbind", "test-routes", "spoof-location"])
+                }.padding(.horizontal, 12)
+            }
+            Divider().padding(.horizontal, 16).padding(.top, 12)
+            VStack(spacing: 3) {
+                if #available(macOS 14.0, *) {
+                    SettingsLink {
+                        Label("Settings", systemImage: "gearshape")
+                            .font(.system(size: 13))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .hoverHighlight(cornerRadius: 7, hovered: Color.primary.opacity(0.045))
+                } else if let job = allJobs.first(where: { $0.id == "settings" }) { sidebarJob(job) }
+                SidebarNavigationRow(title: "Housekeeper", icon: "bubble.left.and.text.bubble.right", selected: false) {
+                    appState.housekeeperTopic = housekeeperTopic
+                    appState.showHousekeeper = true
+                }
+            }.padding(12)
+            HStack {
+                Text("Made by Morad")
+                Spacer()
+                Text(AppState.currentVersion)
+            }.font(.system(size: 10)).foregroundStyle(.tertiary)
+                .padding(.horizontal, 20).padding(.bottom, 14)
+        }
+        .background { HousekeepingBackdrop(style: style, sidebar: true) }
+        .overlay(alignment: .trailing) { Divider() }
+    }
+
+    private var allJobs: [Job] { readingJobs + holdingJobs + appJobs + routeJobs + deviceJobs }
+
+    private func sidebarSection(_ title: String, ids: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                .padding(.horizontal, 10).padding(.bottom, 2)
+            ForEach(ids, id: \.self) { id in
+                if let job = allJobs.first(where: { $0.id == id }) { sidebarJob(job) }
+            }
         }
     }
 
-    private func railGroup(_ jobs: [Job], from base: Int, breathesFirst: Bool = false) -> some View {
-        ForEach(Array(jobs.enumerated()), id: \.element.id) { offset, job in
-            RailButton(
-                title: job.title,
-                systemImage: job.systemImage,
-                tint: job.zone.tint(style),
-                isEnabled: job.isEnabled,
-                help: job.help,
-                delay: Double(base + offset) * Job.stagger,
-                breathes: breathesFirst && offset == 0,
-                action: job.action
-            )
-        }
+    private func sidebarJob(_ job: Job) -> some View {
+        SidebarNavigationRow(title: job.title, icon: job.systemImage,
+                             selected: selectedJobID == job.id, enabled: job.isEnabled, action: job.action)
+            .help(job.help)
     }
 
-    private var railRule: some View {
-        Rectangle()
-            .fill(style.border.opacity(0.38))
-            .frame(height: 1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 5)
+    private var selectedJobID: String? {
+        guard let workspace = appState.workspace else { return nil }
+        switch workspace {
+        case .clean: return "clean"
+        case .diskBrowser: return "browse-the-disk"
+        case .quarantine: return "quarantine"
+        case .protectionList: return "left-alone"
+        case .reconcile: return "two-folders"
+        case .updateList: return "update-apps"
+        case .setupCheck: return "check-my-setup"
+        case .mediaDock: return "mediadock"
+        case .bookbind: return "bookbind"
+        case .routes: return "test-routes"
+        case .phone: return "spoof-location"
+        default: return nil
+        }
     }
 
     /// What reads the Mac, and only reads.
@@ -1071,7 +1042,6 @@ private struct SummaryScreen: View {
                     help: "Read the disk again from the start. Nothing was moved, so there is nothing to undo."
                 ) { appState.startScan() }
                 .keyboardShortcut(.defaultAction)
-                .breathingHalo(style.accent, radius: 14, active: !style.isRetro)
             } else {
                 ThemeButton(
                     title: "Look at them",
@@ -1080,7 +1050,6 @@ private struct SummaryScreen: View {
                     help: "Open the list. Nothing is ticked and nothing moves until you ask for it."
                 ) { appState.advanceFlow(.review) }
                 .keyboardShortcut(.defaultAction)
-                .breathingHalo(style.accent, radius: 14, active: !style.isRetro)
             }
         }
         .padding(.horizontal, 24)
@@ -1120,6 +1089,10 @@ private struct WelcomeScreen: View {
     /// start it, what it will look at. Classic 9 keeps the left-aligned column it
     /// has always had, because a Platinum window does not centre its type.
     var body: some View {
+        ScreenChrome(title: "Housekeeping", subtitle: "Overview") { OverviewView() }
+    }
+
+    private var legacyBody: some View {
         ScreenChrome(title: "Housekeeping", subtitle: "Safety-first cleanup") {
             ScrollView {
                 VStack(alignment: style.isRetro ? .leading : .center, spacing: 16) {
@@ -1600,7 +1573,9 @@ private struct FindingGroup: Identifiable {
 /// figure in the header is the thing you are trying to move.
 private enum ResultsOrder: String, CaseIterable, Identifiable {
     case kind = "Kind"
-    case size = "Size"
+    case size = "Largest"
+    case smallest = "Smallest"
+    case name = "Name"
 
     var id: String { rawValue }
 
@@ -1608,7 +1583,9 @@ private enum ResultsOrder: String, CaseIterable, Identifiable {
     var help: String {
         switch self {
         case .kind: return "Group the list by what each item is."
-        case .size: return "Ignore the grouping and put everything in one list, biggest first."
+        case .size: return "Put everything in one list, biggest first."
+        case .smallest: return "Put everything in one list, smallest first."
+        case .name: return "Sort the list by filename."
         }
     }
 }
@@ -1618,7 +1595,7 @@ private struct ResultsScreen: View {
     @Environment(\.uiStyle) private var style
 
     @State private var query = ""
-    @State private var order: ResultsOrder = .kind
+    @State private var order: ResultsOrder = .size
     @State private var showReadingGuide = false
     @State private var showScanNotes = false
 
@@ -1644,7 +1621,11 @@ private struct ResultsScreen: View {
             }
         case .size:
             guard !visibleItems.isEmpty else { return [] }
-            return [FindingGroup(kind: nil, items: visibleItems.sorted { $0.size > $1.size })]
+            return [FindingGroup(kind: nil, items: visibleItems.sorted { $0.size == $1.size ? $0.path.path < $1.path.path : $0.size > $1.size })]
+        case .smallest:
+            return visibleItems.isEmpty ? [] : [FindingGroup(kind: nil, items: visibleItems.sorted { $0.size == $1.size ? $0.path.path < $1.path.path : $0.size < $1.size })]
+        case .name:
+            return visibleItems.isEmpty ? [] : [FindingGroup(kind: nil, items: visibleItems.sorted { $0.path.lastPathComponent.localizedStandardCompare($1.path.lastPathComponent) == .orderedAscending })]
         }
     }
 
@@ -2519,7 +2500,6 @@ private struct ConfirmScreen: View {
                         appState.confirmRecommendedCleanup()
                     }
                     .keyboardShortcut(.defaultAction)
-                    .breathingHalo(style.accent, radius: 16, active: !style.isRetro && !aboutToMove.isEmpty)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)

@@ -65,9 +65,43 @@ final class AppState: ObservableObject {
         case clean
 
         var id: String { rawValue }
+
+        var isWorkspace: Bool {
+            switch self {
+            case .clean, .diskBrowser, .reconcile, .updateList, .setupCheck, .routes,
+                 .phone, .mediaDock, .bookbind, .quarantine, .protectionList: return true
+            default: return false
+            }
+        }
     }
 
-    @Published var screen: Screen?
+    @Published var showOverview = true
+    @Published var workspace: Screen?
+    @Published var presentedScreen: Screen?
+    // Tool navigation changes the workspace; contextual help and confirmations
+    // present above it. Closing a modal returns to the same tool.
+    var screen: Screen? {
+        get { presentedScreen ?? workspace }
+        set {
+            if let newValue {
+                if newValue.isWorkspace {
+                    workspace = newValue
+                    presentedScreen = nil
+                } else {
+                    presentedScreen = newValue
+                }
+            } else if presentedScreen != nil {
+                presentedScreen = nil
+            } else {
+                workspace = nil
+            }
+        }
+    }
+
+    let diskBrowser = DiskBrowserModel()
+    lazy var reconciler = ReconcileModel()
+    lazy var routeTester = RoutesModel()
+    lazy var phoneController = PhoneModel()
 
     private func show(_ which: Screen, _ on: Bool) {
         if on {
@@ -624,6 +658,9 @@ final class AppState: ObservableObject {
     /// to wait for it — the sweep — can, without the others having to care.
     @discardableResult
     func startScan() -> Task<Void, Never>? {
+        showOverview = false
+        workspace = nil
+        presentedScreen = nil
         scanTask?.cancel()
         lastErrorMessage = nil
         // A scan is the moment the disk is read again, so anything the policy
@@ -704,6 +741,9 @@ final class AppState: ObservableObject {
     /// two are reached from, so it goes first and the reader has a result to look
     /// at while the rest is still being read.
     func startSweep() {
+        showOverview = false
+        workspace = nil
+        presentedScreen = nil
         sweepTask?.cancel()
         lastErrorMessage = nil
         showSweepResults = false
@@ -898,14 +938,14 @@ extension AppState {
         var displayName: String {
             switch self {
             case .classic9: return "Mac OS 9 / Platinum"
-            case .liquidGlass: return "Liquid Glass"
+            case .liquidGlass: return "Modern"
             }
         }
 
         var shortName: String {
             switch self {
             case .classic9: return "Classic 9"
-            case .liquidGlass: return "Glass"
+            case .liquidGlass: return "Modern"
             }
         }
     }

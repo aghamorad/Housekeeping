@@ -46,7 +46,7 @@ struct SelfUpdateView: View {
                 .padding(.vertical, 14)
         }
         .frame(width: 640, height: 660)
-        .background(style.windowBackground)
+        .background { HousekeepingBackdrop(style: style) }
         // Asked when the sheet opens rather than when the app launched: a reader
         // who came here wants the answer now, not the one from twenty minutes ago.
         .onAppear {

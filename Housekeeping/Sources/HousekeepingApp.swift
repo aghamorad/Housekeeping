@@ -22,7 +22,8 @@ struct HousekeepingApp: App {
                 .environmentObject(appState)
         }
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .windowResizability(.automatic)
+        .defaultSize(width: 1320, height: 840)
         .commands {
             CommandGroup(replacing: .newItem) {}
 

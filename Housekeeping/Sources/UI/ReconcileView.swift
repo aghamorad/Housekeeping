@@ -11,9 +11,9 @@ import SwiftUI
 
 struct ReconcileView: View {
     @Environment(\.uiStyle) private var style
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appState: AppState
 
-    @StateObject private var model = ReconcileModel()
+    @ObservedObject var model: ReconcileModel
     @State private var bucket: ReconcileVerdict = .missingFromB
     @State private var showLibrariesWithoutASecondCopy = false
 
@@ -28,7 +28,7 @@ struct ReconcileView: View {
             footer
         }
         .frame(minWidth: 940, maxWidth: 940, minHeight: 660)
-        .background(style.windowBackground)
+        .background { HousekeepingBackdrop(style: style) }
     }
 
     // MARK: - Header
@@ -482,7 +482,7 @@ struct ReconcileView: View {
                     .foregroundStyle(style.secondaryText)
                     .lineLimit(2)
                 Spacer()
-                ThemeButton(title: "Done", isPrimary: true) { dismiss() }
+                ThemeButton(title: "Done", isPrimary: true) { appState.showReconcile = false }
             }
             .padding(12)
         }
@@ -576,7 +576,7 @@ struct ReconcileView: View {
                 Text(result.summaryLine)
                     .font(style.bodyFont)
                 Spacer()
-                ThemeButton(title: "Done", isPrimary: true) { dismiss() }
+                ThemeButton(title: "Done", isPrimary: true) { appState.showReconcile = false }
             }
             Text("Everything that changed is written down in a record, before it happened, so the run can be read back and undone without Housekeeping.")
                 .font(style.smallFont)

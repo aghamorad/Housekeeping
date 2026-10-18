@@ -143,6 +143,9 @@ final class DiskBrowserModel: ObservableObject {
         try? FileManager.default.removeItem(at: snapshotURL)
     }
 
+    @Published var query = ""
+    @Published var order: FileOrder = .largest
+
     // MARK: - Moving around
 
     var rootNode: DiskNode? { snapshot?.rootNode }
@@ -152,7 +155,13 @@ final class DiskBrowserModel: ObservableObject {
     }
 
     var visibleChildren: [DiskNode] {
-        snapshot?.childNodes(of: currentPath) ?? []
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (snapshot?.childNodes(of: currentPath) ?? []).filter {
+            needle.isEmpty || $0.displayName.localizedCaseInsensitiveContains(needle) || $0.path.localizedCaseInsensitiveContains(needle)
+        }.sorted {
+            order.precedes(name: $0.displayName, size: $0.size, modified: $0.modified, path: $0.path,
+                           name: $1.displayName, size: $1.size, modified: $1.modified, path: $1.path)
+        }
     }
 
     var breadcrumb: [(name: String, path: String)] {
@@ -169,6 +178,7 @@ final class DiskBrowserModel: ObservableObject {
     func open(_ path: String) {
         guard path != currentPath, snapshot?.node(at: path) != nil else { return }
         history.append(currentPath)
+        query = ""
         currentPath = path
     }
 

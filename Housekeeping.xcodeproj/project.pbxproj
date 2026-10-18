@@ -112,6 +112,25 @@
 		B1000009 /* SelfCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000009; };
 		B100000A /* BookbindEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200000A; };
 		B100000B /* BookbindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200000B; };
+		C1000001 /* CleanerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001; };
+		C1000002 /* CleanerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000002; };
+		C1000003 /* CleanerScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000003; };
+		C1000004 /* TrashService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000004; };
+		C1000005 /* Uninstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000005; };
+		C1000006 /* CleanerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000006; };
+		C3000001 /* comfyui.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000001; };
+		C3000002 /* drawthings.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000002; };
+		C3000003 /* gpt4all.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000003; };
+		C3000004 /* jan.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000004; };
+		C3000005 /* macwhisper.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000005; };
+		C3000006 /* mlx.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000006; };
+		C3000007 /* whispercpp.json in Resources */ = {isa = PBXBuildFile; fileRef = C4000007; };
+		C3000008 /* llama-server in Resources */ = {isa = PBXBuildFile; fileRef = C4000008; };
+		D1000001 /* OverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000001; };
+		D1000003 /* HousekeeperModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000003; };
+		D1000005 /* HousekeeperFolderEvidence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000005; };
+		D1000004 /* AppleHousekeeper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000004; };
+		D1000002 /* HousekeeperConversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -222,6 +241,25 @@
 		B2000009 /* SelfCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/SelfCheck.swift; sourceTree = "<group>"; };
 		B200000A /* BookbindEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Bookbind/BookbindEngine.swift; sourceTree = "<group>"; };
 		B200000B /* BookbindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Bookbind/BookbindView.swift; sourceTree = "<group>"; };
+		C2000001 /* CleanerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/CleanerModel.swift; sourceTree = "<group>"; };
+		C2000002 /* CleanerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/CleanerModels.swift; sourceTree = "<group>"; };
+		C2000003 /* CleanerScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/CleanerScanner.swift; sourceTree = "<group>"; };
+		C2000004 /* TrashService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/TrashService.swift; sourceTree = "<group>"; };
+		C2000005 /* Uninstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/Uninstaller.swift; sourceTree = "<group>"; };
+		C2000006 /* CleanerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/CleanerView.swift; sourceTree = "<group>"; };
+		C4000001 /* comfyui.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/comfyui.json; sourceTree = "<group>"; };
+		C4000002 /* drawthings.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/drawthings.json; sourceTree = "<group>"; };
+		C4000003 /* gpt4all.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/gpt4all.json; sourceTree = "<group>"; };
+		C4000004 /* jan.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/jan.json; sourceTree = "<group>"; };
+		C4000005 /* macwhisper.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/macwhisper.json; sourceTree = "<group>"; };
+		C4000006 /* mlx.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/mlx.json; sourceTree = "<group>"; };
+		C4000007 /* whispercpp.json */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Rules/whispercpp.json; sourceTree = "<group>"; };
+		C4000008 /* llama-server */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/llama-server; sourceTree = "<group>"; };
+		D2000001 /* OverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/OverviewView.swift; sourceTree = "<group>"; };
+		D2000003 /* HousekeeperModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperModel.swift; sourceTree = "<group>"; };
+		D2000005 /* HousekeeperFolderEvidence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperFolderEvidence.swift; sourceTree = "<group>"; };
+		D2000004 /* AppleHousekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/AppleHousekeeper.swift; sourceTree = "<group>"; };
+		D2000002 /* HousekeeperConversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperConversation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -324,6 +362,25 @@
 				B2000009,
 				B200000A,
 				B200000B,
+				D2000002,
+				D2000003,
+				D2000004,
+				D2000005,
+				D2000001,
+				C4000008,
+				C4000007,
+				C4000006,
+				C4000005,
+				C4000004,
+				C4000003,
+				C4000002,
+				C4000001,
+				C2000006,
+				C2000005,
+				C2000004,
+				C2000003,
+				C2000002,
+				C2000001,
 				A2000073,
 				A2000074,
 				A2000075,
@@ -470,6 +527,17 @@
 				B1000009,
 				B100000A,
 				B100000B,
+				D1000002,
+				D1000003,
+				D1000004,
+				D1000005,
+				D1000001,
+				C1000006,
+				C1000005,
+				C1000004,
+				C1000003,
+				C1000002,
+				C1000001,
 				A1000073,
 				A1000074,
 				A1000075,
@@ -505,6 +573,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000013,
+				C3000008,
+				C3000007,
+				C3000006,
+				C3000005,
+				C3000004,
+				C3000003,
+				C3000002,
+				C3000001,
 				A1000014,
 				A1000015,
 				A1000016,

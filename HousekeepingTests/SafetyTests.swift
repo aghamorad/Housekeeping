@@ -1249,7 +1249,191 @@ struct SafetyTests {
             "Emptying the Trash empties it — the folder itself stays, as it does in Finder."
         )
 
+        try expect(HousekeeperModel.savedChoice(nil) == .none && HousekeeperModel.savedChoice("obsolete") == .none, "Fresh and unknown preferences must leave chat off.")
+        try expect(HousekeeperModel.none.download == nil && HousekeeperModel.apple.download == nil, "Off and Apple Intelligence must never map to an app model download.")
+        try expect(HousekeeperModel.gemma1b.download!.bytes < 1_000_000_000 && HousekeeperModel.qwen15b.download!.bytes < 1_000_000_000, "The chooser must offer sub-gigabyte Gemma and Qwen options.")
+        try expect(HousekeeperModel.gemma2b.download!.title.contains("2B"), "The chooser must include an actual 2B option.")
+        let downloads = HousekeeperModel.allCases.compactMap(\.download)
+        try expect(Set(downloads.map(\.fileName)).count == downloads.count, "Each choice must use its own model and resumable-download filenames.")
+        try expect(downloads.allSatisfy { $0.sha256.count == 64 && $0.sha256.allSatisfy { $0.isHexDigit } && $0.source.scheme == "https" }, "Every model must pin an HTTPS source, exact size and full SHA-256 checksum.")
+        try await MainActor.run {
+            let suite = "HousekeepingModelTests-" + UUID().uuidString
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let directory = testRoot.appendingPathComponent("ManagedModels")
+            let weights = HousekeeperWeights(directory: directory, defaults: defaults)
+            try expect(weights.selection == .none && !weights.state.isReady, "Existing files must not opt the user into chat.")
+            weights.download()
+            try expect(!fileManager.fileExists(atPath: directory.path), "Download while Off must not create a directory or transfer.")
+            weights.select(.qwen15b)
+            try expect(weights.selection == .qwen15b && !weights.state.isReady && !fileManager.fileExists(atPath: directory.path), "Selecting a downloadable model must not download or create files.")
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+            let qwenPart = directory.appendingPathComponent(HousekeeperModel.qwen15b.download!.fileName + ".partial")
+            try Data("partial".utf8).write(to: qwenPart)
+            weights.refresh()
+            try expect(weights.partialBytes == 7, "The selected model must report its own resumable partial.")
+            weights.select(.gemma2b)
+            try expect(weights.partialBytes == 0 && fileManager.fileExists(atPath: qwenPart.path), "Switching models must preserve other downloads without reusing their bytes.")
+            let outside = testRoot.appendingPathComponent("personal-document.txt")
+            try Data("keep".utf8).write(to: outside)
+            do { try weights.removeDownloads([outside]); throw TestFailure.assertion("Managed-model removal must reject a personal file.") }
+            catch is TestFailure { throw TestFailure.assertion("Managed-model removal accepted a personal file.") }
+            catch { }
+            try expect(fileManager.fileExists(atPath: outside.path), "Removing model downloads must not remove personal files.")
+            try weights.removeDownloads([qwenPart])
+            try expect(!fileManager.fileExists(atPath: qwenPart.path), "Explicit model-download removal must remove only its managed target.")
+            weights.select(.apple)
+            weights.download()
+            try expect(!weights.state.isLoading && weights.storedBytes == 0, "Apple's option must not start a GGUF transfer or occupy managed-model storage.")
+        }
+
+        let evidenceHome = testRoot.appendingPathComponent("EvidenceHome")
+        let uvCache = evidenceHome.appendingPathComponent(".cache/uv")
+        let uvData = evidenceHome.appendingPathComponent(".local/share/uv")
+        try fileManager.createDirectory(at: uvCache.appendingPathComponent("wheels-v7"), withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: uvData.appendingPathComponent("python"), withIntermediateDirectories: true)
+        try Data("SECRET_FILE_CONTENT_NEVER_READ".utf8).write(to: uvCache.appendingPathComponent("fixture.txt"))
+        let knownFolders: [HousekeeperFolderEvidence.Location] = [
+            .init(path: uvCache.path, purpose: "Shared Python package cache", owner: "uv", bytes: 123_000, measuredAt: Date(timeIntervalSince1970: 100), isPartial: false),
+            .init(path: uvData.path, purpose: "Persistent Python installations and tool environments", owner: "uv")
+        ]
+        let request = HousekeeperFolderEvidence.Request(focusedPath: uvCache.path, locations: knownFolders, home: evidenceHome.path)
+        let explained = HousekeeperFolderEvidence.inspect(question: "What does this folder do?", request: request)!
+        try expect(explained.focusedPath == uvCache.path && explained.context.contains("Astral's Python") && explained.context.contains("wheels-v7"), "Folder questions must retrieve exact path, purpose and immediate observed children.")
+        try expect(!explained.context.contains("SECRET_FILE_CONTENT_NEVER_READ"), "Folder explanations must not read file contents.")
+        try expect(explained.context.contains("partial: false") && explained.context.contains("not a fresh size"), "Evidence must preserve the per-folder partial flag and dated measurement provenance.")
+        let byName = HousekeeperFolderEvidence.inspect(question: "What is the uv folder?", request: request)!
+        try expect(byName.focusedPath == uvCache.path, "A name matching the selected folder must resolve without requiring its path again.")
+        let dataReport = HousekeeperFolderEvidence.inspect(question: "What is \(uvData.path)?", request: request)!
+        try expect(dataReport.context.contains("distinct from its cache") && dataReport.focusedPath == uvData.path, "uv persistent data must never be labelled as disposable cache.")
+        let privateUV = evidenceHome.appendingPathComponent("Documents/uv")
+        try fileManager.createDirectory(at: privateUV, withIntermediateDirectories: true)
+        let unknown = HousekeeperFolderEvidence.inspect(question: "What is \(privateUV.path)?", request: request)!
+        try expect(unknown.context.contains("Purpose is not established") && !unknown.context.contains("PURPOSE: uv"), "An arbitrary personal folder named uv must not inherit cache identity.")
+        let missing = HousekeeperFolderEvidence.inspect(question: "What is /definitely-missing-housekeeping-uv-fixture?", request: request)!
+        try expect(missing.context.contains("could not be inspected") && missing.focusedPath == nil, "A nonexistent path must remain missing, without an invented purpose.")
+        let duplicate = HousekeeperFolderEvidence.inspect(question: "What is the uv folder?", request: .init(focusedPath: nil, locations: knownFolders, home: evidenceHome.path))!
+        try expect(duplicate.focusedPath == nil && duplicate.context.contains(uvCache.path) && duplicate.context.contains(uvData.path), "Ambiguous folder names must expose alternatives rather than silently pick one.")
+        try expect(HousekeeperFolderEvidence.explicitPaths(in: "Explain `~/My Folder/uv`", home: evidenceHome.path) == [evidenceHome.appendingPathComponent("My Folder/uv").path], "Quoted paths with spaces must resolve correctly.")
+        try expect(HousekeeperFolderEvidence.explicitPaths(in: "Read https://example.com/uv", home: evidenceHome.path).isEmpty, "A web URL must not become a local filesystem path.")
+        try expect(HousekeeperFolderEvidence.inspect(question: "hi", request: request) == nil, "Greetings must not trigger filesystem inspection or folder reports.")
+        let many = (0..<20).map { HousekeeperFolderEvidence.Location(path: evidenceHome.appendingPathComponent("irrelevant\($0)").path) } + knownFolders
+        let notInSample = HousekeeperFolderEvidence.inspect(question: "What is the uv folder?", request: .init(focusedPath: nil, locations: many, home: evidenceHome.path))!
+        try expect(notInSample.context.contains(uvCache.path), "Named-folder lookup must search beyond the six visible sample rows.")
+        try expect(duplicate.clarification?.contains(uvCache.path) == true && duplicate.clarification?.contains(uvData.path) == true, "Ambiguity must show both known purposes in a concrete clarification rather than let the model guess.")
+        let hyphenated = uvCache.appendingPathComponent("wheels-v7")
+        let hyphenReport = HousekeeperFolderEvidence.inspect(question: "What is wheels-v7?", request: .init(focusedPath: nil, locations: knownFolders + [.init(path: hyphenated.path)], home: evidenceHome.path))!
+        try expect(hyphenReport.focusedPath == hyphenated.path && hyphenReport.context.contains("pure Python"), "Punctuated folder names and wheel explanations must resolve correctly.")
+        let shortPath = HousekeeperFolderEvidence.inspect(question: "What is /uv?", request: request)!
+        try expect(shortPath.focusedPath == uvCache.path && shortPath.context.contains("literal short path /uv could not be found"), "A short root-style label must explain the matched selected folder while keeping the literal-path mismatch explicit.")
+        let evidenceLink = evidenceHome.appendingPathComponent("uv-link")
+        try fileManager.createSymbolicLink(at: evidenceLink, withDestinationURL: uvCache)
+        let linkReport = HousekeeperFolderEvidence.inspect(question: "What is \(evidenceLink.path)?", request: request)!
+        try expect(linkReport.context.contains("Symbolic link") && !linkReport.context.contains("Observed immediate child"), "Evidence inspection must not silently follow a directory symlink.")
+        let other = evidenceHome.appendingPathComponent("KnownModels")
+        try fileManager.createDirectory(at: other, withIntermediateDirectories: true)
+        let otherReport = HousekeeperFolderEvidence.inspect(question: "What is \(other.path)?", request: .init(focusedPath: nil, locations: [.init(path: other.path, purpose: "Downloaded speech-recognition weights", owner: "ExampleSpeech")], home: evidenceHome.path))!
+        try expect(otherReport.context.contains("Downloaded speech-recognition weights"), "Known-path description retrieval must work for tools other than uv.")
+        let narrow = HousekeeperConversation.messages(context: explained.context + String(repeating: "status", count: 2000), history: [], question: "What does this folder do?", contextBudget: 2_000)
+        try expect(narrow[0]["content"]?.contains("Astral's Python") == true, "The selected folder's identity must survive a narrow provider's context budget.")
+
+        let messages = HousekeeperConversation.messages(context: "SCAN_STATUS: idle", history: [], question: "hi")
+        try expect(messages.count == 2, "App context must not masquerade as an extra user message.")
+        try expect(messages.first?["role"] == "system" && messages.first?["content"]?.contains("SCAN_STATUS: idle") == true, "App context must be carried as labeled evidence.")
+        try expect(messages.last == ["role": "user", "content": "hi"], "The latest user message must be the final message, unmodified.")
+        let exchange = [["role": "user", "content": "Earlier question"], ["role": "assistant", "content": "Earlier answer"]]
+        let continued = HousekeeperConversation.messages(context: "SCAN_STATUS: complete", history: exchange, question: "What next?")
+        try expect(continued[1] == exchange[0] && continued[2] == exchange[1], "Conversation must retain the roles of earlier turns.")
+        try expect(continued[0]["content"]?.contains("SCAN_STATUS: complete") == true && continued[0]["content"]?.contains("SCAN_STATUS: idle") == false, "Fresh status must replace the older status.")
+        let huge = String(repeating: "x", count: 20_000)
+        let gemma = HousekeeperConversation.transportMessages(continued, for: .gemma2b)
+        try expect(gemma.first?["role"] == "user" && !gemma.contains { $0["role"] == "system" }, "Gemma's transport must use its documented user/model role format.")
+        try expect(gemma.first?["content"]?.contains("SCAN_STATUS: complete") == true && gemma.last?["content"] == "What next?", "Gemma must retain current context, complete history and the latest exact request.")
+        try expect(HousekeeperConversation.transportMessages(continued, for: .qwen15b) == continued, "Qwen's system-role conversation must remain unchanged by the Gemma adapter.")
+        let bounded = HousekeeperConversation.messages(context: huge, history: [["role": "user", "content": huge], ["role": "assistant", "content": huge]] + exchange, question: "Current question")
+        try expect(bounded.count == 4 && bounded[1]["role"] == "user", "History trimming must retain only whole exchanges that fit the budget.")
+        try expect((bounded[0]["content"]?.count ?? 0) < 12_000, "Oversized context must be bounded before reaching the model.")
+        let repeated = "Housekeeping is currently scanning known application folders and has not moved or selected any files on this Mac."
+        try expect(HousekeeperConversation.repeats(repeated, history: [["role": "assistant", "content": repeated]]), "Long repeated replies must be detected instead of being displayed again.")
+        try expect(!HousekeeperConversation.repeats(repeated, history: [["role": "assistant", "content": repeated]], question: "Please repeat that"), "An explicit request to repeat the answer must be respected.")
+        let recorded = HousekeeperConversation.assessmentReply(question: "Can I remove this leftover?", name: "ExampleEditor", verdict: "Leave alone", reason: "App is still installed.", risk: "May contain documents.")
+        try expect(recorded?.contains("Leave alone") == true && recorded?.contains("May contain documents.") == true, "Selected-file removal advice must preserve the app's recorded verdict and risk without model inference.")
+        try expect(HousekeeperConversation.assessmentReply(question: "What is a cache?", name: "ExampleEditor", verdict: "Leave alone", reason: "Installed", risk: "Documents") == nil, "General conversation must still reach the model.")
+        try expect(HousekeeperConversation.assessmentReply(question: "Can I delete report.txt?", name: "ExampleEditor", verdict: "Leave alone", reason: "Installed", risk: "Documents") == nil, "A differently named file must not inherit the selected file's assessment.")
+        try expect(HousekeeperConversation.assessmentReply(question: "Is this report.txt safe to delete?", name: "ExampleEditor", verdict: "Leave alone", reason: "Installed", risk: "Documents") == nil, "An explicit other filename must take precedence over the word this.")
+        try expect(HousekeeperConversation.assessmentReply(question: "Does Quarantine copy it?", name: "ExampleEditor", verdict: "Leave alone", reason: "Installed", risk: "Documents") == nil, "Questions about tool behavior must still reach the model with verified tool help.")
+        let diskQuestion = HousekeeperConversation.messages(context: nil, history: exchange, question: "What is the biggest file?")
+        try expect(diskQuestion[0]["content"]?.contains("FOLDERS ONLY") == true, "Current file-size questions must retrieve the verified folder-only browser limitation.")
+        try expect(HousekeeperConversation.reference(for: "Is this safe to delete?")?.contains("full path") == true, "File safety questions must retrieve the evidence requirement.")
+        try expect(HousekeeperConversation.reference(for: "restore from Quarantine")?.contains("Put It Back") == true, "Restore questions must retrieve the actual control.")
+        try expect(!HousekeeperConversation.repeats("Hi!", history: [["role": "assistant", "content": "Hi!"]]), "A short greeting must not trigger long-answer repetition rejection.")
+        try expect(!HousekeeperConversation.repeats("Caches hold reusable data so applications can avoid downloading the same resources on each launch.", history: exchange), "A substantive new answer must pass the repetition check.")
+
+        try cleanerInteractionTests(home: home)
+
         print("Housekeeping safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, office-add-in-audit, two-folder-reconcile, cleaner-scope, and trash-scope tests passed: \(assertionCount) assertions")
+    }
+
+    @MainActor
+    private static func cleanerInteractionTests(home: URL) throws {
+        let date = Date(timeIntervalSince1970: 100)
+        let small = CleanCandidate(url: home.appendingPathComponent("small"), size: 10, modified: date,
+                                   category: .everydayJunk, name: "Cache 2", detail: "regenerable")
+        let big = CleanCandidate(url: home.appendingPathComponent("big"), size: 100, modified: nil,
+                                 category: .everydayJunk, name: "Cache 10", detail: "regenerable")
+        let other = CleanCandidate(url: home.appendingPathComponent("other"), size: 500, modified: date,
+                                   category: .installers, name: "Installer", detail: "downloaded package")
+        let related = CleanCandidate(url: home.appendingPathComponent("Library/Application Support/Example"), size: 30,
+                                     modified: date, category: .uninstall, name: "Example", detail: "Name match; inspect contents")
+        let app = InstalledApp(url: home.appendingPathComponent("Applications/Example.app"), name: "Example",
+                               bundleIdentifier: "org.housekeeping.test-example", version: "1", size: 200, leftovers: [related])
+        let nested = CleanCandidate(url: small.url.appendingPathComponent("child"), size: 5, modified: date,
+                                    category: .developerLeftovers, name: "nested", detail: "nested")
+        try expect(Set(CleanCandidate.nonOverlapping([small, big, small, nested]).map(\.id)) == Set([small.id, big.id]), "Nested and duplicate scan paths must be counted and offered once.")
+        let model = CleanerModel(snapshot: CleanerSnapshot(candidates: [small, big, other], apps: [app], trash: TrashSummary(), notes: []))
+        try expect(model.visibleCandidates(in: .everydayJunk).map(\.id) == [big.id, small.id], "Cleaner must default to largest first.")
+        model.order = .smallest
+        try expect(model.visibleCandidates(in: .everydayJunk).first?.id == small.id, "Smallest first must reverse size order.")
+        model.order = .name
+        try expect(model.visibleCandidates(in: .everydayJunk).first?.id == small.id, "Names with numbers must sort naturally.")
+        for order in [FileOrder.oldest, .newest] {
+            model.order = order
+            try expect(model.visibleCandidates(in: .everydayJunk).last?.id == big.id, "An unknown date must sort last in either date direction.")
+        }
+        model.query = "  SMALL  "
+        model.setVisible(selected: true)
+        try expect(model.selectedCandidates.map(\.id) == [small.id], "Select shown must honor a trimmed case-insensitive path search.")
+        model.query = "no match"
+        try expect(model.visibleCandidates(in: .everydayJunk).isEmpty && model.selectedCandidates.count == 1, "Filtering must preserve selections without selecting hidden rows.")
+        model.toggle(other)
+        model.requestClean()
+        try expect(Set(model.pendingPaths) == Set([small.id, other.id]), "The review must disclose all selected paths across categories, even while filtered out.")
+        try expect(model.pendingSize == 510, "The review must sum only selected items.")
+        model.cancelPending()
+        try expect(model.selectedCandidates.count == 2 && model.pendingPaths.isEmpty, "Canceling review must preserve selection without retaining a pending plan.")
+        model.clearSelection()
+        try expect(model.selectedCandidates.isEmpty, "Clear selection must clear every category.")
+        model.requestUninstall(app)
+        try expect(model.pendingPaths == [app.id] && model.pendingSize == app.size, "Related data must be opt-in, never implicitly included in uninstall.")
+        model.cancelPending()
+        model.toggleRelated(related)
+        model.requestUninstall(app)
+        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Only explicitly chosen related data must join the uninstall plan.")
+        model.cancelPending()
+        model.query = "ORG.HOUSEKEEPING"
+        try expect(model.visibleApps.count == 1, "App search must include bundle identifiers.")
+
+        let legitimate = home.appendingPathComponent("matched-cache")
+        let unrelated = home.appendingPathComponent("unrelated-cache")
+        try FileManager.default.createDirectory(at: legitimate, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: unrelated, withIntermediateDirectories: true)
+        try Data("cache".utf8).write(to: legitimate.appendingPathComponent("data"))
+        try Data("cache".utf8).write(to: unrelated.appendingPathComponent("data"))
+        let index = Uninstaller.LeftoverIndex(entries: [
+            .init(url: legitimate, name: "com.vendor.example", base: "Caches"),
+            .init(url: unrelated, name: "unrelated-com.vendor.example-copy", base: "Caches")
+        ])
+        try expect(index.leftovers(for: "Example", identifier: "com.vendor.example").map(\.id) == [legitimate.path], "An embedded bundle-ID substring is insufficient ownership evidence.")
     }
 
     private static func item(

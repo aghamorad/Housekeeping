@@ -166,16 +166,12 @@ struct UpdateView: View {
         .padding(16)
         .frame(minWidth: 760, minHeight: 560)
         .preferredColorScheme(style.isRetro ? .light : nil)
-        // Opening the sheet is what starts the reading, because the answer is
-        // only wanted when the screen is up — and the reading runs `brew` and
-        // fetches feeds, which is not a thing to do in the background on launch.
-        .task { appState.startUpdateInventory() }
-        // Closing it mid-read stops the read, since nothing is on screen to show
-        // the answer to. An update in progress is left alone: it changes the Mac,
-        // and abandoning one half-way is the only way this screen could do harm.
-        .onDisappear {
-            if appState.updateIsReading { appState.cancelUpdateWork() }
+        .task {
+            if appState.updateRows.isEmpty && !appState.updateIsReading && !appState.updateIsWorking {
+                appState.startUpdateInventory()
+            }
         }
+
     }
 
     // MARK: - Header and footer
@@ -516,6 +512,11 @@ struct UpdateView: View {
                 Text(family.title)
                     .font(style.labelFont)
                     .foregroundColor(style.text)
+                if family == .unclear {
+                    Text("(probably pirated?)")
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                }
                 if needing == rows.count {
                     Text("\(needing) \(needingWording)")
                         .font(style.smallFont)
@@ -804,8 +805,7 @@ struct UpdateView: View {
         // the one menu the row has room for.
         Button("Ask the Housekeeper about this") {
             appState.housekeeperTopic = topic(for: row)
-            appState.showUpdateList = false
-            Task { @MainActor in appState.showHousekeeper = true }
+            appState.showHousekeeper = true
         }
         if let path = row.path {
             Button("Show in Finder") {

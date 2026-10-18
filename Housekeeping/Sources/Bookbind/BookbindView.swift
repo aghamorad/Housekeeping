@@ -35,8 +35,8 @@ struct BookbindView: View {
         }
         .frame(minWidth: 1040, idealWidth: 1200, maxWidth: 1360,
                minHeight: 640, idealHeight: 780, maxHeight: 980)
-        .background(style.windowBackground)
-        .preferredColorScheme(style.isRetro ? .light : .dark)
+        .background { HousekeepingBackdrop(style: style) }
+        .preferredColorScheme(style.isRetro ? .light : nil)
         .onAppear {
             engine.applyTheme(appState.currentTheme)
             engine.startIfNeeded()
