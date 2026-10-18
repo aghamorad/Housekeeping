@@ -69,7 +69,7 @@ final class Scanner {
         let rootTargets = buildTargets(installedApplicationNames: installedApplicationNames)
         let targets = dedupeInventory(expandInventoryTargets(rootTargets))
         progressHandler(.phase(deepSweep
-            ? "Measuring \(targets.count) storage locations, including folders that belong to no known app..."
+            ? "Measuring \(targets.count) storage locations, including the folders that belong to no app..."
             : "Measuring \(targets.count) storage locations Housekeeping knows..."))
 
         var undeclaredCount = 0
@@ -115,8 +115,8 @@ final class Scanner {
             scanNotes.append(.init(
                 phase: "Sweep",
                 message: undeclaredCount == 0
-                    ? "No folder over \(Self.minimumUndeclaredSize.humanReadable) was found that belongs to no known app."
-                    : "Found \(undeclaredCount) folders totalling \(undeclaredSize.humanReadable) that belong to no known app."
+                    ? "Every folder that belongs to no app came back under \(Self.minimumUndeclaredSize.humanReadable), so none was listed."
+                    : "Found \(undeclaredCount) folder\(undeclaredCount == 1 ? "" : "s") belonging to no app, \(undeclaredSize.humanReadable) together."
             ))
             if suppressedCount > 0 {
                 scanNotes.append(.init(

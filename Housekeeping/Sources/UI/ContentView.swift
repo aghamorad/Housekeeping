@@ -37,6 +37,7 @@ struct ContentView: View {
             case .mediaDock: mediaDockBody
             case .bookbind: BookbindView(engine: appState.bookbind)
             case .selfUpdate: SelfUpdateView()
+            case .clean: CleanerView(model: appState.cleaner)
             }
         }
         .environment(\.uiStyle, style)
@@ -707,6 +708,15 @@ private struct JobBar: View {
             ),
 
             Job(
+                id: "clean",
+                title: "Clean Up",
+                systemImage: "sparkles",
+                zone: .app,
+                help: "Caches, logs, build folders, installers, large files and apps you no longer need — each on its own shelf, with a sentence saying what it is. Everything moved goes to Quarantine and can come back; emptying the Trash is the one exception, and it says so.",
+                action: { appState.showClean = true }
+            ),
+
+            Job(
                 id: "settings",
                 title: "Settings",
                 systemImage: "gearshape",
@@ -746,8 +756,8 @@ private struct JobBar: View {
             facts.append("What a scan reads: ~/Library — application data, caches, logs, preferences and containers; tool caches and hidden folders in the home folder, such as cache, .npm, .ollama and similar; housekeeping files left behind on the Desktop by Office and similar apps; and your Applications folders, to work out which apps are still installed.")
             facts.append("Measuring is all it does. Nothing is moved, changed or deleted until an item is ticked and the move is confirmed, and once moved everything can be put back.")
             facts.append(appState.deepSweep
-                         ? "Housekeeping is also measuring the folders that belong to no known app, which is usually where the space is. That is why this scan is taking longer."
-                         : "Housekeeping is measuring only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools it knows, so folders belonging to anything it does not recognise are not measured and any space they use will not appear.")
+                         ? "It is also looking in the folders that belong to no app, which is usually where the space is. That is why this scan is taking longer."
+                         : "It is only looking in the folders it knows an app owns. Space inside other folders is not measured, so it will not appear in the results.")
             return HousekeeperTopic(
                 id: "scan-idle",
                 title: "Housekeeping, before a scan",
@@ -762,8 +772,8 @@ private struct JobBar: View {
             facts.append("A scan is running now. It is reading the disk; it has not changed anything, and it cannot — measuring and moving are separate steps.")
             facts.append("Right now it is: \(appState.scanProgress.title)")
             facts.append(appState.deepSweep
-                         ? "This run is also measuring the folders that belong to no known app, so it takes longer than usual and finds more."
-                         : "This run is measuring only the folders belonging to the \(RuleEngine.shared.applications.count) apps and tools Housekeeping knows. Folders belonging to anything else are not being measured.")
+                         ? "This run also looks in the folders that belong to no app, so it takes longer than usual and finds more."
+                         : "This run only looks in the folders it knows an app owns. Nothing else is being measured.")
             facts.append("A scan can be stopped at any point. Stopping keeps whatever was measured so far; it throws nothing away and it changes nothing.")
             return HousekeeperTopic(
                 id: "scan-running",
@@ -1163,7 +1173,7 @@ private struct WelcomeScreen: View {
             set: { appState.setDeepSweep($0) }
         )) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Also measure folders that belong to no known app")
+                Text("Also look in folders that belong to no app")
                     .font(style.bodyFont)
                     .foregroundStyle(style.text)
                 // Said in the reader's terms rather than the app's. The first
@@ -1176,7 +1186,7 @@ private struct WelcomeScreen: View {
                 // safe. The count is read rather than written down, because
                 // it is also shown on the Settings screen and a number typed
                 // into two places is a number that will disagree with itself.
-                Text("Housekeeping knows where \(RuleEngine.shared.applications.count) apps and tools keep their files, and normally measures only those. This also measures the folders that belong to none of them — often where the space is, since nothing else reports it. It costs up to a minute a scan, and what it finds is only ever shown: cleaning one takes a tick and then a typed confirmation, because Housekeeping cannot prove what is inside.")
+                Text("Housekeeping knows where \(RuleEngine.shared.applications.count) apps and tools keep their files, and normally looks only there. Turning this on also opens the folders that belong to no app — usually where the missing space is, because nothing else reports it. It adds about a minute to a scan, and anything found that way is only listed: you tick it, then type a word to confirm.")
                     .font(style.smallFont)
                     .foregroundStyle(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1299,6 +1309,14 @@ private struct WelcomeRing: View {
                 zone: .reading,
                 help: "Measure the apps and tools Housekeeping knows. The result is a list you can read and sort — nothing is ticked, moved, or changed by a scan, and you can stop it partway.",
                 action: { appState.startScan() }
+            ),
+            Door(
+                id: "clean",
+                title: "Clean Up",
+                systemImage: "sparkles",
+                zone: .reading,
+                help: "Caches, logs, build folders, installers, large files and apps you no longer need, each on its own shelf. Everything moved goes to Quarantine and can come back — except emptying the Trash, which asks in words first.",
+                action: { appState.showClean = true }
             ),
             Door(
                 id: "phone",
@@ -1917,8 +1935,8 @@ private struct ResultsScreen: View {
                 .font(style.titleFont)
                 .foregroundStyle(style.text)
             Text(appState.deepSweep
-                 ? "Every folder Housekeeping knows about came back empty, and it found nothing in the folders belonging to no known app either. Your Mac is already tidy — or the clutter is somewhere it cannot see."
-                 : "Everything Housekeeping knows about came back empty. Turning on “Also measure folders that belong to no known app”, in Settings, would look in those too — that is often where the real leftovers are.")
+                 ? "Every folder it knows about came back empty, and it found nothing in the folders belonging to no app either. Your Mac is already tidy — or the clutter is somewhere it cannot see."
+                 : "Every folder it knows about came back empty. Turning on “Also look in folders that belong to no app”, in Settings, would check those too — that is often where the real leftovers are.")
                 .font(style.bodyFont)
                 .foregroundStyle(style.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)

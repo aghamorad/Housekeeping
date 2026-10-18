@@ -62,6 +62,7 @@ final class AppState: ObservableObject {
         case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
         case protectionList, diskBrowser, reconcile, updateList, setupCheck
         case housekeeper, routes, phone, mediaDock, bookbind, selfUpdate
+        case clean
 
         var id: String { rawValue }
     }
@@ -95,6 +96,13 @@ final class AppState: ObservableObject {
     var showQuarantineManagement: Bool {
         get { screen == .quarantine }
         set { show(.quarantine, newValue) }
+    }
+    /// The Clean Up shelf: everyday junk, developer leftovers, installers,
+    /// large files, apps, and the Trash. Everything it moves goes into
+    /// Quarantine, except emptying the Trash, which asks first and says so.
+    var showClean: Bool {
+        get { screen == .clean }
+        set { show(.clean, newValue) }
     }
     var showGuidedCleanup: Bool {
         get { screen == .guidedCleanup }
@@ -167,6 +175,9 @@ final class AppState: ObservableObject {
         set { show(.bookbind, newValue) }
     }
 
+    /// Clean Up's reading and selection. Owned here for the same reason: a
+    /// second look at the shelf keeps what the first one found and ticked.
+    let cleaner = CleanerModel()
     /// MediaDock 9, folded into this app. Owned here rather than by its screen so
     /// that reopening the sheet finds the same settings and the same queue.
     let mediaDock = AppModel()
@@ -388,6 +399,15 @@ final class AppState: ObservableObject {
               let index = results.foundItems.firstIndex(where: { $0.id == item.id }) else { return }
         results.foundItems[index].isSelected = false
         scanResults = results
+    }
+
+    /// Puts a path on the left-alone list without a `FoundItem` to hand — the
+    /// Clean Up screen knows a path and a shelf name, not a sweep result.
+    @discardableResult
+    func protect(path: String, kind: String) -> Bool {
+        guard protectionList.protect(path: path, kind: kind) else { return false }
+        applyProtectionChange()
+        return true
     }
 
     /// Takes one entry off the list. Keyed on the entry's own stored path rather

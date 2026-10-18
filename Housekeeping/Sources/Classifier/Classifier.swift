@@ -52,13 +52,13 @@ enum FindingKind: String, CaseIterable {
     /// means, in their terms rather than Housekeeping's.
     var tagline: String {
         switch self {
-        case .undeclared: return "Real folders that belong to no known app"
-        case .aiAppData: return "Belongs to an AI app you still have installed"
-        case .aiLeftover: return "Belongs to an AI app Housekeeping cannot find installed"
-        case .applicationLeftover: return "Looks like residue from an app that is no longer installed"
-        case .housekeeping: return "Caches, logs, and package-manager leftovers"
+        case .undeclared: return "Folders that don't belong to any app Housekeeping knows"
+        case .aiAppData: return "Belongs to an AI app that is still installed"
+        case .aiLeftover: return "Left behind by an AI app that is no longer installed"
+        case .applicationLeftover: return "Looks like what an uninstalled app left behind"
+        case .housekeeping: return "Caches, logs, and package-manager files"
         case .userProject: return "Your own project and workspace data — never ticked for you"
-        case .other: return "Found it, but can't tell what it belongs to"
+        case .other: return "Found, but can't tell what it belongs to"
         }
     }
 
@@ -68,11 +68,11 @@ enum FindingKind: String, CaseIterable {
     /// finish the sentence "Most of it is …".
     var plainName: String {
         switch self {
-        case .undeclared: return "in folders that belong to no known app"
+        case .undeclared: return "in folders that belong to no app"
         case .aiAppData: return "inside the AI apps you still use"
         case .aiLeftover: return "AI leftovers"
         case .applicationLeftover: return "app leftovers"
-        case .housekeeping: return "system and developer housekeeping"
+        case .housekeeping: return "system and developer caches"
         case .userProject: return "in your own projects"
         case .other: return "odds and ends"
         }
@@ -93,19 +93,19 @@ enum FindingKind: String, CaseIterable {
     var explanation: String {
         switch self {
         case .undeclared:
-            return "Housekeeping measured this folder while looking in the folders that belong to no known app, and it has no record that says what this one is. That is not a judgment about whether the contents matter — only that this is real, measured storage it cannot put a name to."
+            return "Housekeeping found this folder while looking in folders that belong to no app, and it has no record of what this one is. That is not a judgment about whether the contents matter — only that this is real, measured space it cannot put a name to."
         case .aiAppData:
-            return "This path belongs to a known AI application or AI tool that Housekeeping currently detects as installed or active."
+            return "This belongs to an AI app or tool that is installed and in use."
         case .aiLeftover:
-            return "This path matches a known AI application rule, but Housekeeping does not currently detect that application as installed."
+            return "This matches an AI app Housekeeping knows, but that app is not installed any more."
         case .applicationLeftover:
-            return "This path was found in an app-facing Library location, but Housekeeping could not find an installed application that appears to own the namespace."
+            return "This was found where apps keep their files, but no installed app claims it."
         case .housekeeping:
-            return "This is a known operating-system, shell, package-manager, or developer-tool housekeeping path."
+            return "This is a cache, log or download folder belonging to the system, a package manager, or a developer tool."
         case .userProject:
-            return "This is user-created project or workspace data. It is shown for awareness and must not be treated as disposable application residue."
+            return "This is your own project or workspace data. It is shown so you know it is there; Housekeeping will never tick it for you."
         case .other:
-            return "Housekeeping found this one but cannot place it in any of its groups: AI data, app leftovers, housekeeping, or your own projects."
+            return "Housekeeping found this one but cannot place it: it is not an AI app, an app leftover, housekeeping, or one of your projects."
         }
     }
 }

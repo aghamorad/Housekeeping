@@ -1188,7 +1188,68 @@ struct SafetyTests {
             "A reconcile that moved a file aside must have left a Quarantine record behind it."
         )
 
-        print("Housekeeping safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, office-add-in-audit, and two-folder-reconcile tests passed: \(assertionCount) assertions")
+        // MARK: - Clean Up: what it refuses to touch
+
+        // Everything the Clean Up screen moves goes through `quarantineRepairs`,
+        // which skips the normal cleanup policy on purpose. What keeps that safe
+        // is its own three refusals: the root, the home folder, the Quarantine
+        // folder, anything that contains either of them, and paths that no longer
+        // exist. Those are the lines worth a test, because this is the one entry
+        // point that does not pass through `CleanupSafetyPolicy` first.
+        let cleanerEngine = CleanupEngine(
+            homeDirectory: home,
+            quarantineRoot: quarantine,
+            fileManager: fileManager
+        )
+        let junk = home.appendingPathComponent("Downloads/junk.txt", isDirectory: false)
+        try writeFile("junk", at: "Downloads/junk.txt", in: home, modified: Date(), fileManager: fileManager)
+
+        let refusals = try await cleanerEngine.quarantineRepairs(
+            paths: [
+                "/",
+                home.path,
+                quarantine.path,
+                testRoot.path,
+                home.appendingPathComponent("Downloads/not-there.txt").path,
+            ],
+            category: "Clean Up",
+            reason: "Scope test"
+        )
+        try expect(refusals.movedPaths.isEmpty, "The cleaner must not move the root, the home folder, Quarantine, a folder containing them, or a path that does not exist.")
+
+        let moved = try await cleanerEngine.quarantineRepairs(
+            paths: [junk.path],
+            category: "Clean Up",
+            reason: "Scope test"
+        )
+        try expect(moved.movedPaths == [junk.path], "An ordinary file inside the home folder is exactly what the cleaner is for.")
+        try expect(
+            !fileManager.fileExists(atPath: junk.path),
+            "A moved file must leave its original path."
+        )
+
+        // The Trash is the only irreversible action, so it is built so it can
+        // only ever reach `home/.Trash`. A fixture home proves both halves: it
+        // reads what is there, and emptying it removes the contents rather than
+        // the folder itself.
+        let trashHome = testRoot.appendingPathComponent("TrashHome", isDirectory: true)
+        let trashDir = trashHome.appendingPathComponent(".Trash", isDirectory: true)
+        try fileManager.createDirectory(at: trashDir, withIntermediateDirectories: true)
+        try writeFile("discard me", at: ".Trash/old.txt", in: trashHome, modified: Date(), fileManager: fileManager)
+        let trashService = TrashService(home: trashHome)
+        let trashSummary = trashService.read()
+        try expect(
+            trashSummary.count == 1 && trashSummary.size > 0,
+            "The Trash reading must see the fixture's one item and its size."
+        )
+        let emptied = trashService.empty()
+        try expect(emptied.removedCount == 1 && emptied.failures.isEmpty, "Emptying the Trash must remove its direct contents.")
+        try expect(
+            fileManager.fileExists(atPath: trashDir.path),
+            "Emptying the Trash empties it — the folder itself stays, as it does in Finder."
+        )
+
+        print("Housekeeping safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, office-add-in-audit, two-folder-reconcile, cleaner-scope, and trash-scope tests passed: \(assertionCount) assertions")
     }
 
     private static func item(

@@ -40,6 +40,7 @@ SOURCES=(
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafetyPolicy.swift"
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/ProtectionList.swift"
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafeCleanupEngine.swift"
+  "$ROOT_DIR"/Housekeeping/Sources/Cleaner/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Disk/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Reconcile/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift
