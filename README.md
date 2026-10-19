@@ -8,7 +8,7 @@ I also did not want to make one of those cleaners that announces that it has fou
 
 Housekeeping has two appearances: a burgundy desktop interface with a grouped sidebar, and a Platinum skin with beveled controls, gray panels, and a striped title bar. Both use the same storage overview and tools. The octopus in the menu bar is the housekeeper.
 
-[Download Housekeeping 0.18.5](https://github.com/aghamorad/Housekeeping/releases/tag/v0.18.5) · [Release notes](releases/v0.18.5.md)
+[Download Housekeeping 0.18.6](https://github.com/aghamorad/Housekeeping/releases/tag/v0.18.6) · [Release notes](releases/v0.18.6.md)
 
 ## What you actually do with it
 
@@ -351,6 +351,8 @@ The Mac OS 9 interface is a deliberate choice. Utilities such as Norton Utilitie
 - **Always reversible:** eligible cleanup goes to recoverable quarantine, and restore refuses to overwrite an existing path
 
 ## Version
+
+**Housekeeping 0.18.6:** Optional Dock icon under Settings → Startup → Show in Dock. Turn it off to keep Housekeeping in the menu bar without a Dock or Command-Tab entry. Changes apply immediately and survive relaunch.
 
 **Housekeeping 0.18.5:** Persistent tool navigation, searchable and sortable cleanup results, a refined burgundy interface, repaired Platinum layout, optional Gemma and Qwen chat models, Apple Intelligence support on eligible Macs, specific-folder explanations, and model removal in Settings. See the [release notes](releases/v0.18.5.md).
 

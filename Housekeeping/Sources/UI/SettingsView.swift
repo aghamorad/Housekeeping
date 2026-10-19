@@ -7,6 +7,7 @@ struct SettingsView: View {
     @ObservedObject private var loginItem = LoginItem.shared
     @Environment(\.uiStyle) private var style
     @AppStorage("housekeeping.appearance") private var appearance = "system"
+    @AppStorage("housekeeping.showInDock") private var showInDock = true
 
     var body: some View {
         Form {
@@ -36,6 +37,18 @@ struct SettingsView: View {
             }
 
             Section("Startup") {
+                Toggle("Show in Dock", isOn: $showInDock)
+                    .onChange(of: showInDock) { value in
+                        DockVisibility.apply(showInDock: value)
+                    }
+
+                Text(showInDock
+                     ? "Housekeeping appears in the Dock and the menu bar."
+                     : "Housekeeping stays in the menu bar. Click the octopus to open the window or quit. It is hidden from the Dock and Command-Tab.")
+                    .font(.callout)
+                    .foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Toggle("Open Housekeeping when I log in", isOn: Binding(
                     get: { loginItem.enabled },
                     set: { loginItem.setEnabled($0) }
