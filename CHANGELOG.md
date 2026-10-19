@@ -1,5 +1,12 @@
 # Housekeeping changelog
 
+## 0.18.6 — Optional Dock icon
+
+Settings → Startup includes Show in Dock. Turning it off switches to accessory
+mode immediately, leaving the menu-bar octopus and its window-opening and Quit
+actions available. The preference survives relaunch; turning it back on restores
+the Dock and Command-Tab entry. Existing windows stay available during the change.
+
 ## 0.18.5 — Platinum layout repair
 
 Platinum uses the shared storage overview and a wrapping tool grid so every tool

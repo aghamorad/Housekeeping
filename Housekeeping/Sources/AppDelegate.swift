@@ -12,9 +12,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // items — a menu of things this app does not do.
         NSWindow.allowsAutomaticWindowTabbing = false
 
-        // Set up the retro cursor
-        setupAppearance()
-
         // A sheet must not be able to hold the app open.
         allowQuittingThroughSheets()
 
@@ -25,6 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // launch, so it is in the menu bar whether or not a window is open — which
         // is the point of having it there at all.
         StatusItemController.shared.install()
+        DockVisibility.applySavedPreference()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -75,12 +73,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    private func setupAppearance() {
-        // A regular app: a window, a Dock tile, and the octopus in the menu bar.
-        NSApp.setActivationPolicy(.regular)
+}
 
-        // The standard application menu is SwiftUI's, not this file's. Housekeeping
-        // contributes through Scene commands rather than replacing Settings, Window,
-        // Help, keyboard navigation, and the other native menus.
+/// The menu-bar item is installed before the Dock can be hidden. Accessory mode
+/// keeps windows usable while removing the Dock and Command-Tab entry.
+@MainActor
+enum DockVisibility {
+    static let defaultsKey = "housekeeping.showInDock"
+
+    static func applySavedPreference() {
+        let defaults = UserDefaults.standard
+        apply(showInDock: defaults.object(forKey: defaultsKey) == nil || defaults.bool(forKey: defaultsKey))
+    }
+
+    static func apply(showInDock: Bool) {
+        let policy: NSApplication.ActivationPolicy = showInDock ? .regular : .accessory
+        guard NSApp.activationPolicy() != policy else { return }
+        let windows = NSApp.windows.filter { $0.isVisible && $0.level == .normal }
+        let keyWindow = NSApp.keyWindow
+        NSApp.setActivationPolicy(policy)
+        // Changing activation policy can reorder windows. Preserve the current
+        // workspace and Settings window without opening a closed window.
+        DispatchQueue.main.async {
+            for window in windows { window.orderFront(nil) }
+            if let keyWindow, windows.contains(keyWindow) {
+                keyWindow.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
     }
 }
