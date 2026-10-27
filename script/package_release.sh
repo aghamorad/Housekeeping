@@ -143,7 +143,7 @@ stage() {
   # normal state rather than a build failure: a source checkout may not have the
   # folder, and the screen then says what is missing and where to get it.
   local bookbind_dst="$app/Contents/Resources/Bookbind"
-  local bookbind_src="${HOUSEKEEPING_BOOKBIND_SRC:-$HOME/Claude/Bookbind}"
+  local bookbind_src="${HOUSEKEEPING_BOOKBIND_SRC:-$HOME/C3PO/Bookbind}"
   if [[ -f "$bookbind_src/app.py" && -f "$bookbind_src/bookbind_cli.py" && -d "$bookbind_src/static" ]]; then
     mkdir -p "$bookbind_dst"
     cp "$bookbind_src/app.py" "$bookbind_src/bookbind_cli.py" "$bookbind_dst/"
