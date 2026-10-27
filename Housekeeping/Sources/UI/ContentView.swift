@@ -36,6 +36,7 @@ struct ContentView: View {
             case .phone: PhoneView(model: appState.phoneController)
             case .mediaDock: mediaDockBody
             case .bookbind: BookbindView(engine: appState.bookbind)
+            case .localModels: ModelsView(model: appState.localModels)
             case .selfUpdate: SelfUpdateView()
             case .clean: CleanerView(model: appState.cleaner)
             }
@@ -459,7 +460,7 @@ private struct JobBar: View {
                         }
                     }
                     sidebarSection("Storage", ids: ["clean", "browse-the-disk", "quarantine", "left-alone"])
-                    sidebarSection("Maintenance", ids: ["look-everywhere", "update-apps", "check-my-setup", "two-folders"])
+                    sidebarSection("Maintenance", ids: ["look-everywhere", "update-apps", "check-my-setup", "two-folders", "local-models"])
                     sidebarSection("Utilities", ids: ["mediadock", "bookbind", "test-routes", "spoof-location"])
                 }.padding(.horizontal, 12)
             }
@@ -524,6 +525,7 @@ private struct JobBar: View {
         case .bookbind: return "bookbind"
         case .routes: return "test-routes"
         case .phone: return "spoof-location"
+        case .localModels: return "local-models"
         default: return nil
         }
     }
@@ -565,6 +567,19 @@ private struct JobBar: View {
                 zone: .reading,
                 help: "Compare two folders that are meant to hold the same things — a library and its backup — and see what is on one side and not the other. Reading changes nothing; a copy happens only when you tick the row and press the button.",
                 action: { appState.showReconcile = true }
+            ),
+
+            // The one reading that also acts on this Mac, and the reason it is
+            // still on this row: what it acts on is memory, and it asks on the row
+            // it is about. Loading a model that does not fit does not fail
+            // politely, so the arithmetic is done before the button is offered.
+            Job(
+                id: "local-models",
+                title: "Local Models",
+                systemImage: "cpu",
+                zone: .reading,
+                help: "Everything installed for local inference — Ollama, LM Studio, the housekeeper's own weights, a running MLX server, the Hugging Face cache — with what each one weighs and which are holding memory now. Load and unload per model; nothing is downloaded, and a model that does not fit in the memory that is free is not offered.",
+                action: { appState.showLocalModels = true }
             ),
 
             Job(

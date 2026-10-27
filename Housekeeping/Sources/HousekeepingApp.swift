@@ -161,6 +161,14 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("y", modifiers: [.command, .shift])
 
+                // The one screen about the models themselves rather than the disk
+                // they sit on: what is installed, what is in memory, and the way
+                // out of it when the machine has none left.
+                Button("Local Models…") {
+                    appState.showLocalModels = true
+                }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
+
                 // The other half of looking after a Mac: what is installed and
                 // whether any of it is out of date. Kept off the cleanup screens
                 // because it changes things rather than removing them.
@@ -214,6 +222,14 @@ struct HousekeepingApp: App {
                     appState.showBookbind = true
                 }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
+
+                // The menu bar panel, reachable without a mouse. The octopus was
+                // the only door to it, so a menu bar short of room could hide the
+                // octopus and take every reading behind it out of reach with it.
+                Button("Menu Bar Panel") {
+                    StatusItemController.shared.presentPanel()
+                }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
 
                 Divider()
 

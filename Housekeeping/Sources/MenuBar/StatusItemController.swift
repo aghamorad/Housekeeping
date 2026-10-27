@@ -60,11 +60,16 @@ final class WindowOpener {
     /// Brings the window back, running `then` once it is there — immediately if it
     /// was only closed or hidden, or when it comes up if it has to be built again.
     func withWindow(_ then: @escaping @MainActor @Sendable () -> Void) {
-        NSApp.activate(ignoringOtherApps: true)
+        bringForward()
 
-        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
+        if let window = liveWindow() {
             if window.isMiniaturized { window.deminiaturize(nil) }
             window.makeKeyAndOrderFront(nil)
+            // An accessory app can be refused the activation it just asked for, and
+            // a window ordered front by an app that is not active stays exactly
+            // where it was. This is the one case where the window is put in front
+            // regardless of who is active, and it is a person's click that asks.
+            if !NSApp.isActive { window.orderFrontRegardless() }
             // It is already in the hierarchy, so the view can be told on the next
             // turn of the run loop rather than whenever a new one is built.
             DispatchQueue.main.async(execute: then)
@@ -72,10 +77,43 @@ final class WindowOpener {
         }
 
         // Nothing is left to bring back. SwiftUI is the only thing that can build
-        // a window, and only when it is asked from inside the scene.
-        guard let open else { return }
+        // a window, and only when it is asked from inside the scene. The job is
+        // kept even when there is no scene to ask yet, so a window that arrives
+        // later — from the menu, from the Dock, from a launch — still runs it.
         waiting = then
-        open()
+        open?()
+    }
+
+    /// The window that can actually be shown, which is not the same thing as the
+    /// window that can become main.
+    ///
+    /// A window SwiftUI has finished with stays in `NSApp.windows` with its style
+    /// mask intact, so it still answers `canBecomeMain` — it is only no longer
+    /// visible. Ordering that one front is why every door in the panel did nothing:
+    /// the app activated, a window that draws nothing was brought forward over the
+    /// desktop, and the reader was left looking at the screen they started on. The
+    /// live window was there the whole time, one entry further down the list — and
+    /// when it had been minimized there was no live window to find at all, because
+    /// a miniaturized window is not allowed to become main either.
+    private func liveWindow() -> NSWindow? {
+        let ordinary = NSApp.windows.filter {
+            $0.level == .normal && $0.styleMask.contains(.titled)
+        }
+        if let key = NSApp.keyWindow, ordinary.contains(key), key.isVisible {
+            return key
+        }
+        // A window waiting in the Dock is still the reader's window, and bringing
+        // it back is a restore rather than a second window beside it.
+        if let asleep = ordinary.first(where: { $0.isMiniaturized }) { return asleep }
+        return ordinary.first { $0.isVisible }
+    }
+
+    /// A panel click is a person asking for the app, so the activation is allowed
+    /// — but `NSApp.activate` alone is not enough for an accessory app on current
+    /// macOS, where an unbundled activation request can be ignored silently.
+    private func bringForward() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSRunningApplication.current.activate(options: [.activateIgnoringOtherApps])
     }
 
     /// Called by the window as it appears, after it has registered.
@@ -193,6 +231,22 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // popover exists. Shown from inside the action it is shown *during* that
         // click, and a transient popover reads the rest of the click as a click
         // outside itself and shuts again immediately.
+        DispatchQueue.main.async { [weak self] in self?.showPanel() }
+    }
+
+    /// Opens the panel from somewhere other than the octopus itself.
+    ///
+    /// The panel is the app's smallest screen and the only one with no route to it
+    /// but a mouse: the status item is the sole way in, and a menu bar a reader
+    /// cannot see or reach leaves every reading behind it out of reach. With this,
+    /// the panel is a job like everything else — in the Jobs menu, and on a key.
+    func presentPanel() {
+        guard popover?.isShown != true else {
+            popover?.performClose(nil)
+            return
+        }
+        // A transient popover closes on the click that opens it, so the opening
+        // waits for this click to finish — the same reason the octopus does.
         DispatchQueue.main.async { [weak self] in self?.showPanel() }
     }
 
