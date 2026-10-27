@@ -165,10 +165,22 @@ final class BookbindEngine: NSObject, ObservableObject {
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true))
 
-        let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 1200, height: 760),
-                            configuration: config)
+        let web = BookbindDropWebView(frame: NSRect(x: 0, y: 0, width: 1200, height: 760),
+                                      configuration: config)
         web.navigationDelegate = self
         web.uiDelegate = self
+        // The same two answers the standalone window gives: the veil while files
+        // are held over the page, and the real paths when they land.
+        web.onDrag = { [weak self] on in self?.dragHighlight(on) }
+        web.onFiles = { [weak self] urls in self?.dropped(urls) }
+
+        // Over the page and out of the way of every click: see BookbindDropCatcher.
+        let catcher = BookbindDropCatcher(frame: web.bounds)
+        catcher.autoresizingMask = [.width, .height]
+        catcher.onDrag = { [weak self] on in self?.dragHighlight(on) }
+        catcher.onFiles = { [weak self] urls in self?.dropped(urls) }
+        web.addSubview(catcher)
+
         web.loadHTMLString("""
         <html><head><meta charset="utf-8"><style>
         body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
@@ -185,6 +197,24 @@ final class BookbindEngine: NSObject, ObservableObject {
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }
         web.evaluateJavaScript("window.__bookbindReply(\(id), \(json))", completionHandler: nil)
+    }
+
+    // MARK: - What a drop means
+
+    /// Says to the page "files are over you" (or have gone again), which is what
+    /// draws and clears the veil.
+    private func dragHighlight(_ on: Bool) {
+        web.evaluateJavaScript("window.bookbindDrag(\(on))", completionHandler: nil)
+    }
+
+    /// Hands the dropped paths to the page, which decides what each one is: a
+    /// folder is a book folder, an audio file is a chapter, anything else is left
+    /// alone.
+    private func dropped(_ urls: [URL]) {
+        let paths = urls.map { $0.path }
+        guard let data = try? JSONSerialization.data(withJSONObject: paths),
+              let json = String(data: data, encoding: .utf8) else { return }
+        web.evaluateJavaScript("window.bookbindDrop(\(json))", completionHandler: nil)
     }
 
     private func panel() -> NSOpenPanel {
@@ -354,7 +384,7 @@ private enum BookbindLaunch {
             return .failed("Every port from 8765 to 8774 is taken.\n\nQuit whatever is using them and open Bookbind again.")
         }
         guard let root = BookbindWhere.root else {
-            return .failed("Bookbind's program files are not in this copy of Housekeeping.\n\nWhile building: keep the checkout at ~/Claude/Bookbind. From a release: download Housekeeping again.")
+            return .failed("Bookbind's program files are not in this copy of Housekeeping.\n\nWhile building: keep the checkout at ~/C3PO/Bookbind. From a release: download Housekeeping again.")
         }
 
         let url = URL(string: "http://127.0.0.1:\(port)/")!
@@ -468,5 +498,106 @@ private enum BookbindLaunch {
             if runs(c, ["-c", "import mutagen"]) { return c }
         }
         return any
+    }
+}
+
+// MARK: - Dropping files on the page
+
+/// Takes files dropped on Bookbind's page.
+///
+/// A web page is deliberately never told where a dropped file lives, and the
+/// engine cannot work without that: a dropped folder has to become the folder the
+/// book is written into. So the drop is caught here and handed to the page as a
+/// list of real paths. Only file URLs are registered, so dragging text into the
+/// title field still reaches WebKit as it always did.
+///
+/// Two catchers, on purpose: this view sits above the page, and the web view's own
+/// subclass answers too. WebKit keeps its drag destination on a private subview,
+/// so which of the two AppKit asks first is not something this app decides -- and
+/// a second call is harmless, because the page checks each path against its list
+/// before adding it.
+final class BookbindDropCatcher: NSView {
+    var onFiles: (([URL]) -> Void)?
+    var onDrag: ((Bool) -> Void)?
+    private var inside = false
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        registerForDraggedTypes([.fileURL])
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        registerForDraggedTypes([.fileURL])
+    }
+
+    /// Clicks, scrolls and everything else belong to the page underneath.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    /// The dropped paths, minus any that have already gone.
+    static func files(_ info: NSDraggingInfo) -> [URL] {
+        let urls = info.draggingPasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        return urls.filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    private func entering(_ info: NSDraggingInfo) -> NSDragOperation {
+        guard !Self.files(info).isEmpty else { return [] }
+        if !inside { inside = true; onDrag?(true) }
+        return .copy
+    }
+
+    override func draggingEntered(_ info: NSDraggingInfo) -> NSDragOperation { entering(info) }
+    override func draggingUpdated(_ info: NSDraggingInfo) -> NSDragOperation { entering(info) }
+
+    override func draggingExited(_ info: NSDraggingInfo?) { left() }
+    override func draggingEnded(_ info: NSDraggingInfo) { left() }
+
+    override func prepareForDragOperation(_ info: NSDraggingInfo) -> Bool {
+        !Self.files(info).isEmpty
+    }
+
+    override func performDragOperation(_ info: NSDraggingInfo) -> Bool {
+        let urls = Self.files(info)
+        left()
+        guard !urls.isEmpty else { return false }
+        onFiles?(urls)
+        return true
+    }
+
+    private func left() {
+        guard inside else { return }
+        inside = false
+        onDrag?(false)
+    }
+}
+
+/// The same catcher, worn by the web view itself.
+final class BookbindDropWebView: WKWebView {
+    var onFiles: (([URL]) -> Void)?
+    var onDrag: ((Bool) -> Void)?
+    private var inside = false
+
+    private func entering(_ info: NSDraggingInfo) -> NSDragOperation {
+        guard !BookbindDropCatcher.files(info).isEmpty else { return super.draggingEntered(info) }
+        if !inside { inside = true; onDrag?(true) }
+        return .copy
+    }
+
+    override func draggingEntered(_ info: NSDraggingInfo) -> NSDragOperation { entering(info) }
+    override func draggingUpdated(_ info: NSDraggingInfo) -> NSDragOperation { entering(info) }
+
+    override func draggingExited(_ info: NSDraggingInfo?) {
+        if inside { inside = false; onDrag?(false) }
+        super.draggingExited(info)
+    }
+
+    override func performDragOperation(_ info: NSDraggingInfo) -> Bool {
+        let urls = BookbindDropCatcher.files(info)
+        if inside { inside = false; onDrag?(false) }
+        guard !urls.isEmpty else { return super.performDragOperation(info) }
+        onFiles?(urls)
+        return true
     }
 }

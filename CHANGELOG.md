@@ -1,3 +1,22 @@
+## 0.19.0 — Bookbind takes a drop, and shows you the run
+
+The Bookbind screen can now be handed a folder by dragging it in from the Finder,
+and pressing Make the audiobook opens a panel that follows that one run to the end.
+
+A folder dropped on the screen becomes the book's folder — the one the `.m4b` is
+written into and the one the originals are moved aside inside — and loose audio
+files are added to the chapter list already there. A veil comes up while files are
+held over the page, and a drop that holds nothing playable says so rather than
+doing nothing. The drop is caught by the app rather than by the page, because a web
+page is never told where a dropped file lives and Bookbind needs the real path; the
+same catcher is carried by Bookbind.app.
+
+The run panel shows planning, then a real percentage with the audio done out of the
+audio total, then checking, then moving the originals aside, and then Saved — the
+exact path the book was written to, with Show in Finder. It can be stopped, sent to
+the background and brought back with Progress on the job, and closed without
+stopping anything. The bundled engine is Bookbind 1.5.0.
+
 # Housekeeping changelog
 
 ## 0.18.6 — Optional Dock icon
