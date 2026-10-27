@@ -1,3 +1,29 @@
+## 0.20.0 — Local Models, and the octopus opens the window again
+
+**Local Models** is a new screen, in Maintenance and in the Jobs menu (⇧⌘I):
+everything installed for local inference in one list — Ollama, LM Studio, the
+housekeeper's own weights, a running MLX server, and the Hugging Face cache — with
+what each one weighs on disk, what each one is holding in memory now, and a Load or
+Unload on every row that can take one. Nothing is downloaded from it and nothing is
+deleted by it: the only thing this screen changes is memory.
+
+Loading is measured before it is offered. A model that needs more memory than is
+free is shown with the arithmetic — "this one needs about 6.4 GB and 3.9 GB is
+free" — instead of a button, because on a 16 GB Mac a model that does not fit does
+not fail politely. One model loads at a time, and **Unload Everything** is there for
+when the machine needs the room back. LM Studio is read as a folder and never woken
+by a command; Ollama is read through its own service; the Hugging Face cache is
+listed as downloads, because a file that nothing can run is not a model you can load.
+
+The five buttons at the foot of the menu bar panel — Open, Scan, Ask, MediaDock,
+Bookbind — work again. They were bringing a window that SwiftUI had already finished
+with to the front: it stays in the window list with its style mask intact, so it
+still answers "can I become the main window", and ordering it forward put nothing on
+screen. The live window was always there, one entry further down. A minimized window
+is now restored rather than left in the Dock, and an app that is refused activation
+still puts its window in front. The panel itself is also reachable without a mouse:
+**Jobs ▸ Menu Bar Panel** (⇧⌘M).
+
 ## 0.19.0 — Bookbind takes a drop, and shows you the run
 
 The Bookbind screen can now be handed a folder by dragging it in from the Finder,

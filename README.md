@@ -8,7 +8,7 @@ I also did not want to make one of those cleaners that announces that it has fou
 
 Housekeeping has two appearances: a burgundy desktop interface with a grouped sidebar, and a Platinum skin with beveled controls, gray panels, and a striped title bar. Both use the same storage overview and tools. The octopus in the menu bar is the housekeeper.
 
-[Download Housekeeping 0.19.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.19.0) · [Release notes](releases/v0.19.0.md)
+[Download Housekeeping 0.20.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.20.0) · [Release notes](releases/v0.20.0.md)
 
 ## What you actually do with it
 
@@ -123,6 +123,22 @@ Settings shows downloaded models, their disk usage, and controls to delete an in
 Folder questions use the selected folder, known app locations, or a matching path from the held disk inventory. Exact paths can be checked for directory metadata and up to 16 immediate child names. This does not read file contents. Missing or ambiguous paths are stated explicitly. The discussed path is shown in chat, and follow-up questions retain that subject.
 
 Generated answers can be wrong. For removal questions, Housekeeping displays its recorded assessment separately. The model cannot select items, move files, or override the cleanup policy. Conversation replies can be stopped, and downloaded-model runtime memory is released after the panel has been closed for 45 seconds.
+
+### Local models
+
+**Local Models** (Maintenance, or ⇧⌘I) is one list of everything on this Mac that can
+hold a model in memory: Ollama, LM Studio, the housekeeper's own weights, a running MLX
+server, and the Hugging Face cache. Each row says what it weighs on disk and what it is
+holding now, and each offers the one thing it can do — **Load** while it is on disk,
+**Unload** while it is in memory.
+
+Nothing is downloaded from this screen and nothing is deleted by it; the only thing it
+changes is memory. Loading is measured first: a model that needs more than the memory
+that is free is shown with the arithmetic instead of a button, because a model that does
+not fit does not fail politely on a 16 GB Mac. One loads at a time, and **Unload
+Everything** takes them all out when the room is needed back. LM Studio is read as a
+folder rather than by waking the app, and the Hugging Face cache is listed as downloads
+rather than as models, because a file nothing can run is not one.
 
 ### The setup check
 

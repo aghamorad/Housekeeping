@@ -62,14 +62,15 @@ final class AppState: ObservableObject {
         case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
         case protectionList, diskBrowser, reconcile, updateList, setupCheck
         case housekeeper, routes, phone, mediaDock, bookbind, selfUpdate
-        case clean
+        case clean, localModels
 
         var id: String { rawValue }
 
         var isWorkspace: Bool {
             switch self {
             case .clean, .diskBrowser, .reconcile, .updateList, .setupCheck, .routes,
-                 .phone, .mediaDock, .bookbind, .quarantine, .protectionList: return true
+                 .phone, .mediaDock, .bookbind, .quarantine, .protectionList,
+                 .localModels: return true
             default: return false
             }
         }
@@ -99,6 +100,9 @@ final class AppState: ObservableObject {
     }
 
     let diskBrowser = DiskBrowserModel()
+    /// What is installed locally and what is in memory right now. A model's own
+    /// inventory, so that reading it cannot disturb the scan or the disk browser.
+    let localModels = LocalModelInventory()
     lazy var reconciler = ReconcileModel()
     lazy var routeTester = RoutesModel()
     lazy var phoneController = PhoneModel()
@@ -166,6 +170,13 @@ final class AppState: ObservableObject {
     var showDiskBrowser: Bool {
         get { screen == .diskBrowser }
         set { show(.diskBrowser, newValue) }
+    }
+    /// Whether the local-model list is open. Only the flag lives here: what is
+    /// installed and what is loaded belong to `LocalModelInventory`, which re-reads
+    /// the runtimes itself.
+    var showLocalModels: Bool {
+        get { screen == .localModels }
+        set { show(.localModels, newValue) }
     }
     /// Whether the two-folder comparison is open. Only the flag lives here, for
     /// the same reason as the disk browser: which pair is on screen and what the

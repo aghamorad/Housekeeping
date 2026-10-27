@@ -112,6 +112,8 @@
 		B1000009 /* SelfCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000009; };
 		B100000A /* BookbindEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200000A; };
 		B100000B /* BookbindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200000B; };
+		E1000001 /* LocalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000001; };
+		E1000002 /* ModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2000002; };
 		C1000001 /* CleanerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001; };
 		C1000002 /* CleanerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000002; };
 		C1000003 /* CleanerScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000003; };
@@ -241,6 +243,8 @@
 		B2000009 /* SelfCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MediaDock/SelfCheck.swift; sourceTree = "<group>"; };
 		B200000A /* BookbindEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Bookbind/BookbindEngine.swift; sourceTree = "<group>"; };
 		B200000B /* BookbindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Bookbind/BookbindView.swift; sourceTree = "<group>"; };
+		E2000001 /* LocalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Models/LocalModels.swift; sourceTree = "<group>"; };
+		E2000002 /* ModelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Models/ModelsView.swift; sourceTree = "<group>"; };
 		C2000001 /* CleanerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/CleanerModel.swift; sourceTree = "<group>"; };
 		C2000002 /* CleanerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/CleanerModels.swift; sourceTree = "<group>"; };
 		C2000003 /* CleanerScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/CleanerScanner.swift; sourceTree = "<group>"; };
@@ -362,6 +366,8 @@
 				B2000009,
 				B200000A,
 				B200000B,
+				E2000001,
+				E2000002,
 				D2000002,
 				D2000003,
 				D2000004,
@@ -526,6 +532,8 @@
 				B1000008,
 				B1000009,
 				B100000A,
+				E1000001,
+				E1000002,
 				B100000B,
 				D1000002,
 				D1000003,

@@ -53,6 +53,7 @@ SOURCES=(
   "$ROOT_DIR"/Housekeeping/Sources/Phone/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/MediaDock/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Bookbind/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/Models/*.swift
 )
 
 WORK_ROOT="$(mktemp -d /private/tmp/housekeeping-package.XXXXXX)"

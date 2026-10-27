@@ -204,6 +204,33 @@ struct EnvironmentAudit: Sendable {
         return Set(result.stdout.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
     }
 
+    /// Whether linking a keg would collide with files another installer has
+    /// already put in the same folder — in practice, a Python library whose
+    /// site-packages entries were installed by pip. `brew link` fails on the
+    /// first of these, so offering it would offer a fix that cannot run.
+    static func kegLinkIsBlocked(name: String, brewPrefix: String) -> Bool {
+        let cellar = URL(fileURLWithPath: brewPrefix).appendingPathComponent("Cellar/\(name)")
+        let manager = FileManager.default
+        guard let versions = try? manager.contentsOfDirectory(
+            at: cellar, includingPropertiesForKeys: nil
+        ) else { return false }
+
+        for version in versions {
+            let lib = version.appendingPathComponent("lib")
+            let pyDirs = (try? manager.contentsOfDirectory(at: lib, includingPropertiesForKeys: nil)) ?? []
+            for pyDir in pyDirs where pyDir.lastPathComponent.hasPrefix("python3.") {
+                let kegSite = pyDir.appendingPathComponent("site-packages")
+                let entries = (try? manager.contentsOfDirectory(atPath: kegSite.path)) ?? []
+                let shared = URL(fileURLWithPath: brewPrefix)
+                    .appendingPathComponent("lib/\(pyDir.lastPathComponent)/site-packages")
+                for entry in entries where manager.fileExists(atPath: shared.appendingPathComponent(entry).path) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     /// Homebrew's own report, plus `brew missing`, which doctor only summarises.
     ///
     /// Doctor's output is kept whole rather than reduced to the parts this app
@@ -637,6 +664,23 @@ struct EnvironmentAudit: Sendable {
                     summary: "\(name) is still in Homebrew's cellar and doctor lists it as unlinked, but Homebrew no longer treats it as a current formula — `brew info \(name)` resolves to its replacement. It is not linked on purpose, so nothing here needs fixing.",
                     evidence: doctor.sectionLines(containing: "unlinked kegs", mentioning: name).map { "brew doctor: \($0)" },
                     steps: ["# If nothing still needs the old keg, it can go:", "brew uninstall \(name)"],
+                    fix: nil,
+                    isSelected: false
+                ))
+                continue
+            }
+            // A Python library keg that shares its site-packages folder with a
+            // pip install. `brew link` would fail on the first file that is
+            // already there, and the safe repair is to leave it alone.
+            if let brewPrefix, Self.kegLinkIsBlocked(name: name, brewPrefix: brewPrefix) {
+                findings.append(EnvironmentFinding(
+                    id: "unlinked:\(name)",
+                    category: .homebrew,
+                    severity: .untidy,
+                    title: "\(name) shares a folder with files already installed there",
+                    summary: "\(name) is installed but Homebrew cannot link it: the files it would place are already in Python's shared package folder, put there by another installer. Linking would mean overwriting them, so it is left unlinked and Python keeps using the copy that is there.",
+                    evidence: doctor.sectionLines(containing: "unlinked kegs", mentioning: name).map { "brew doctor: \($0)" },
+                    steps: [],
                     fix: nil,
                     isSelected: false
                 ))
