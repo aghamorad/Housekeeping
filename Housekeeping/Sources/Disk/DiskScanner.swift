@@ -102,6 +102,12 @@ final class DiskScanner {
             return context.finish()
         }
 
+        // Counted before the walk so the screen has a denominator: the root's own
+        // children are what the walk works through one at a time, and reporting how
+        // many are finished turns a spinner into a bar that actually moves.
+        context.foldersTotal = (try? fileManager.contentsOfDirectory(atPath: options.root.path))?.count ?? 0
+        context.foldersDone = 0
+
         // The root is always kept, however small it turns out to be, because it is
         // the only place the browser can define "up" against.
         let aggregate = measure(options.root.path, depth: 0, isRoot: true, context: &context)
@@ -244,6 +250,12 @@ final class DiskScanner {
                 context.bytesScanned += size
             }
 
+            // At depth 0 the loop above *is* the top level, so one finished entry
+            // is one finished folder of the denominator counted in `scan`.
+            if depth == 0 {
+                context.foldersDone += 1
+            }
+
             context.maybeReportProgress(path: path)
         }
 
@@ -267,6 +279,8 @@ final class DiskScanner {
 
         var filesScanned = 0
         var directoriesScanned = 0
+        var foldersDone = 0
+        var foldersTotal = 0
         var bytesScanned: Int64 = 0
         var keptFolders = 0
         var skippedSymlinks = 0
@@ -297,6 +311,8 @@ final class DiskScanner {
                 filesScanned: filesScanned,
                 directoriesScanned: directoriesScanned,
                 bytesScanned: bytesScanned,
+                foldersDone: foldersDone,
+                foldersTotal: foldersTotal,
                 currentPath: path,
                 elapsed: Date().timeIntervalSince(startedAt)
             )

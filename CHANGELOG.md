@@ -1,3 +1,22 @@
+## 0.21.0 — bars instead of spinners, and a way forward
+
+Two long operations answered "is it working" and never "how much longer". **Update Apps**
+now shows a bar over the whole run — *3 of 5 updated*, with the name being worked on under
+it — counted in rows, because a row is the only unit with a real length across Homebrew,
+GitHub releases and the store. The reading pass behind it has a bar in two honest states:
+travelling (*Counting what is installed*) while the bundles are being counted and there is
+no denominator, then filling (*Reading 34 of 210*) once the inventory lands. Housekeeping's
+own update shows *Step 3 of 6* over its six named steps.
+
+The disk browser gained **Forward** (⌘]), beside Back, so the path bar can be walked in
+both directions; opening anything new clears it. Measuring the disk now fills a bar over
+the root's top-level folders — *5 of 134* — with the file count, bytes read and current
+folder beneath it, instead of a spinner and two live counters.
+
+Motion is back at twenty frames a second wherever the mark can be seen, which is smoother
+than the twelve the menu bar ran before 0.20.1. The window costs about 2.5% of one core
+while frontmost; idle in the menu bar it is still 0.0%.
+
 ## 0.20.1 — she stops breathing for an empty room
 
 A copy of Housekeeping sitting in the menu bar with no window open was holding about 28%

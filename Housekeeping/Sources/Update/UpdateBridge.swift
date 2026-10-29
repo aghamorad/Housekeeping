@@ -39,6 +39,8 @@ extension AppState {
         updateStopRequested = false
         updateIsWorking = false
         updateIsReading = true
+        updateReadDone = 0
+        updateReadTotal = 0
 
         let exceptions = updateExceptions
 
@@ -51,6 +53,11 @@ extension AppState {
             do {
                 let inventory = try await AppInventory.scan(using: runner)
                 try Task.checkCancellation()
+                // The length of the reading is known here, before the slow part:
+                // one check per application and per package. Published so the
+                // screen can show a bar instead of a spinner that says nothing.
+                self.updateReadTotal = inventory.applications.count + inventory.packages.count
+                self.updateReadDone = 0
                 // Asked once and shared by every row: `brew outdated` is a single
                 // expensive call, and running it per package would be hundreds.
                 // Deliberately after the inventory, not beside it — both drive
@@ -66,6 +73,7 @@ extension AppState {
                         path: application.path
                     ).key
                     let check = await engine.check(application: application, prepared: prepared)
+                    self.updateReadDone += 1
                     rows.append(self.row(
                         for: application,
                         check: check,
@@ -76,6 +84,7 @@ extension AppState {
                 for package in inventory.packages {
                     try Task.checkCancellation()
                     let check = await engine.check(package: package, prepared: prepared)
+                    self.updateReadDone += 1
                     rows.append(self.row(
                         for: package,
                         check: check,
@@ -238,6 +247,9 @@ extension AppState {
         updateSummaryLine = nil
         updateStopRequested = false
         updateIsWorking = true
+        updateRunDone = 0
+        updateRunTotal = 1
+        updateRunCurrent = row.name
 
         let application = updateApplications.first { $0.bundleIdentifier == row.id }
 
@@ -284,6 +296,9 @@ extension AppState {
         updateSummaryLine = nil
         updateStopRequested = false
         updateIsWorking = true
+        updateRunDone = 0
+        updateRunTotal = targets.count
+        updateRunCurrent = nil
 
         let applications = updateApplications
 
@@ -297,6 +312,7 @@ extension AppState {
             for row in targets {
                 if self.updateStopRequested { break }
                 guard let action = row.action else { continue }
+                self.updateRunCurrent = row.name
                 let application = applications.first { $0.bundleIdentifier == row.id }
                 do {
                     let outcome = try await engine.perform(action, for: application)
@@ -314,6 +330,7 @@ extension AppState {
                 // Published as they land, so a long run shows its progress rather
                 // than a spinner that could mean anything.
                 self.updateOutcomes = outcomes
+                self.updateRunDone = outcomes.count
             }
 
             self.finishUpdateRun(outcomes)
@@ -339,6 +356,7 @@ extension AppState {
             updateSummaryLine = "\(succeeded) of \(outcomes.count) updated."
         }
         updateIsWorking = false
+        updateRunCurrent = nil
         updateRunner = nil
         // The list described the Mac as it was before the updates. It is read
         // again so the rows show what is actually installed now; the outcomes

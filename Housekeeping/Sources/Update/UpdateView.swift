@@ -149,6 +149,10 @@ struct UpdateView: View {
             header
             ThemePanel(padding: 10) { toolbar }
 
+            if appState.updateIsWorking {
+                runProgress
+            }
+
             if appState.updateIsReading {
                 readingState
             } else if visibleCount == 0 {
@@ -310,10 +314,26 @@ struct UpdateView: View {
         .help(isOn ? "Showing only \(title). Press again to show every family." : "Show only \(title).")
     }
 
+    /// The reading pass, with a bar once its length is known.
+    ///
+    /// The inventory is counted before the first feed is asked, so "34 of 210" is a
+    /// real fraction rather than a guess: the slow part is one check per thing
+    /// installed. Before the inventory lands there is nothing honest to divide by,
+    /// so the spinner stays for those first seconds.
     private var readingState: some View {
         VStack(spacing: 10) {
             Spacer()
-            ProgressView()
+            ProgressBar(
+                fraction: appState.updateReadTotal > 0
+                    ? Double(appState.updateReadDone) / Double(max(appState.updateReadTotal, 1))
+                    : nil,
+                caption: appState.updateReadTotal > 0
+                    ? "Reading \(appState.updateReadDone) of \(appState.updateReadTotal)"
+                    : "Counting what is installed",
+                detail: "The bundles are read first — their signatures, their receipts, Homebrew's list — and then every one of them is asked once for its newest version.",
+                height: 9
+            )
+            .frame(maxWidth: 460)
             Text("Reading what is installed and asking each source for its newest version.")
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
@@ -395,6 +415,24 @@ struct UpdateView: View {
                 }
             }
             .padding(.vertical, 2)
+        }
+    }
+
+    /// The run, in one bar and one name.
+    ///
+    /// A row is the unit of work, because that is the only unit that has a real
+    /// length: a Homebrew cask is a command, a GitHub release is a download of an
+    /// unknown size, and the store is whatever the store decides. Saying "3 of 5"
+    /// and naming the one being worked on is true for all of them, where a
+    /// byte-percentage would be invented for two of the three.
+    private var runProgress: some View {
+        ThemePanel(padding: 10) {
+            ProgressBar(
+                fraction: Double(appState.updateRunDone) / Double(max(appState.updateRunTotal, 1)),
+                caption: "\(appState.updateRunDone) of \(appState.updateRunTotal) updated",
+                detail: appState.updateRunCurrent.map { "Working on \($0). An update in progress is never interrupted; Stop waits for it to finish." },
+                height: 10
+            )
         }
     }
 
