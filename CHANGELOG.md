@@ -1,3 +1,13 @@
+## 0.21.1 — the Bookbind catalogue search reaches the catalogue
+
+**Search online catalogue**, on the Bookbind screen, failed on this Mac with
+`CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate`. Not a network
+fault: a python.org Python on macOS has no root certificates until its
+`Install Certificates.command` is run, and every https request fails verification
+until then. The trust store is now named — `certifi`'s bundle when installed, macOS's
+`/etc/ssl/cert.pem` otherwise — for the catalogue lookup and for cover downloads.
+This is Bookbind 1.5.1 carried inside the app.
+
 ## 0.21.0 — bars instead of spinners, and a way forward
 
 Two long operations answered "is it working" and never "how much longer". **Update Apps**
