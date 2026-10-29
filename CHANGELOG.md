@@ -1,3 +1,23 @@
+## 0.20.1 — she stops breathing for an empty room
+
+A copy of Housekeeping sitting in the menu bar with no window open was holding about 28%
+of one core, all day — the top consumer on the machine by its own panel's reading — while
+doing nothing at all. Two animations were responsible. The menu bar octopus was played
+back on a twelve-frames-a-second timer installed at launch and never stopped, and the
+window's marks were `TimelineView`s redrawing at twelve and twenty frames a second even
+with `working: false`, from a window SwiftUI had closed but not torn down.
+
+Motion is now spent from a budget: it runs while the app is active, while the mark's own
+window is on screen, and for a moment at launch, and stops dead otherwise — a still frame,
+no timer, no layout. A sleeping display stops it too. Two more costs fell out of the same
+measurements: the panel's octopus is now still, because every animated frame in a popover
+re-solves the panel's whole Auto Layout at about 1.4% of a core per frame; and the panel's
+height reporting is debounced, because resizing the popover made it lay itself out again
+and report a new height, round and round.
+
+Measured after the change on the same Mac: 28% → 0.0% in the menu bar with the app in the
+background; ~2.6% with the window open and frontmost; ~1.5% with the panel open.
+
 ## 0.20.0 — Local Models, and the octopus opens the window again
 
 **Local Models** is a new screen, in Maintenance and in the Jobs menu (⇧⌘I):

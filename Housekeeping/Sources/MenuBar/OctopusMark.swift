@@ -704,22 +704,42 @@ func addScallops(_ path: inout Path, from start: CGPoint, to end: CGPoint, count
 
 // MARK: - The moving one
 
-/// Her, alive. The menu bar walks this by hand at twelve frames a second rather
-/// than using `TimelineView`, because it has to rasterise each frame into an image
-/// and hand that to the status item.
+/// Her, alive — when someone is there to see it.
+///
+/// The mark breathes, and a breathing mark means a `TimelineView`, which means the
+/// whole body is evaluated and laid out twenty times a second. On a window nobody
+/// is looking at that is not atmosphere, it is a fan. So the breathing is spent
+/// from `MotionBudget`: while the app is active or the menu bar panel is open she
+/// moves as before, and the rest of the time she is one still frame — the same
+/// drawing at rest, with no clock behind it and no work in it.
+///
+/// This is also why she is still while `working == false` on a screen nobody is
+/// looking at: the effort only changes how hard she breathes, never whether the
+/// drawing is correct.
 struct WorkingOctopus: View {
     var size: CGFloat
     var working: Bool = true
 
+    @ObservedObject private var budget = MotionBudget.shared
+    @State private var onScreen = false
+
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1.0 / 20)) { context in
-            OctopusMark(
-                time: context.date.timeIntervalSinceReferenceDate,
-                effort: working ? 1 : 0
-            )
-            .frame(width: size, height: size)
+        Group {
+            if budget.isTicking && onScreen {
+                TimelineView(.periodic(from: .now, by: working ? 1.0 / 12 : 1.0 / 8)) { context in
+                    mark(at: context.date.timeIntervalSinceReferenceDate)
+                }
+            } else {
+                mark(at: 0)
+            }
         }
         .frame(width: size, height: size)
+        .tracksOnScreen($onScreen)
         .accessibilityLabel("The housekeeper, looking around")
+    }
+
+    private func mark(at time: Double) -> some View {
+        OctopusMark(time: time, effort: working ? 1 : 0)
+            .frame(width: size, height: size)
     }
 }

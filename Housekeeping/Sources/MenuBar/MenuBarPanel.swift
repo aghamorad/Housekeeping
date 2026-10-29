@@ -67,6 +67,17 @@ struct MenuBarPanel: View {
 
     private var snapshot: VitalsSnapshot { vitals.snapshot }
 
+    /// The header's octopus, drawn the same way whether it is moving or still.
+    private func panelMark(at time: Double) -> some View {
+        OctopusMark(
+            time: time,
+            color: HousekeepingInk.redLifted,
+            effort: effort,
+            rendering: .fullColour
+        )
+        .frame(width: 46, height: 46)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -111,15 +122,14 @@ struct MenuBarPanel: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            TimelineView(.periodic(from: .now, by: 1.0 / 12)) { context in
-                OctopusMark(
-                    time: context.date.timeIntervalSinceReferenceDate,
-                    color: HousekeepingInk.redLifted,
-                    effort: effort,
-                    rendering: .fullColour
-                )
-                .frame(width: 46, height: 46)
-            }
+            // Still, on purpose. Every animated frame inside a popover makes AppKit
+            // re-solve the whole panel's Auto Layout, and measured on this Mac that
+            // is about 1.4% of a core per frame: twelve frames a second of a
+            // forty-six point drawing cost a fifth of a core, more than the rest of
+            // the app put together. The mark in the menu bar still breathes, and so
+            // does the one in the window; this one is the price the panel is not
+            // going to pay.
+            panelMark(at: 0)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("HOUSEKEEPING")
