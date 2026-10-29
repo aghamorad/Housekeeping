@@ -44,6 +44,8 @@ struct DiskBrowserView: View {
         Group {
             Button("Back") { model.goBack() }
                 .keyboardShortcut("[", modifiers: .command)
+            Button("Forward") { model.goForward() }
+                .keyboardShortcut("]", modifiers: .command)
             Button("Up") { model.goUp() }
                 .keyboardShortcut(.upArrow, modifiers: .command)
             Button("Measure") { scan(rootChoice.url) }
@@ -106,6 +108,15 @@ struct DiskBrowserView: View {
             }
 
             ThemeButton(
+                title: "Forward",
+                systemImage: "chevron.forward",
+                isEnabled: model.canGoForward,
+                help: "Go forward again, to the folder you came back out of (⌘])."
+            ) {
+                model.goForward()
+            }
+
+            ThemeButton(
                 title: "Up",
                 systemImage: "arrow.up",
                 isEnabled: model.canGoUp,
@@ -165,10 +176,17 @@ struct DiskBrowserView: View {
         VStack(spacing: 14) {
             Spacer()
             if let progress = model.progress {
-                ProgressView()
-                Text("\(progress.filesScanned.formatted()) files so far · \(progress.bytesScanned.humanReadable)")
-                    .font(style.bodyFont)
-                    .foregroundStyle(style.text)
+                ProgressBar(
+                    fraction: progress.foldersTotal > 0
+                        ? Double(progress.foldersDone) / Double(progress.foldersTotal)
+                        : 0,
+                    caption: progress.foldersTotal > 0
+                        ? "\(progress.foldersDone) of \(progress.foldersTotal) top-level folders"
+                        : "Measuring",
+                    detail: "\(progress.filesScanned.formatted()) files so far · \(progress.bytesScanned.humanReadable) read",
+                    height: 10
+                )
+                .frame(maxWidth: 460)
                 Text(progress.currentFolderName)
                     .font(style.pathFont)
                     .foregroundStyle(style.secondaryText)

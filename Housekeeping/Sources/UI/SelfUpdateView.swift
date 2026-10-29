@@ -401,6 +401,20 @@ struct SelfUpdateView: View {
 
             TrayBar {
                 VStack(alignment: .leading, spacing: 0) {
+                    // The app's own update is six named steps, so its length is
+                    // known before it starts: a bar over them is the honest picture
+                    // of where it is, in one line, above the step list that says
+                    // what each one is doing.
+                    ProgressBar(
+                        fraction: Double(doneStepCount) / Double(SelfUpdateStep.allCases.count),
+                        caption: appState.selfUpdateIsRunning
+                            ? "Step \(min(doneStepCount + 1, SelfUpdateStep.allCases.count)) of \(SelfUpdateStep.allCases.count)"
+                            : "Update",
+                        detail: runningStepTitle,
+                        height: 9
+                    )
+                    .padding(.bottom, 4)
+
                     ForEach(SelfUpdateStep.allCases) { step in
                         stepRow(step)
                     }
@@ -416,6 +430,23 @@ struct SelfUpdateView: View {
                     .padding(.top, 2)
             }
         }
+    }
+
+    /// How many steps have finished. Failed and handed-off count as finished: the
+    /// bar is about where the work has got to, not about how it went.
+    private var doneStepCount: Int {
+        SelfUpdateStep.allCases.reduce(0) { total, step in
+            let state = appState.selfUpdateSteps[step] ?? .pending
+            return total + (state.isPending || state.isRunning ? 0 : 1)
+        }
+    }
+
+    private var runningStepTitle: String? {
+        for step in SelfUpdateStep.allCases
+        where (appState.selfUpdateSteps[step] ?? .pending).isRunning {
+            return step.title
+        }
+        return nil
     }
 
     private func stepRow(_ step: SelfUpdateStep) -> some View {

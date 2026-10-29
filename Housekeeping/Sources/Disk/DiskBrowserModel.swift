@@ -44,6 +44,11 @@ final class DiskBrowserModel: ObservableObject {
     /// because the reader who has walked down through four folders wants to come
     /// back out the way they came, not by retracing the tree by hand.
     @Published private(set) var history: [String] = []
+    /// Where Forward goes, newest last. Back is only half of "go back and forth":
+    /// a reader who came out of four folders to look at something and wants the
+    /// fourth one again should not have to walk in again. Opening anything new
+    /// clears it, because there is no longer a single "forward" from here.
+    @Published private(set) var forward: [String] = []
     @Published private(set) var isScanning = false
     @Published private(set) var progress: DiskScanProgress?
     /// A sentence about the last thing that happened — a measurement that was
@@ -89,6 +94,7 @@ final class DiskBrowserModel: ObservableObject {
         snapshot = nil
         currentPath = root.path
         history = []
+        forward = []
         note = nil
 
         let options = DiskScanner.Options(root: root)
@@ -126,6 +132,7 @@ final class DiskBrowserModel: ObservableObject {
         snapshot = measured
         currentPath = measured.root
         history = []
+        forward = []
         measured.save(to: snapshotURL)
 
         if !measured.isComplete {
@@ -139,6 +146,7 @@ final class DiskBrowserModel: ObservableObject {
         snapshot = nil
         currentPath = ""
         history = []
+        forward = []
         note = nil
         try? FileManager.default.removeItem(at: snapshotURL)
     }
@@ -170,6 +178,8 @@ final class DiskBrowserModel: ObservableObject {
 
     var canGoBack: Bool { !history.isEmpty }
 
+    var canGoForward: Bool { !forward.isEmpty }
+
     var canGoUp: Bool {
         guard let snapshot else { return false }
         return snapshot.parent(of: currentPath) != nil
@@ -178,6 +188,7 @@ final class DiskBrowserModel: ObservableObject {
     func open(_ path: String) {
         guard path != currentPath, snapshot?.node(at: path) != nil else { return }
         history.append(currentPath)
+        forward.removeAll()
         query = ""
         currentPath = path
     }
@@ -187,12 +198,21 @@ final class DiskBrowserModel: ObservableObject {
     /// where the third click happened, not one level up from here.
     func goBack() {
         guard let previous = history.popLast() else { return }
+        forward.append(currentPath)
         currentPath = previous
+    }
+
+    /// The other half of Back: the folder this one was left for.
+    func goForward() {
+        guard let next = forward.popLast() else { return }
+        history.append(currentPath)
+        currentPath = next
     }
 
     func goUp() {
         guard let parent = snapshot?.parent(of: currentPath) else { return }
         history.append(currentPath)
+        forward.removeAll()
         currentPath = parent
     }
 

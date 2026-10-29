@@ -269,7 +269,7 @@ struct RailButton: View {
     private var glyph: some View {
         if showsOctopus {
             if budget.isTicking && onScreen {
-                TimelineView(.periodic(from: .now, by: 1.0 / 8)) { context in
+                TimelineView(.periodic(from: .now, by: 1.0 / 20)) { context in
                     mark(at: context.date.timeIntervalSinceReferenceDate)
                 }
             } else {
@@ -298,6 +298,87 @@ struct RailButton: View {
         // octopus-shaped blob.
         .frame(width: diameter * 0.80, height: diameter * 0.80)
         .offset(y: diameter * 0.03)
+    }
+}
+
+/// A bar with a length: work that can say how much of itself is left.
+///
+/// The Mac's own `ProgressView` draws a determinate bar only when it is handed a
+/// value, and its bar ignores the app's two appearances entirely. This is the same
+/// idea in the app's own ink, carrying the sentence that belongs above it and the
+/// line that belongs under it, so a long operation can say "12 of 210" in one
+/// place instead of a spinner that could mean anything.
+struct ProgressBar: View {
+    @Environment(\.uiStyle) private var style
+
+    /// 0 … 1, or `nil` while the length of the work is still unknown — a pass that
+    /// is still counting what it has to do. Clamped here rather than at every call
+    /// site. `nil` draws a bar that travels instead of filling, so the two states
+    /// look different and neither of them lies.
+    var fraction: Double?
+    var caption: String?
+    var detail: String?
+    var height: CGFloat = 8
+    var tint: Color?
+
+    private var clamped: Double { min(1, max(0, fraction ?? 0)) }
+
+    @State private var travelling = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if let caption {
+                HStack(spacing: 8) {
+                    Text(caption)
+                        .font(style.labelFont)
+                        .foregroundColor(style.text)
+                    Spacer(minLength: 8)
+                    if fraction != nil {
+                        Text("\(Int((clamped * 100).rounded()))%")
+                            .font(style.smallFont)
+                            .foregroundColor(style.secondaryText)
+                            .monospacedDigit()
+                    }
+                }
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(style.border.opacity(0.30))
+
+                    if fraction == nil {
+                        // A third of the bar, travelling. The animation is on the
+                        // offset of one capsule, so it costs a composited layer
+                        // rather than a redraw of the view behind it.
+                        Capsule()
+                            .fill((tint ?? style.accent).opacity(0.85))
+                            .frame(width: proxy.size.width / 3)
+                            .offset(x: travelling ? proxy.size.width : -proxy.size.width / 3)
+                            .animation(
+                                .linear(duration: 1.15).repeatForever(autoreverses: false),
+                                value: travelling
+                            )
+                            .onAppear { travelling = true }
+                    } else {
+                        Capsule()
+                            .fill(tint ?? style.accent)
+                            .frame(width: max(clamped > 0 ? 4 : 0, proxy.size.width * CGFloat(clamped)))
+                            .animation(.easeOut(duration: 0.25), value: clamped)
+                    }
+                }
+            }
+            .frame(height: height)
+            .clipShape(Capsule())
+
+            if let detail {
+                Text(detail)
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(fraction == nil ? "working" : "\(Int((clamped * 100).rounded())) percent")
     }
 }
 

@@ -284,6 +284,17 @@ final class AppState: ObservableObject {
     @Published var updateIsReading = false
     /// True while updates are actually being applied.
     @Published var updateIsWorking = false
+    /// How much of the run is done, and which row is being worked on. Counted in
+    /// rows rather than in bytes because a Homebrew cask gives no byte total, and a
+    /// bar that invents one would sit at 90% for the minute that matters.
+    @Published var updateRunDone = 0
+    @Published var updateRunTotal = 0
+    @Published var updateRunCurrent: String?
+    /// The same for the reading pass: how many applications and packages have been
+    /// asked so far. The inventory is counted first, so the length is known before
+    /// the slow part starts.
+    @Published var updateReadDone = 0
+    @Published var updateReadTotal = 0
     /// The one line above the outcomes, e.g. "3 of 5 updated".
     @Published var updateSummaryLine: String?
     /// Things the reading noticed — Homebrew missing, `mas` missing, an answer

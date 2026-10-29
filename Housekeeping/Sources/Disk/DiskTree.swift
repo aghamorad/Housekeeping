@@ -215,6 +215,12 @@ struct DiskScanProgress: Equatable {
     var filesScanned: Int
     var directoriesScanned: Int
     var bytesScanned: Int64
+    /// How many of the root's own children have been finished out of how many it
+    /// has. This is the only honest fraction an unbounded walk can offer: the tree
+    /// has no total, but its top level does, and that level is what takes the time
+    /// on a Mac — one entry per volume, per home folder, per application folder.
+    var foldersDone: Int = 0
+    var foldersTotal: Int = 0
     /// The folder being read right now. Named rather than implied, because it is
     /// the only evidence the reader has that the scan is moving.
     var currentPath: String

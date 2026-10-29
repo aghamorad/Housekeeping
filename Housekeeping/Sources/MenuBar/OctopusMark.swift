@@ -726,7 +726,7 @@ struct WorkingOctopus: View {
     var body: some View {
         Group {
             if budget.isTicking && onScreen {
-                TimelineView(.periodic(from: .now, by: working ? 1.0 / 12 : 1.0 / 8)) { context in
+                TimelineView(.periodic(from: .now, by: 1.0 / 20)) { context in
                     mark(at: context.date.timeIntervalSinceReferenceDate)
                 }
             } else {
