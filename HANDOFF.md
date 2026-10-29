@@ -1,58 +1,58 @@
 # Housekeeping — handoff
 
-## Objective (2026-10-27, session 2)
+## Objective (2026-10-30)
 
-Two fixes for Morad: (1) the menu bar panel's five door buttons did nothing; (2) add a
-screen that lists installed local AI models and loads/unloads them. Both shipped as
-**0.20.0**.
+Morad: "housekeeping apparently takes up a lot of battery — can we somehow fix that?"
+His own panel showed Housekeeping as the top consumer (16.9). Shipped as **0.20.1**.
 
 ## Done and verified
 
-- **Menu bar panel, all five buttons.** Root cause: `WindowOpener.withWindow` used
-  `NSApp.windows.first(where: { $0.canBecomeMain })`, and a window SwiftUI has closed
-  keeps its style mask, so it still answers `canBecomeMain` while drawing nothing. The
-  app activated, ordered the dead window front, and the reader saw the desktop. On this
-  Mac there are always two such windows at launch (restored frame + default size), one
-  of them invisible.
-  Fix in `Housekeeping/Sources/MenuBar/StatusItemController.swift`: `liveWindow()` picks
-  key → minimized → visible (titled, level .normal only); `bringForward()` also calls
-  `NSRunningApplication.current.activate`; `orderFrontRegardless()` when activation was
-  refused; `waiting` is kept even when no SwiftUI opener exists yet.
-  Verified: minimize the window → open panel → click **Open** → the same window id
-  returns on screen (`CGWindowListCopyWindowInfo`), not a duplicate.
-- **Panel reachable without the mouse.** `StatusItemController.presentPanel()` +
-  **Jobs ▸ Menu Bar Panel** (⇧⌘M). Added because the octopus can be hidden by a crowded
-  menu bar.
-- **Local Models screen** (`Sources/Models/LocalModels.swift`, `ModelsView.swift`):
-  Ollama (REST `/api/tags`, `/api/ps`; load = `generate` keep_alive 10m, unload = 0),
-  LM Studio (store read as a folder; REST `/api/v0/models` only when already running;
-  `lms` used only for load/unload), the housekeeper's weights + `LlamaServer`, Hermes
-  MLX `/v1/models` + `/unload`, and the HF cache as read-only downloads.
-  RAM guard: `bytes * 1.15 + 700 MB` vs free; refuses with the arithmetic instead of a
-  button. One load at a time; **Unload Everything**.
-  Verified end-to-end with a stand-in Ollama service on :11434 (fake, 1.5 GB): row
-  flipped to IN MEMORY on Load (`keep_alive='10m'` in the server log), back on Unload
-  (`keep_alive=0`). Nothing real was loaded; no model was tested for real (16 GB Mac).
-- Wired: `AppState.Screen.localModels`, `showLocalModels`, `localModels` inventory,
-  ContentView sheet + sidebar (Maintenance) + job, Jobs menu (⇧⌘I), typecheck and
-  package source lists, Xcode project (E1/E2 ids).
+- **Measured first.** `sample 27720` (installed 0.20.0, menu bar only, no window): main
+  thread 100% busy, ~28% CPU, 8.8k idle wakeups/s, call graph under `OctopusMark.body`
+  and `StatusItemController.advance`.
+- **Two causes.** (1) `StatusItemController.install()` added a 12 fps `Timer` and never
+  stopped it — a status-bar image swap and menu bar redraw twelve times a second forever.
+  (2) `WorkingOctopus` was a `TimelineView` at 12/20 fps even with `working: false`, in a
+  window SwiftUI had closed but not torn down, so a menu-bar copy kept laying out and
+  drawing a hidden window.
+- **Fix — `MotionBudget`** (`Housekeeping/Sources/UI/Motion.swift`): motion runs while the
+  app is active (or a token is held — launch greeting only), and `OnScreenProbe`, a
+  zero-sized `NSView` reported through `tracksOnScreen(_:)`, answers whether *this* drawing's
+  window is on screen and unoccluded. Both are needed: opening the panel activates the app,
+  and the closed window would have taken that as its cue.
+- Wired: `WorkingOctopus`, the rail's octopus in `ModernChrome`, the menu bar timer
+  (`setAnimating`, driven from `MotionBudget.$isTicking`), and the panel header.
+- **Two more costs found while measuring, also fixed:** the panel's header octopus made
+  AppKit re-solve the panel's whole Auto Layout per frame (~1.4% CPU per frame at 12 fps),
+  so it is now a still frame; and `resize(to:)` fought the popover's own relayout (resize →
+  layout → new height → resize), so it is debounced 80 ms.
+- **Verified on this Mac, same states:** 28% → **0.0%** idle in the menu bar; **~2.6%** with
+  the window open and frontmost; **~1.5%** with the panel open. Fresh launch → 0.0%;
+  window open but app in the background → 0.0%.
+- Visual check: desktop capture (cua-driver) of the open panel shows the header mark drawing,
+  the vitals live, and the foot reading `Made by Morad · Housekeeping 0.20.1`.
 
 ## Shipped
 
-- Commit `92706fb`, tag `v0.20.0`, release with universal/arm64/x86_64 zips +
-  SHA256SUMS: <https://github.com/aghamorad/Housekeeping/releases/tag/v0.20.0>
-- Packaged build installed in `/Applications` (0.20.0); previous 0.18.6 app moved to
-  `~/.Trash/housekeeping-app-backup-20261027-203743`; old dist in `/tmp/dist-0.19.0-backup`.
-- Guide: `~/Desktop/Housekeeping — a noob's guide.md`.
+- Commit `b6d6bf1`, tag `v0.20.1`, release with universal/arm64/x86_64 zips + SHA256SUMS:
+  <https://github.com/aghamorad/Housekeeping/releases/tag/v0.20.1>
+  (the tag was force-moved once: the first 0.20.1 push predated the panel fixes, so commit,
+  tag and assets were replaced before anyone downloaded them).
+- Packaged build installed in `/Applications` (0.20.1, build 34); the previous app moved to
+  `~/.Trash/housekeeping-app-backup-20261030-*`.
+- Guide rewritten: `~/Desktop/Housekeeping — a noob's guide.md` (the 0.20.0 one was no
+  longer on the Desktop).
 
 ## Not done / open
 
-- The five panel buttons were verified through **Open** only; Scan/Ask/MediaDock/Bookbind
-  share that same `withWindow` path and post notifications ContentView already handles,
-  but were not clicked individually after the fix.
-- Duplicate invisible windows still accumulate at launch (SwiftUI restores more than one
-  and they are not closed). Harmless now that `liveWindow()` ignores them; a tidy-up was
-  attempted in `AppDelegate` and removed because `window.close()` did not take effect.
-- Menu-bar-only mode (`housekeeping.showInDock = 0`) is what Morad runs; the Dock policy
-  change at launch may be part of why two windows appear.
-- `lms` load/unload path is untested (LM Studio has no models installed here).
+- **The panel still costs ~1.5% while open**, from `SystemVitals` sampling once a second.
+  That is by design (it only measures while the panel is up), but a slower tick would cut it.
+- **The window's own marks still relayout the window per frame** (~2.6% with the window open
+  and frontmost). The next lever is drawing the mark without `GeometryReader` (pass the size
+  in) or with a `Canvas`, so a frame does not re-solve constraints. Not attempted.
+- `appResignedActive` clears every motion token as a belt-and-braces guard; the only token
+  left is the launch greeting, which a timer clears.
+- Duplicate invisible windows still accumulate at launch (0.20.0 note, unchanged). They now
+  cost nothing because the on-screen probe keeps their timelines still.
+- Still unverified: the panel's Scan/Ask/MediaDock/Bookbind buttons individually; LM Studio
+  `lms` load/unload (no models installed).
