@@ -8,7 +8,7 @@ I also did not want to make one of those cleaners that announces that it has fou
 
 Housekeeping has two appearances: a burgundy desktop interface with a grouped sidebar, and a Platinum skin with beveled controls, gray panels, and a striped title bar. Both use the same storage overview and tools. The octopus in the menu bar is the housekeeper.
 
-[Download Housekeeping 0.20.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.20.0) · [Release notes](releases/v0.20.0.md)
+[Download Housekeeping 0.20.1](https://github.com/aghamorad/Housekeeping/releases/tag/v0.20.1) · [Release notes](releases/v0.20.1.md)
 
 ## What you actually do with it
 

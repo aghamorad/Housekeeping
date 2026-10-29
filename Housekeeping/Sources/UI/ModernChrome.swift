@@ -133,6 +133,8 @@ struct RailButton: View {
     @State private var hovering = false
     @State private var arrived = false
     @State private var blooming = false
+    @ObservedObject private var budget = MotionBudget.shared
+    @State private var onScreen = false
 
     private let diameter: CGFloat = 36
 
@@ -175,6 +177,7 @@ struct RailButton: View {
         }
         .help(help ?? title)
         .accessibilityLabel(title)
+        .tracksOnScreen($onScreen)
     }
 
     /// The name brightens with the disc under the pointer. The two are one
@@ -260,32 +263,41 @@ struct RailButton: View {
 
     /// A symbol in a disc, or the octopus in a disc. The clock is the same one
     /// the menu bar uses, so the small octopus on this rail and the small octopus
-    /// in the menu bar are breathing in step.
+    /// in the menu bar are breathing in step — and both stop on the same budget,
+    /// so a rail behind a closed window costs nothing either.
     @ViewBuilder
     private var glyph: some View {
         if showsOctopus {
-            TimelineView(.periodic(from: .now, by: 1.0 / 12)) { context in
-                OctopusMark(
-                    time: context.date.timeIntervalSinceReferenceDate,
-                    color: .white,
-                    // It leans into the work when the pointer arrives, which is
-                    // the whole joke: this is the door that talks back.
-                    effort: hovering ? 1 : 0,
-                    // One colour on a coloured disc: the dress, the apron and the
-                    // eyes read as cut-outs rather than as separate inks.
-                    rendering: .singleColour
-                )
-                // Taller than it is wide, because the tentacles hang below the
-                // head and the disc is round — squaring this crops the arms and
-                // the mark becomes an octopus-shaped blob.
-                .frame(width: diameter * 0.80, height: diameter * 0.80)
-                .offset(y: diameter * 0.03)
+            if budget.isTicking && onScreen {
+                TimelineView(.periodic(from: .now, by: 1.0 / 8)) { context in
+                    mark(at: context.date.timeIntervalSinceReferenceDate)
+                }
+            } else {
+                mark(at: 0)
             }
         } else {
             Image(systemName: systemImage)
                 .font(.system(size: diameter * 0.42, weight: .semibold))
                 .foregroundStyle(.white)
         }
+    }
+
+    private func mark(at time: Double) -> some View {
+        OctopusMark(
+            time: time,
+            color: .white,
+            // It leans into the work when the pointer arrives, which is the whole
+            // joke: this is the door that talks back.
+            effort: hovering ? 1 : 0,
+            // One colour on a coloured disc: the dress, the apron and the eyes read
+            // as cut-outs rather than as separate inks.
+            rendering: .singleColour
+        )
+        // Taller than it is wide, because the tentacles hang below the head and the
+        // disc is round — squaring this crops the arms and the mark becomes an
+        // octopus-shaped blob.
+        .frame(width: diameter * 0.80, height: diameter * 0.80)
+        .offset(y: diameter * 0.03)
     }
 }
 

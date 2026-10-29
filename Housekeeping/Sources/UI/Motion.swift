@@ -27,6 +27,240 @@ enum HousekeepingMotion {
     static let orbit = Animation.linear(duration: 1.5).repeatForever(autoreverses: false)
 }
 
+// MARK: - The motion budget
+
+/// Decides whether the app's decorative motion is allowed to run.
+///
+/// The housekeeper breathes. Drawn inside a `TimelineView` that means her body is
+/// evaluated and laid out every frame, and in the menu bar it means a status item
+/// swapping template images twelve times a second — charming while someone is
+/// looking, expensive while nobody is. Measured on this Mac on 2026-10-30: a copy
+/// sitting in the menu bar with no window open held one core at roughly a quarter,
+/// all day, because a window SwiftUI has closed but not torn down keeps its
+/// timelines firing and the status item keeps its timer. That is a laptop's battery
+/// spent on an animation behind a closed door.
+///
+/// So motion is a budget, and the budget is spent only where it can be seen: while
+/// the app is active, while the menu bar panel is open, and for a moment at launch
+/// so the mark reads as alive rather than stuck. Everywhere else she stands still —
+/// one frame, no timer, no layout work.
+///
+/// A view asks one question, `isTicking`, and falls back to a still frame when the
+/// answer is no:
+///
+///     if MotionBudget.shared.isTicking {
+///         TimelineView(.periodic(from: .now, by: 1.0 / 20)) { context in
+///             OctopusMark(time: context.date.timeIntervalSinceReferenceDate)
+///         }
+///     } else {
+///         OctopusMark(time: 0)
+///     }
+///
+/// Nothing is lost by this: a still octopus at rest is a still octopus. What is
+/// gone is the version of her that animated for a reader who was not there.
+final class MotionBudget: NSObject, ObservableObject {
+    static let shared = MotionBudget()
+
+    /// Whether decorative motion may run right now.
+    @Published private(set) var isTicking = true
+
+    private var appIsActive = false
+    private var displayIsAsleep = false
+    private var holds: Set<String> = ["greeting"]
+    private var greetingEnd: Timer?
+
+    private override init() {
+        super.init()
+
+        let app = NotificationCenter.default
+        app.addObserver(
+            self,
+            selector: #selector(appBecameActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        app.addObserver(
+            self,
+            selector: #selector(appResignedActive),
+            name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+
+        // A sleeping display is the one moment nothing can be seen at all, and it
+        // is also the moment the machine is most likely to be on battery. Whatever
+        // else is held open, nothing ticks through it.
+        let workspace = NSWorkspace.shared.notificationCenter
+        workspace.addObserver(
+            self,
+            selector: #selector(displaySlept),
+            name: NSWorkspace.screensDidSleepNotification,
+            object: nil
+        )
+        workspace.addObserver(
+            self,
+            selector: #selector(displayWoke),
+            name: NSWorkspace.screensDidWakeNotification,
+            object: nil
+        )
+
+        // The greeting: one turn of the animation at launch, then still. Long
+        // enough to show she is a drawing and not a glyph, short enough to cost
+        // nothing. `common` mode, so a launch that lands while a menu is open
+        // still clears it.
+        let timer = Timer(timeInterval: 2.6, repeats: false) { [weak self] _ in
+            self?.release("greeting")
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        greetingEnd = timer
+    }
+
+    // MARK: - What is asking for motion
+
+    /// Something wants motion for as long as it says so. Tokens rather than a
+    /// boolean, because two of these overlap all the time — the panel is open on
+    /// an active app — and the last one out should not switch off the lights.
+    func hold(_ token: String) {
+        holds.insert(token)
+        refresh()
+    }
+
+    func release(_ token: String) {
+        holds.remove(token)
+        refresh()
+    }
+
+    // MARK: - The answer
+
+    private func refresh() {
+        let ticking = !displayIsAsleep && (appIsActive || !holds.isEmpty)
+        guard ticking != isTicking else { return }
+        isTicking = ticking
+    }
+
+    @objc private func appBecameActive() {
+        appIsActive = true
+        refresh()
+    }
+
+    @objc private func appResignedActive() {
+        appIsActive = false
+        // Nothing that can be seen survives the app losing the foreground, so
+        // anything still holding motion open has outlived its reason. Dropping the
+        // holds here is the belt to the release's braces: a token whose owner was
+        // never told it had gone away — a panel dismissed by a key press, a sheet
+        // that closed itself — would otherwise keep the menu bar's timer running
+        // for the rest of the session.
+        holds.removeAll()
+        refresh()
+    }
+
+    @objc private func displaySlept() {
+        displayIsAsleep = true
+        refresh()
+    }
+
+    @objc private func displayWoke() {
+        displayIsAsleep = false
+        refresh()
+    }
+}
+
+// MARK: - Whether this view is on screen
+
+/// Answers the other half of the question.
+///
+/// `MotionBudget` says whether the app has any reason to animate at all. This says
+/// whether *this* drawing is somewhere a person can see it. Both are needed: opening
+/// the menu bar panel makes the app active, and the main window — closed, forgotten,
+/// but still hosted by SwiftUI — would take that as its cue to lay itself out twenty
+/// times a second behind a shut door. Measured while the panel was open: the app went
+/// from nothing to a fifth of a core, none of it on screen.
+///
+/// A window answers for itself. AppKit tracks whether a window is actually visible and
+/// how much of it is covered, and posts a notification when that changes; a zero-sized
+/// `NSView` inside the view tree is enough to listen. SwiftUI has no per-window
+/// visibility of its own, which is the whole reason this exists.
+private final class OnScreenProbe: NSView {
+    var report: ((Bool) -> Void)?
+    private var observers: [NSObjectProtocol] = []
+    private var last: Bool?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers.removeAll()
+
+        guard let window else {
+            send(false)
+            return
+        }
+
+        // AppKit does not have an ordering notification to hang this on: a window
+        // being hidden, shown, minimized or covered all arrive as an occlusion
+        // change or as the app activating. `NSWindow` has only these two names for
+        // it, so these two are what is watched.
+        for name in [
+            NSWindow.didChangeOcclusionStateNotification,
+            NSWindow.willCloseNotification,
+            NSApplication.didBecomeActiveNotification,
+            NSApplication.didResignActiveNotification
+        ] {
+            observers.append(
+                NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) {
+                    [weak self] _ in self?.send(self?.isOnScreen ?? false)
+                }
+            )
+        }
+
+        send(isOnScreen)
+    }
+
+    private var isOnScreen: Bool {
+        guard let window, window.isVisible, !window.isMiniaturized else { return false }
+        // `occlusionState` is the only thing that knows the window is entirely
+        // covered by another one — `isVisible` happily says yes to a window hidden
+        // behind a full-screen video.
+        return window.occlusionState.contains(.visible)
+    }
+
+    private func send(_ value: Bool) {
+        guard value != last else { return }
+        last = value
+        // A turn later: the answer usually arrives during layout, and SwiftUI
+        // treats state written from inside a layout pass as a mistake.
+        DispatchQueue.main.async { [weak self] in
+            self?.report?(value)
+        }
+    }
+}
+
+extension View {
+    /// Reports whether this view's window is on screen and not fully covered, so a
+    /// drawing can stop moving while it is behind a closed window.
+    func tracksOnScreen(_ onScreen: Binding<Bool>) -> some View {
+        background(OnScreenReader(onScreen: onScreen).frame(width: 0, height: 0))
+    }
+}
+
+private struct OnScreenReader: NSViewRepresentable {
+    @Binding var onScreen: Bool
+
+    func makeNSView(context: Context) -> OnScreenProbe {
+        let probe = OnScreenProbe()
+        probe.report = { value in
+            DispatchQueue.main.async { onScreen = value }
+        }
+        return probe
+    }
+
+    func updateNSView(_ nsView: OnScreenProbe, context: Context) {
+        nsView.report = { value in
+            DispatchQueue.main.async { onScreen = value }
+        }
+    }
+}
+
 // MARK: - Entrance
 
 private struct EntranceModifier: ViewModifier {

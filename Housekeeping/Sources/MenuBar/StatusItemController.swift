@@ -10,6 +10,7 @@
 // the mark works in both appearances without knowing which one is on.
 
 import AppKit
+import Combine
 import SwiftUI
 
 extension Notification.Name {
@@ -140,6 +141,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     private var item: NSStatusItem?
     private var timer: Timer?
+    private var budgetObserver: AnyCancellable?
+    private var pendingResize: DispatchWorkItem?
     private var frames: [NSImage] = []
     private var tick = 0
     private var popover: NSPopover?
@@ -163,17 +166,43 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         frames = buildFrames()
         item.button?.image = frames.first
 
-        let timer = Timer(
-            timeInterval: Self.frameInterval,
-            target: self,
-            selector: #selector(advance),
-            userInfo: nil,
-            repeats: true
-        )
-        // Common mode, so the octopus keeps moving while a menu is open or the window
-        // is being dragged — the two moments the reader is most likely to be looking.
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        // The animation follows the motion budget, not the clock. Before 0.20.1 this
+        // timer was installed at launch and never stopped: twelve status-bar image
+        // swaps a second from login to logout, each one a menu bar redraw, for a
+        // reader who was not there. On an otherwise idle Mac that was the single
+        // biggest reason Housekeeping sat at a quarter of a core all day. Now the
+        // budget says when she moves — while the app is active, while the panel is
+        // open, for a moment at launch — and she stands still the rest of the time.
+        budgetObserver = MotionBudget.shared.$isTicking
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] ticking in self?.setAnimating(ticking) }
+    }
+
+    /// Starts or stops the two-second loop. Stopping parks the mark on its rest
+    /// frame rather than leaving whatever frame it happened to be on, so the
+    /// still image is always the same still image.
+    private func setAnimating(_ animating: Bool) {
+        if animating {
+            guard timer == nil, !frames.isEmpty else { return }
+            let timer = Timer(
+                timeInterval: Self.frameInterval,
+                target: self,
+                selector: #selector(advance),
+                userInfo: nil,
+                repeats: true
+            )
+            // Common mode, so the octopus keeps moving while a menu is open or the
+            // window is being dragged — the two moments a reader is most likely to
+            // be looking at her.
+            RunLoop.main.add(timer, forMode: .common)
+            self.timer = timer
+        } else {
+            timer?.invalidate()
+            timer = nil
+            tick = 0
+            item?.button?.image = frames.first
+        }
     }
 
     // MARK: - Drawing
@@ -306,11 +335,27 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// A page inside the panel is taller than the overview, and the popover is only
     /// measured once, when it is built. So the page reports its own height and the
     /// popover is resized here. It anchors at the arrow, so growth goes downward.
+    ///
+    /// Debounced, because resizing a popover makes its hosting view lay out again,
+    /// and laying out again reports a height, which asks for another resize. The
+    /// old version chased that round trip as fast as the run loop would carry it:
+    /// with the panel open, Housekeeping sat at about a fifth of a core, all of it
+    /// spent asking a 352-point panel how tall it was. Waiting for the reports to
+    /// stop before acting on the last one ends it — the popover is resized once,
+    /// to the height the page actually settled at.
     private func resize(to height: CGFloat) {
         guard let popover, popover.isShown, height > 0 else { return }
         let target = NSSize(width: 352, height: ceil(height))
         guard abs(popover.contentSize.height - target.height) > 1 else { return }
-        popover.contentSize = target
+
+        pendingResize?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, let popover = self.popover, popover.isShown else { return }
+            guard abs(popover.contentSize.height - target.height) > 1 else { return }
+            popover.contentSize = target
+        }
+        pendingResize = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: work)
     }
 
     private func explain(_ topic: HousekeeperTopic) {
