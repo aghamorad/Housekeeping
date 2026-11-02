@@ -1,3 +1,12 @@
+## 0.24.1 — Official Maid Octopus Mascot & Icon Update
+
+A visual and brand milestone featuring the official Benign Monster Works octopus mascot dressed in housekeeper attire:
+
+- **Official Mascot App Icon & Assets**: Generated natively via Antigravity image generation. Features the signature crimson Benign Monster octopus with circular white eyes dressed in a maid's uniform (lace cap, white ruffled apron, black collar) holding housekeeping essentials: feather duster, spray bottle, vacuum hose & nozzle, squeegee, yellow sponge, and chrome wrench.
+- **Full-Bleed macOS Icon**: Created edge-to-edge `AppIcon.icns` using `script/make_icon.sh` for pixel-crisp display in the macOS Dock, App Switcher, and Finder.
+- **Brand Identity Alignment**: Replaced all obsolete badge text; the app UI and icons cleanly represent **Housekeeper by Benign Monster Works**.
+- **Universal Multi-Architecture Build**: Shipped fat universal binary supporting both Apple Silicon (`arm64`) and Intel (`x86_64`) Macs on macOS 13.0+.
+
 ## 0.24.0 — Benign Monster Works edition, 5-room Dad-Simple navigation, runaway zombie watchdog, and 3-tab updater
 
 A major milestone release introducing the Benign Monster Works brand identity, a complete "72-year-old dad" navigation overhaul, and powerful diagnostic superpowers:
