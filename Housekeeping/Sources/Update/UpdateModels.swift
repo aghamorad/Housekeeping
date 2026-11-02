@@ -252,6 +252,7 @@ struct InstalledApplication: Identifiable, Equatable {
     let isAdHoc: Bool
     /// The update feed the bundle itself declares, if any.
     let feedURL: URL?
+    let websiteURL: URL?
     /// What this application is, in one plain sentence, assembled only from what
     /// was read off the bundle: the category it files itself under, the maker its
     /// own copyright line names, and the route it arrived by. Nil when a bundle
@@ -368,6 +369,7 @@ struct UpdateRow: Identifiable, Equatable {
     var isSelected: Bool
     let evidence: [ProvenanceEvidence]
     let path: String?
+    let websiteURL: URL?
 
     var canUpdate: Bool { action != nil && !isExcepted }
 
@@ -397,9 +399,12 @@ enum UpdateAction: Equatable {
     case openAppStoreUpdates
     /// Fetch the URL, check it, swap the bundle, keep the old one until it works.
     case replaceBundle(download: UpdateDownload)
+    /// Direct link to developer download page or website.
+    case openWebsite(url: URL)
 
     var isSelfService: Bool {
         if case .openAppStoreUpdates = self { return false }
+        if case .openWebsite = self { return false }
         return true
     }
 }

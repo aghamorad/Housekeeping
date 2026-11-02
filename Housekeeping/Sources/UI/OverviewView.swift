@@ -55,9 +55,10 @@ struct OverviewView: View {
                         Text(style.isRetro ? "Available in the toolbar" : "Available in the sidebar").font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     HStack(spacing: 14) {
-                        utility("App Uninstaller", detail: "Cleanly remove apps & container leftovers", icon: "app.badge.minus") { appState.showUninstaller = true }
-                        utility("Terminal Health", detail: "Check commands and installations", icon: "terminal") { appState.showSetupCheck = true }
-                        utility("Two Folders", detail: "Compare a folder with its backup", icon: "rectangle.on.rectangle") { appState.showReconcile = true }
+                        utility("App Uninstaller", detail: "Cleanly remove apps & leftovers", icon: "app.badge.minus") { appState.showUninstaller = true }
+                        utility("Local Models", detail: "Manage MLX & Apple Silicon models", icon: "brain") { appState.showLocalModels = true }
+                        utility("Terminal Health", detail: "Check shell installations", icon: "terminal") { appState.showSetupCheck = true }
+                        utility("Two Folders", detail: "Compare folders & backups", icon: "rectangle.on.rectangle") { appState.showReconcile = true }
                     }
                 }
 

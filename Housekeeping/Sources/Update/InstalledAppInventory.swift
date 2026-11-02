@@ -158,6 +158,22 @@ struct CaskMatch: Equatable {
         let (provenance, evidence) = await AppProvenance.assess(facts: facts, using: runner)
         let signature = await AppProvenance.readSignature(bundleAt: url, using: runner)
 
+        let websiteURL: URL? = {
+            if let repo = AppUpdateEngine.knownGitHubRepos[identifier] {
+                return URL(string: "https://github.com/\(repo)/releases")
+            }
+            if let token = cask?.token {
+                return URL(string: "https://formulae.brew.sh/cask/\(token)")
+            }
+            if let feedURL {
+                if let host = feedURL.host, !host.isEmpty {
+                    return URL(string: "\(feedURL.scheme ?? "https")://\(host)")
+                }
+                return feedURL
+            }
+            return nil
+        }()
+
         return InstalledApplication(
             bundleIdentifier: identifier,
             name: name,
@@ -167,6 +183,7 @@ struct CaskMatch: Equatable {
             team: signature.teamIdentifier,
             isAdHoc: signature.isAdHoc || !signature.isSigned,
             feedURL: feedURL,
+            websiteURL: websiteURL,
             // Homebrew's own line first when this bundle is one of its casks. It
             // was written by someone who knows what the program does, where the
             // bundle's own plist usually offers only that it is "a utility".

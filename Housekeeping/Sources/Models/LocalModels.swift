@@ -24,6 +24,7 @@ import Foundation
 // MARK: - What a row is
 
 enum ModelRuntime: String, CaseIterable, Identifiable {
+    case mlx
     case ollama
     case lmStudio
     case housekeeper
@@ -34,6 +35,7 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .mlx: return "Apple Silicon MLX & Local Registry"
         case .ollama: return "Ollama"
         case .lmStudio: return "LM Studio"
         case .housekeeper: return "The housekeeper"
@@ -46,6 +48,7 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
     /// which of these is which. The last one is not a runtime at all, and says so.
     var summary: String {
         switch self {
+        case .mlx: return "Native Metal-accelerated MLX models and central registry located in ~/Models and ~/.mlx-lm."
         case .ollama: return "A background service that loads a model when something asks and unloads it after a few idle minutes."
         case .lmStudio: return "An app with its own model store. Models are loaded into it explicitly, and stay loaded until they are taken out."
         case .housekeeper: return "This app's own chat model, run by the llama-server that ships inside Housekeeping."
@@ -169,13 +172,14 @@ final class LocalModelInventory: ObservableObject {
         note = nil
         memory = ModelMemory.read()
 
+        async let mlx = readMLX()
         async let ollama = readOllama()
         async let lmStudio = readLMStudio()
         async let hermes = readHermes()
         async let housekeeper = readHousekeeper()
         async let cache = readHuggingFace()
 
-        let found = await [ollama, lmStudio, housekeeper, hermes, cache]
+        let found = await [mlx, ollama, lmStudio, housekeeper, hermes, cache]
         groups = found
             .filter { !$0.models.isEmpty || $0.hint != nil }
             .sorted { order($0.runtime) < order($1.runtime) }
@@ -185,6 +189,161 @@ final class LocalModelInventory: ObservableObject {
 
     private func order(_ runtime: ModelRuntime) -> Int {
         ModelRuntime.allCases.firstIndex(of: runtime) ?? 0
+    }
+
+    // MARK: - Apple Silicon MLX & Local Registry
+
+    private func readMLX() async -> ModelGroup {
+        var group = ModelGroup(runtime: .mlx)
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let mlxModelsURL = URL(fileURLWithPath: home + "/.mlx-lm/models")
+        let registryURL = URL(fileURLWithPath: home + "/Models")
+
+        // Current symlink in ~/.mlx-lm/models/current
+        let currentLink = home + "/.mlx-lm/models/current"
+        let currentTarget = URL(fileURLWithPath: currentLink).resolvingSymlinksInPath().path
+
+        var models: [LocalModel] = []
+        var seenPaths = Set<String>()
+
+        // 1. Scan ~/.mlx-lm/models
+        if let entries = try? FileManager.default.contentsOfDirectory(at: mlxModelsURL, includingPropertiesForKeys: [.isDirectoryKey]) {
+            for entry in entries {
+                let name = entry.lastPathComponent
+                guard !name.hasPrefix("."), name != "current" else { continue }
+                let resolved = entry.resolvingSymlinksInPath()
+                guard !seenPaths.contains(resolved.path) else { continue }
+                seenPaths.insert(resolved.path)
+
+                let bytes = await Task.detached(priority: .utility) { Self.directorySize(resolved) }.value
+                let isCurrent = (currentTarget == resolved.path) || (currentTarget == entry.path)
+
+                var facts: [String] = ["MLX Metal", "LLM"]
+                if name.lowercased().contains("4bit") { facts.append("4-bit") }
+                if name.lowercased().contains("8bit") { facts.append("8-bit") }
+                if isCurrent { facts.append("Active Default") }
+                if bytes > 0 { facts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+
+                models.append(LocalModel(
+                    id: "mlx:\(entry.path)",
+                    runtime: .mlx,
+                    name: Self.formatMLXModelName(name),
+                    facts: facts,
+                    bytes: bytes,
+                    loaded: isCurrent,
+                    path: resolved.path,
+                    control: .loadAndUnload,
+                    reference: entry.path,
+                    note: isCurrent ? "Active default model pointed to by ~/.mlx-lm/models/current." : "Local MLX model in ~/.mlx-lm/models."
+                ))
+            }
+        }
+
+        // 2. Scan ~/Models (llm, speech, voice, image)
+        let categories = ["llm", "speech", "voice", "image"]
+        for category in categories {
+            let catURL = registryURL.appendingPathComponent(category)
+            guard let entries = try? FileManager.default.contentsOfDirectory(at: catURL, includingPropertiesForKeys: [.isDirectoryKey]) else { continue }
+
+            for entry in entries {
+                let name = entry.lastPathComponent
+                guard !name.hasPrefix(".") else { continue }
+                let resolved = entry.resolvingSymlinksInPath()
+                guard !seenPaths.contains(resolved.path) else { continue }
+                seenPaths.insert(resolved.path)
+
+                let bytes = await Task.detached(priority: .utility) { Self.directorySize(resolved) }.value
+                let isCurrent = (currentTarget == resolved.path)
+
+                var facts: [String] = []
+                switch category {
+                case "llm": facts.append("LLM")
+                case "speech": facts.append("Speech-to-Text")
+                case "voice": facts.append("Voice Synthesis")
+                case "image": facts.append("Image Gen")
+                default: facts.append(category.uppercased())
+                }
+
+                if name.lowercased().contains("mlx") || resolved.path.contains("mlx") { facts.append("MLX Metal") }
+                if name.lowercased().contains("4bit") { facts.append("4-bit") }
+                if name.lowercased().contains("8bit") { facts.append("8-bit") }
+                if name.lowercased().contains("onnx") { facts.append("ONNX") }
+                if isCurrent { facts.append("Active Default") }
+                if bytes > 0 { facts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+
+                let isMLX = name.lowercased().contains("mlx") || resolved.path.contains("mlx") || category == "llm"
+
+                models.append(LocalModel(
+                    id: "registry:\(entry.path)",
+                    runtime: .mlx,
+                    name: Self.formatRegistryModelName(name),
+                    facts: facts,
+                    bytes: bytes,
+                    loaded: isCurrent,
+                    path: resolved.path,
+                    control: isMLX ? .loadAndUnload : .none,
+                    reference: entry.path,
+                    note: "Registered in ~/Models/\(category)/ -> \(resolved.path)"
+                ))
+            }
+        }
+
+        group.models = models.sorted {
+            if $0.loaded != $1.loaded { return $0.loaded && !$1.loaded }
+            return ($0.bytes ?? 0) > ($1.bytes ?? 0)
+        }
+
+        if group.models.isEmpty {
+            group.hint = "No models detected in ~/Models or ~/.mlx-lm/models."
+        } else {
+            group.hint = "Found \(group.models.count) model\(group.models.count == 1 ? "" : "s") in ~/Models and ~/.mlx-lm."
+        }
+
+        return group
+    }
+
+    private static func formatMLXModelName(_ raw: String) -> String {
+        switch raw {
+        case "Qwen3.5-4B-Claude-Heretic-4bit":
+            return "Qwen 3.5 4B (Claude Heretic 4-bit MLX)"
+        case "Qwen3.5-9B-4bit":
+            return "Qwen 3.5 9B (4-bit MLX)"
+        default:
+            return raw
+                .replacingOccurrences(of: "-", with: " ")
+                .replacingOccurrences(of: "_", with: " ")
+        }
+    }
+
+    private static func formatRegistryModelName(_ raw: String) -> String {
+        switch raw {
+        case "qwen3.5-4b-mlx-4bit":
+            return "Qwen 3.5 4B (Claude Heretic 4-bit MLX)"
+        case "qwen3.5-9b-mlx-4bit":
+            return "Qwen 3.5 9B (4-bit MLX)"
+        case "whisper-large-v3-mlx":
+            return "Whisper Large v3 (MLX)"
+        case "fish-speech-s2-pro-8bit-mlx":
+            return "Fish Speech S2 Pro (8-bit MLX)"
+        case "whisper-large-v3-faster":
+            return "Whisper Large v3 (faster-whisper)"
+        case "whisper-base-faster":
+            return "Whisper Base (faster-whisper)"
+        case "sensevoice-onnx":
+            return "SenseVoice (int8 ONNX)"
+        case "nllb-200-distilled-600M":
+            return "Meta NLLB-200 Distilled (Translation)"
+        case "omnivoice":
+            return "OmniVoice (TTS Clone)"
+        case "moss-tts-nano":
+            return "OpenMOSS TTS Nano"
+        case "moss-tts-nano-100m":
+            return "OpenMOSS TTS Nano (100M)"
+        default:
+            return raw
+                .replacingOccurrences(of: "-", with: " ")
+                .replacingOccurrences(of: "_", with: " ")
+        }
     }
 
     // MARK: Ollama
@@ -465,6 +624,22 @@ final class LocalModelInventory: ObservableObject {
         _ = await postJSON(hermesBase.appendingPathComponent("unload"), [:])
     }
 
+    private func loadMLX(_ model: LocalModel) async {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let currentLink = home + "/.mlx-lm/models/current"
+        guard let target = model.path ?? model.reference else { return }
+        let fm = FileManager.default
+        try? fm.removeItem(atPath: currentLink)
+        try? fm.createSymbolicLink(atPath: currentLink, withDestinationPath: target)
+    }
+
+    private func unloadMLX(_ model: LocalModel) async {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let currentLink = home + "/.mlx-lm/models/current"
+        try? FileManager.default.removeItem(atPath: currentLink)
+        await unloadHermes()
+    }
+
     // MARK: Hugging Face cache
 
     private func readHuggingFace() async -> ModelGroup {
@@ -552,6 +727,7 @@ final class LocalModelInventory: ObservableObject {
         note = "Loading \(model.name)…"
 
         switch model.runtime {
+        case .mlx: await loadMLX(model)
         case .ollama: await loadInOllama(model)
         case .lmStudio: await loadInLMStudio(model)
         case .housekeeper:
@@ -576,6 +752,7 @@ final class LocalModelInventory: ObservableObject {
         note = "Unloading \(model.name)…"
 
         switch model.runtime {
+        case .mlx: await unloadMLX(model)
         case .ollama: await unloadFromOllama(model)
         case .lmStudio: await unloadFromLMStudio(model)
         case .housekeeper: Housekeeper.shared.server.stopAndWait()
