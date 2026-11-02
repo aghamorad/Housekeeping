@@ -413,6 +413,14 @@ final class AppUpdateEngine {
             return try await upgradeViaStore(adamID: adamID)
         case .openAppStoreUpdates:
             return openAppStoreUpdates()
+        case .openWebsite(let url):
+            NSWorkspace.shared.open(url)
+            return UpdateOutcome(
+                id: application?.id ?? url.absoluteString,
+                name: application?.name ?? url.host ?? "Website",
+                message: "Opened \(url.absoluteString) in browser.",
+                succeeded: true
+            )
         case .replaceBundle(let download):
             guard let application else {
                 throw UpdateFailure.missingApplication
@@ -556,8 +564,9 @@ final class AppUpdateEngine {
         }
 
         let oldTeam = application.team
-        let workspace = fileManager.temporaryDirectory
-            .appendingPathComponent("HousekeepingUpdate-\(UUID().uuidString)")
+        let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        let workspace = downloads.appendingPathComponent("Housekeeping Updates", isDirectory: true)
         try fileManager.createDirectory(at: workspace, withIntermediateDirectories: true)
 
         var mountedVolume: URL?
@@ -571,7 +580,6 @@ final class AppUpdateEngine {
                 try? process.run()
                 process.waitUntilExit()
             }
-            discardToTrash(workspace)
         }
 
         // 1. Fetch.
@@ -759,13 +767,14 @@ final class AppUpdateEngine {
         return candidates.first
     }
 
-    // MARK: - Support folder
+    // MARK: - Backup folder
 
     func updateBackupDirectory() throws -> URL {
-        let directory = CleanupEngine.supportDirectoryURL()
-            .appendingPathComponent("Update Backups", isDirectory: true)
-        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
+        let trash = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".Trash")
+        if !fileManager.fileExists(atPath: trash.path) {
+            try fileManager.createDirectory(at: trash, withIntermediateDirectories: true)
+        }
+        return trash
     }
 
     /// Moves a finished workspace to the user's Trash. Housekeeping never deletes

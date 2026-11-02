@@ -235,7 +235,7 @@ struct ModelsView: View {
                         .textSelection(.enabled)
 
                     if entry.loaded {
-                        Text("IN MEMORY")
+                        Text(entry.runtime == .mlx ? "ACTIVE DEFAULT" : "IN MEMORY")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(style.positive)
                             .padding(.horizontal, 5)
@@ -302,10 +302,10 @@ struct ModelsView: View {
             .frame(width: 130, alignment: .trailing)
         } else if entry.control == .loadAndUnload {
             ThemeButton(
-                title: "Load",
-                systemImage: "arrow.down.circle",
+                title: entry.runtime == .mlx ? "Set Default" : "Load",
+                systemImage: entry.runtime == .mlx ? "checkmark.circle" : "arrow.down.circle",
                 isEnabled: refusal == nil && !blocked,
-                help: refusal ?? "Puts \(entry.name) into memory so it is ready to answer at once. It stays until it is unloaded or the runtime drops it."
+                help: refusal ?? (entry.runtime == .mlx ? "Sets \(entry.name) as current default model in ~/.mlx-lm/models/current." : "Puts \(entry.name) into memory so it is ready to answer at once. It stays until it is unloaded or the runtime drops it.")
             ) {
                 Task { await model.load(entry) }
             }

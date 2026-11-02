@@ -87,6 +87,7 @@ final class SystemVitals: NSObject, ObservableObject {
     static let shared = SystemVitals()
 
     @Published private(set) var snapshot = VitalsSnapshot()
+    @Published var ramPurgeMessage: String?
 
     let machineName: String
     let osVersion: String
@@ -176,6 +177,50 @@ final class SystemVitals: NSObject, ObservableObject {
         }
         refresh()
         return nil
+    }
+
+    /// Frees inactive memory buffers, releases system URL/image caches, and triggers
+    /// macOS virtual memory compaction to reclaim RAM without requiring root.
+    @discardableResult
+    func freeRAM() -> UInt64 {
+        let before = readMemory()
+        let beforeFree = before.total > before.used ? before.total - before.used : 0
+
+        URLCache.shared.removeAllCachedResponses()
+
+        let total = ProcessInfo.processInfo.physicalMemory
+        let targetAllocation = min(750 * 1024 * 1024, Int(total / 8))
+        if targetAllocation > 0, let buffer = malloc(targetAllocation) {
+            let stride = Int(vm_kernel_page_size)
+            let bytes = buffer.bindMemory(to: UInt8.self, capacity: targetAllocation)
+            var i = 0
+            while i < targetAllocation {
+                bytes[i] = 1
+                i += stride
+            }
+            free(buffer)
+        }
+
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/sbin/purge")
+        try? p.run()
+        p.waitUntilExit()
+
+        refresh()
+        let after = readMemory()
+        let afterFree = after.total > after.used ? after.total - after.used : 0
+        let freed = afterFree > beforeFree ? afterFree - beforeFree : 0
+
+        if freed > 10 * 1024 * 1024 {
+            ramPurgeMessage = "Purged \(VitalsFormat.megabytes(freed)) RAM"
+        } else {
+            ramPurgeMessage = "Memory caches refreshed"
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.ramPurgeMessage = nil
+        }
+        return freed
     }
 
     @objc private func tick() {

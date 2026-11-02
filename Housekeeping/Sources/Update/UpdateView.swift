@@ -319,6 +319,20 @@ struct UpdateView: View {
 
             Spacer()
 
+            if let site = row.websiteURL, row.channel != .macAppStore {
+                Button {
+                    NSWorkspace.shared.open(site)
+                } label: {
+                    Image(systemName: "safari")
+                        .font(.system(size: 14))
+                        .foregroundStyle(style.accent)
+                        .padding(6)
+                        .background(style.accent.opacity(0.08), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .help("Visit official project website")
+            }
+
             if row.canUpdate && row.channel.canInstall {
                 ThemeButton(
                     title: "Update",
@@ -329,14 +343,21 @@ struct UpdateView: View {
                     appState.setUpdateSelection(ids: [row.id], selected: true)
                     appState.runUpdateAll()
                 }
-            } else if case .available = row.check {
+            } else if row.channel == .macAppStore {
                 ThemeButton(
-                    title: "Open Store",
-                    systemImage: "arrow.up.forward.app"
+                    title: "Open App Store",
+                    systemImage: "apple.logo"
                 ) {
                     if let url = URL(string: "macappstore://showUpdatesPage") {
                         NSWorkspace.shared.open(url)
                     }
+                }
+            } else if let site = row.websiteURL {
+                ThemeButton(
+                    title: "Visit Website",
+                    systemImage: "arrow.up.forward.app"
+                ) {
+                    NSWorkspace.shared.open(site)
                 }
             }
         }

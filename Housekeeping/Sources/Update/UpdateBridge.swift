@@ -147,7 +147,8 @@ extension AppState {
                 isExcepted: excepted
             ),
             evidence: application.evidence,
-            path: application.path
+            path: application.path,
+            websiteURL: application.websiteURL
         )
     }
 
@@ -175,7 +176,8 @@ extension AppState {
                 isExcepted: excepted
             ),
             evidence: [],
-            path: nil
+            path: nil,
+            websiteURL: URL(string: "https://formulae.brew.sh/\(package.isCask ? "cask" : "formula")/\(package.name)")
         )
     }
 

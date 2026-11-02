@@ -115,6 +115,9 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenFanControl)) { _ in
                 appState.showFanControl = true
             }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenUpdates)) { _ in
+                appState.showUpdateList = true
+            }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenUninstaller)) { _ in
                 appState.showUninstaller = true
             }

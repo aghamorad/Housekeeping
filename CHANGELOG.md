@@ -1,3 +1,12 @@
+## 0.23.0 — Menu bar one-click process killer, Free RAM purge, Apple Silicon MLX model loader, and clean updater
+
+A targeted UX and capability leap inspired by CleanMyMac and Mole:
+
+- **Menu Bar Widget Redesign & One-Click Process Killer**: Spacious, modern layout with real-time hardware gauges. Replaced niche subtool buttons with core quick actions: `[Open App]`, `[Free RAM]`, `[Clean]`, `[Cooling]`, and `[Updates]`. Added a segmented `[Top CPU | Top RAM]` consumers inspector where every single process row includes a direct, one-click `✕` termination button right on the row, freeing CPU and memory immediately without forcing nested sub-page navigation.
+- **Instant Memory Purge ("Free RAM")**: Built-in virtual memory compaction and cache purge that releases inactive memory buffers, flushes URL and image caches, and drops memory pressure cleanly with real-time feedback.
+- **Apple Silicon MLX & Local Registry Model Loader**: Full native discovery for local AI models across `~/.mlx-lm` and `~/Models` (`llm/`, `speech/`, `voice/`, `image/`). Seamlessly detects and surfaces Morad's MLX models (`Qwen 3.5 4B Claude Heretic 4-bit`, `Qwen 3.5 9B 4-bit`, `Whisper Large v3 MLX`, `Fish Speech S2 Pro 8-bit MLX`, `SenseVoice ONNX`, and more). Displays resolved symlink paths, true disk footprints, quantization tags, and enables one-click default switching via `~/.mlx-lm/models/current`.
+- **Clean Updater Workflow & Direct Website Links**: Added direct "Open App Store" actions for Mac App Store apps (`macappstore://showUpdatesPage`). Added official "Visit Website" links for web-distributed tools. Downloaded update packages are saved visibly in `~/Downloads/Housekeeping Updates` instead of hidden app caches, and backup copies of replaced applications are cleanly moved to `~/.Trash`.
+
 ## 0.22.0 — Fans & thermals, modern updater with sudo, Space Lens, and dedicated uninstaller
 
 A comprehensive overhaul giving the kitchen-sink experience breathing room, intuitive navigation, and direct hardware control:

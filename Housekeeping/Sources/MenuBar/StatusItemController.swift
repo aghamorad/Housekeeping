@@ -27,6 +27,7 @@ extension Notification.Name {
     static let housekeepingOpenDisk = Notification.Name("HousekeepingOpenDisk")
     static let housekeepingOpenFanControl = Notification.Name("HousekeepingOpenFanControl")
     static let housekeepingOpenUninstaller = Notification.Name("HousekeepingOpenUninstaller")
+    static let housekeepingOpenUpdates = Notification.Name("HousekeepingOpenUpdates")
     /// The panel was dismissed, so the next opening starts at the overview rather
     /// than on whichever page was left behind.
     static let housekeepingPanelClosed = Notification.Name("HousekeepingPanelClosed")
@@ -311,6 +312,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             loginItem: LoginItem.shared,
             onOpen: { [weak self] in self?.openMainWindow() },
             onScan: { [weak self] in self?.scanNow() },
+            onFans: { [weak self] in self?.openFans() },
+            onUpdates: { [weak self] in self?.openUpdates() },
             onAsk: { [weak self] in self?.askTheHousekeeper() },
             onMediaDock: { [weak self] in self?.openMediaDock() },
             onBookbind: { [weak self] in self?.openBookbind() },
@@ -371,6 +374,18 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func openDisk() {
         WindowOpener.shared.withWindow {
             NotificationCenter.default.post(name: .housekeepingOpenDisk, object: nil)
+        }
+    }
+
+    private func openFans() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenFanControl, object: nil)
+        }
+    }
+
+    private func openUpdates() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenUpdates, object: nil)
         }
     }
 
