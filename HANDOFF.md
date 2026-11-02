@@ -2,6 +2,13 @@
 
 ## Objective
 
+**0.24.1 (2026-11-02, session 4).** Morad: "The app's logo shouldn't say Benign Monster Studios - it should be the Octopus that is our main brand mascot and have it dressed in a maids outfit holding all the tools and appliances of the housekeeper... use your own imagegen!!! You have the octopus already you just need to dress it up using your own imagegen!... Remember from now on when it comes to Antigravity/Gemini tasks - you are more than capable to make your own images so you can bypass the other ones (update the skill accordingly too)"
+Shipped:
+1. Native Mascot Art Generation: Generated official crimson octopus brand mascot in housekeeper maid uniform using native Antigravity `image-generator` subagent (lace cap, white ruffled apron, holding feather duster, spray bottle, vacuum hose, squeegee, sponge, wrench, and fan turbine).
+2. macOS Full-Bleed App Icon: Created `AppIcon.icns` and `AppIcon.png` via `script/make_icon.sh` using the maid mascot. Bundled in `/Applications/Housekeeping.app` and `Housekeeping/Resources/`.
+3. Native Skill Update: Updated `/Users/Morad/Skills/generate-image/SKILL.md` to establish that under Antigravity/Gemini, agents must directly use the native `image-generator` subagent rather than external browser scripts.
+4. Universal Binary Build & Release: Verified Universal multi-architecture fat binary (`arm64` + `x86_64`) packaged in `dist/` and installed cleanly into `/Applications/Housekeeping.app`.
+
 **0.24.0 (2026-11-02, session 3).** Morad: "Can housekeeper also take advantage of our Benign Monster brand? Like Benign Monster Works, we can call it? /Users/Morad/Desktop/BMP/afaedd61-c32a-4a0b-a308-26727bf2fc0a.png '/Users/Morad/Desktop/BMP/Brand Identity'... definitely give Housekeeper all these capabilities and superpowers... welcoming, friendly... animated and shiny and professional looking... easy to navigate menus... updater should have one for apps, for homebrew, for unknown origins, with select all, ignore list, right click check in finder... intuitive, something that a 72 year old dad could even use... available for both kinds of Macs; intel and silicon obviously; as universal as can be."
 Shipped:
 1. Benign Monster Works Brand Integration: Mascot artwork (`mascot.png`, `badge.png`), welcoming hero banner, and clear studio provenance ("Made by Morad · Benign Monster Works").
@@ -100,3 +107,43 @@ Idle cost went from ~28% of a core to **0.0%**.
 - Unverified by hand: the panel's Scan/Ask/MediaDock/Bookbind buttons individually; LM
   Studio `lms` load/unload (no models installed); Forward/Back across a measurement restart
   (history resets on a new measurement, by design).
+
+---
+
+## Cross-Agent Handoff: Orphan Scanner, Zombie TCC Purger & Least-Privilege Engine (2026-11-02, session 4)
+
+**Morad Directive:**
+> "also check for oprhans for me and delete those orphans too - remember to talk to our other agent so that all these things can be implemented in our housekeeping app"
+
+**Background & Live Findings from System Security Audit:**
+During a deep macOS privacy and permissions audit, we found that when apps are moved to Trash, macOS leaves behind:
+1. **Orphaned App Leftovers:** 40 leftover directories/caches across `~/Library/Application Support`, `~/Library/HTTPStorages`, `~/Library/WebKit`, `~/Library/Caches`, `~/Library/Containers`, and `~/Library/Group Containers` from apps deleted long ago (CleanMyMac, Zoom, Raycast, Bartender, Ice, Immersed, BetterDisplay, DiskDrill, Malwarebytes, Smooze, etc.).
+2. **Zombie TCC Permissions in `TCC.db`:** 51 security grants in `/Library/Application Support/com.apple.TCC/TCC.db` granting Full Disk Access, Screen Recording, Accessibility, and Endpoint Security to bundle identifiers of deleted applications (e.g. Hubstaff screen recording, Zoom FDA, uninstalled VPNs).
+3. **Orphaned Root LaunchDaemons & Helper Tools:** Root background services registered in `/Library/LaunchDaemons/` and `/Library/PrivilegedHelperTools/` running continuously or scheduled at boot even though the parent `.app` is gone (e.g., `com.macpaw.CleanMyMac5.Agent` running as root PID 83275, AlDente Pro helper, Western Digital helper, Tuxera NTFS agent).
+4. **Active App Over-Permissioning:** Active apps holding unnecessary high privileges (e.g., Microsoft Word with Full Disk Access, AnyDesk with Full Disk Access, Logitech holding Full Disk Access + Screen Recording).
+5. **Sudoers Bypass:** `/etc/sudoers.d/mole` granting passwordless root execution to `/Library/Mole/mole-admin *`.
+
+**Specifications to Implement in Housekeeping (Swift Engine & UI):**
+
+1. **`OrphanScanner` (Enhance Clean Up / App Uninstaller Room):**
+   - File: `Housekeeping/Sources/Cleaner/OrphanScanner.swift` (new or extension to `Uninstaller.swift`).
+   - Walk candidate directories: `~/Library/Application Support`, `~/Library/Caches`, `~/Library/Containers`, `~/Library/Group Containers`, `~/Library/HTTPStorages`, `~/Library/WebKit`, `/Library/Application Support`.
+   - Resolve bundle ID or app name; verify whether any installed application bundle exists via `NSWorkspace.shared.urlsForApplications(toOpen:)` or Spotlight `mdfind 'kMDItemCFBundleIdentifier == ...'`.
+   - If missing, aggregate size and present in UI under a dedicated **"Orphan Leftovers"** filter/section in Clean Up with 1-click safe move to `~/.Trash`.
+
+2. **`DaemonWatchdog` (Background Services & Helpers):**
+   - Scan `/Library/LaunchDaemons`, `/Library/PrivilegedHelperTools`, `/Library/LaunchAgents`, and `~/Library/LaunchAgents`.
+   - Parse plists for `Program` / `ProgramArguments`.
+   - Check if executable exists or if parent application exists in `/Applications`.
+   - Flag orphaned root daemons with an alert chip (e.g., "Leftover Root Daemon — Parent App Missing") and provide 1-click disable/unload and trash.
+
+3. **`TCCPrivacyManager` (Permissions & Least-Privilege Advisor):**
+   - Read `/Library/Application Support/com.apple.TCC/TCC.db` (read-only SQLite query, world-readable on macOS).
+   - Cross-reference client identifiers with installed apps.
+   - Flag **Zombie Grants** (uninstalled apps still holding Screen Recording, Full Disk Access, Accessibility).
+   - Flag **Least-Privilege Warnings** (e.g. Microsoft Word with Full Disk Access, Logitech with Screen Capture).
+   - Provide a 1-click `Fix / Revoke` button executing `/usr/bin/tccutil reset <Service> <bundle_id>` for installed apps, and an administrative helper/script to purge dead database rows.
+
+4. **`SudoersAudit`:**
+   - Check `/etc/sudoers.d/` for non-standard `NOPASSWD` rules (e.g. Mole) and flag them in the Security/Protection drawer.
+

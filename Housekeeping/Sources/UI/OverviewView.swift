@@ -196,8 +196,16 @@ struct OverviewView: View {
     }
 
     private func loadBenignMonsterMascot() -> NSImage? {
+        let preferred = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/BenignMonster/housekeeper_octopus_maid.png")
+        if FileManager.default.fileExists(atPath: preferred.path), let img = NSImage(contentsOf: preferred) {
+            return img
+        }
         let bundlePath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/BenignMonster/mascot.png")
         if FileManager.default.fileExists(atPath: bundlePath.path), let img = NSImage(contentsOf: bundlePath) {
+            return img
+        }
+        let devPath = URL(fileURLWithPath: "/Users/Morad/C3PO/Housekeeping/Housekeeping/Resources/BenignMonster/housekeeper_octopus_maid.png")
+        if FileManager.default.fileExists(atPath: devPath.path), let img = NSImage(contentsOf: devPath) {
             return img
         }
         let fallback = URL(fileURLWithPath: "/Users/Morad/Desktop/BMP/afaedd61-c32a-4a0b-a308-26727bf2fc0a.png")
