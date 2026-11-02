@@ -2,22 +2,26 @@
   <img src="https://raw.githubusercontent.com/aghamorad/Housekeeping/main/docs/images/mascot.png" width="180" alt="Housekeeper Mascot" />
   <h1 align="center">Housekeeper 0.25.0</h1>
   <p align="center"><strong>The All-in-One Native macOS Companion & System Maintenance Suite</strong><br>
-  <em>Made by Morad · Zero Subscriptions · Zero Idle Drain · Full Kitchen-Sink Bundle</em></p>
+  <em>Made by Morad · No Subscriptions · Zero Idle Drain · The Full Kitchen Sink</em></p>
 </p>
 
 ---
 
-### Why I Built This
+### Why I Made This
 
-I got sick of the state of Mac maintenance tools.
+I basically just wanted an app for the things I actually deal with every day on my Mac.
 
-On one side you have apps like CleanMyMac: bloated, subscription-hungry, wrapped in flashy animations that chew up memory, and leaving behind unkillable root daemons even after you drag the app into the trash. On the other side you have fragile, scattered terminal one-liners that you have to look up every three months when Gatekeeper declares an app “damaged,” when a rogue VPN refuses to give your default gateway back, or when your disk runs out of space because an AI package manager cached forty gigabytes of weights in a hidden directory.
+I wanted something that has the good stuff that CleanMyMac has, the useful low-level tricks from Mole, but also all the extras that none of those apps ever bother to include. Instead of having five different utilities running in the background—or paying an annual subscription for an app that leaves half a dozen unkillable root daemons on your system—I wanted one clean, native app that puts it all in one place.
 
-Worse still, most utilities lie to you. They scan your disk, hit a folder boundary or a 20,000-file ceiling, panic, and report that forty gigabytes of applications is “12 GB” because they read the directory node instead of the bundle. Or they tell you an app has “4 leftover items” as static text and give you no way to see what those files are, where they live, or reveal them in Finder.
+Here is the reality of what I needed:
 
-I wanted one app. A real kitchen-sink companion built natively in Swift that lives in your menu bar, sits at **0.0% to 0.1% CPU** when you’re not actively looking at it, speaks plainly without tech-support condescension, and actually does the work.
+* **Audiobooks**: I love audiobooks. But when you get an audiobook, it often arrives as sixty separate, messy MP3 tracks. I wanted a way to just drag them in, search the iTunes catalogue for the right cover art and chapters, and compile them into a proper `.m4b` file so I can actually listen to them without losing my place. There you go: that’s Bookbind, built right in.
+* **Living in Iran & Dealing with VPNs**: When you live in Iran, you have to use VPNs constantly. The problem is that VPNs get blocked all the time, server IPs die, and when a tunnel drops, it often leaves your network routing silently confused or your default gateway stuck. You disconnect the VPN, but your internet is dead. I wanted a route sweeper and interface watchdog that shows you exactly what `utun` devices and tunnels are active, and lets you flush the routes and delete dead VPN profiles with one click.
+* **Sanctions & 403 Errors**: Because of geographic sanctions, half the developer tools you use—Docker, Homebrew, Gradle, Android SDK, NPM—throw 403 Forbidden errors unless you route them through specific bypass DNS providers like Shecan, 403.online, or Begzar. And sometimes you just want Cloudflare or Google DNS to speed up standard browsing. Having to open terminal commands or dig through macOS Network settings every time is annoying. So there’s the DNS Easy Switcher, complete with live ping benchmarks so you can see what’s actually reachable.
+* **Coding with Codex, AI & Python Clutter**: As soon as you start working with AI tools, local LLMs, and coding harnesses, you realize there is a massive amount of Python, Homebrew, and cache clutter getting dumped into places you don’t even know exist. Huge MLX model weights, gigabytes of Hugging Face caches, `uv` build artifacts, and orphaned app containers sitting in `~/Library`. I wanted an uninstaller and cleaner that actually tracks down those hidden folders, lets you inspect every leftover item before touching it, and lets you reveal it in Finder.
+* **Damaged App Gatekeeper Warnings**: macOS loves to flag tools downloaded from GitHub as “damaged and cannot be opened.” Instead of opening Terminal every single time to remember `xattr -cr` and `codesign` commands, I wanted an App Doctor where you just drag the app in and it fixes the quarantine flags and permissions instantly.
 
-No monthly fees. No telemetry. No background daemons lingering after you quit. Just an honest, sharp tool for your Mac.
+That’s really the whole reason. Just a fast, honest, kitchen-sink companion that looks after your Mac, sits at **0.1% CPU** when you’re not looking at it, and does the things that actually matter.
 
 ---
 
