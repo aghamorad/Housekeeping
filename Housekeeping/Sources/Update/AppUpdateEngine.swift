@@ -421,6 +421,17 @@ final class AppUpdateEngine {
         }
     }
 
+    static var hasFullDiskAccess: Bool {
+        let testPath = ("~/Library/Safari" as NSString).expandingTildeInPath
+        return FileManager.default.isReadableFile(atPath: testPath)
+    }
+
+    static func openPrivacySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     private func upgradeBrew(name: String, isCask: Bool) async throws -> UpdateOutcome {
         guard let brew = brewPath else {
             throw UpdateFailure.homebrewMissing
@@ -433,6 +444,22 @@ final class AppUpdateEngine {
         if result.succeeded {
             return UpdateOutcome(id: name, name: name, message: "Updated with Homebrew.", succeeded: true)
         }
+
+        // When Homebrew or a cask requires sudo / administrator privileges, prompt via macOS authorization dialog
+        let combined = (result.stderr + "\n" + result.stdout).lowercased()
+        if combined.contains("sudo") || combined.contains("permission") || combined.contains("password") || isCask {
+            let escapedBrew = brew.replacingOccurrences(of: "\"", with: "\\\"")
+            let subCmd = isCask ? "upgrade --cask \(name)" : "upgrade \(name)"
+            let appleScriptSource = "do shell script \"\(escapedBrew) \(subCmd)\" with administrator privileges"
+            var errDict: NSDictionary?
+            if let appleScript = NSAppleScript(source: appleScriptSource) {
+                let _ = appleScript.executeAndReturnError(&errDict)
+                if errDict == nil {
+                    return UpdateOutcome(id: name, name: name, message: "Updated with Homebrew (Administrator privileges granted).", succeeded: true)
+                }
+            }
+        }
+
         let detail = lastMeaningfulLine(result.stderr) ?? lastMeaningfulLine(result.stdout) ?? "Homebrew reported an error."
         return UpdateOutcome(id: name, name: name, message: detail, succeeded: false)
     }

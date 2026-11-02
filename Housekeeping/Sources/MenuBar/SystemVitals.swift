@@ -52,6 +52,8 @@ struct VitalsSnapshot: Equatable {
 
     var gpu: Double?
     var battery: BatteryState?
+    var fanRPM: Double?
+    var cpuTemperature: Double?
     var uptime: TimeInterval = ProcessInfo.processInfo.systemUptime
     /// The busiest hands. Kept to four because the panel names the first three.
     var processes: [ProcessLoad] = []
@@ -206,6 +208,8 @@ final class SystemVitals: NSObject, ObservableObject {
         next.networkHistory = networkHistory
         next.gpu = readGPU()
         next.battery = readBattery()
+        next.fanRPM = FanController.shared.fans.first?.currentRPM
+        next.cpuTemperature = FanController.shared.cpuTemperature
         next.uptime = ProcessInfo.processInfo.systemUptime
         let hands = readProcesses()
         next.processes = hands.busy

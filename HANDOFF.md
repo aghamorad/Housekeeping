@@ -2,6 +2,15 @@
 
 ## Objective
 
+**0.22.0 (2026-11-02).** Morad: "So my Housekeeping app sucks. It is still not doing what I want it to do, having fan controls, being quick, having a very, very user-friendly interface where you can easy pick and see what you should update, uninstall etc. The updater itself is terrible. It is so confusing too on top of everything - while we wanted an easy kitchen-sink app... make everything as easy as CleanMyMac and Mole but better with all the other features... fast and optimized for devices both Silicon and Intel... ask for Sudo or Full Disk Access... space checker convoluted with so little room to breathe."
+Shipped:
+1. Native SMC & IOHID Fan & Thermal Control for Apple Silicon and Intel Macs (live RPM gauges, 5 profiles including System Auto, Quiet, Balanced, Full Blast, and Custom RPM slider, CPU/GPU/Battery temps, safety reset on quit).
+2. Modern, CleanMyMac-inspired App & Package Updater with hero banner, one-click *Update All*, individual row update actions, Full Disk Access verification, and automated macOS native authorization (sudo) for Homebrew packages and casks.
+3. Space Lens & Visual Storage Explorer providing instant volume statistics, category breakdown (Applications, Developer & Caches, Media, Downloads, Documents, Trash), large files discovery (>200 MB), and fluid folder exploration with breadcrumbs.
+4. Dedicated App Uninstaller scanning application bundles and associated leftovers across Application Support, Caches, Preferences, Saved State, and Containers with safe Quarantine archiving.
+
+**0.21.1 (2026-10-30).** Bookbind 1.5.1 bundled to resolve catalogue search root certificate verification.
+
 **0.21.0 (2026-10-30, session 2).** Morad: "make sure there's no lag… a progress bar for the
 updates… a path bar for the searches so someone can go back and forth." Shipped: bars on
 every long operation, Forward in the disk browser, and smooth motion restored.

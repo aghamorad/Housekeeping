@@ -161,6 +161,15 @@ struct HousekeepingApp: App {
                 }
                 .keyboardShortcut("y", modifiers: [.command, .shift])
 
+                Button("Fans & Thermals…") {
+                    appState.showFanControl = true
+                }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+
+                Button("App Uninstaller…") {
+                    appState.showUninstaller = true
+                }
+
                 // The one screen about the models themselves rather than the disk
                 // they sit on: what is installed, what is in memory, and the way
                 // out of it when the machine has none left.
