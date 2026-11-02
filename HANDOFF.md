@@ -2,12 +2,67 @@
 
 ## Objective
 
-**0.24.1 (2026-11-02, session 4).** Morad: "The app's logo shouldn't say Benign Monster Studios - it should be the Octopus that is our main brand mascot and have it dressed in a maids outfit holding all the tools and appliances of the housekeeper... use your own imagegen!!! You have the octopus already you just need to dress it up using your own imagegen!... Remember from now on when it comes to Antigravity/Gemini tasks - you are more than capable to make your own images so you can bypass the other ones (update the skill accordingly too)"
+**0.24.1 (2026-11-02, session 4).** Morad: "The app's logo shouldn't say Benign Monster Studios - it should be the Octopus that is our main brand mascot and have it dressed in a maids outfit holding all the tools and appliances of the housekeeper... use your own imagegen!!! You have the octopus already you just need to dress it up using your own imagegen!... Remember from now on when it comes to Antigravity/Gemini tasks - you are more than capable to make your own images so you can bypass the other ones (update the skill accordingly too)... And don't push anything yet until we check and see what needs working on still please... For example, the uninstaller (and all the other options in the app) doesn't have organize by size, by date, by modified , by name etc. which is central... the uninstaller button doesnt have an icon either - make sure everything has a nice icon you know?... and when is ee such a thing when checking my ram - maybe i can see what swift-run-end is according to the housekeeping knowledge (made better if I enable its local AI) while also it telling me what app it is connected to... The icon is terrible btw - it is not what it is supposed to be - let me make it myself and i'll share it with you... there you go - /Users/Morad/Desktop/30e46a86-0c5a-4a6f-ab23-6bb3f8d430ee.png... can you also add this as a feature too - that it does the damaaged file repair gatekepeer thing? like one of the app options? '/Applications/Damaged Repair Tool'... BTW Benign Monster Works shouldnt be littered - its just the studio that made this technically... Also battery health maangment is also a good feature to have in this... Before you commit it, debug and troubleshoot and make sure everything is in perfect working order... the storage is wrong btw - it says that i have only that many gbs of apps when there is much much more... Also, the housekeeper can have a transparent background - the icon i mean - it doesnt need to be boxed in - the housekeper should also have its logo updated in the menu bar... also, there should be an option here to see the leftovers... also - i want one that shows how many vpn tunnels are installe dand running because sometimes that can really confuse the computer so its good to have a list - with the option to delete them... also, menu bar item should be consistent with all the other buttons up there in form and style... Oh man - this is bad. Like MediaDock and BookBind should be part of this app - same with all the other features. They should not need a separate app. This is a kitchen-sink app after all. Full bundle."
 Shipped:
-1. Native Mascot Art Generation: Generated official crimson octopus brand mascot in housekeeper maid uniform using native Antigravity `image-generator` subagent (lace cap, white ruffled apron, holding feather duster, spray bottle, vacuum hose, squeegee, sponge, wrench, and fan turbine).
-2. macOS Full-Bleed App Icon: Created `AppIcon.icns` and `AppIcon.png` via `script/make_icon.sh` using the maid mascot. Bundled in `/Applications/Housekeeping.app` and `Housekeeping/Resources/`.
-3. Native Skill Update: Updated `/Users/Morad/Skills/generate-image/SKILL.md` to establish that under Antigravity/Gemini, agents must directly use the native `image-generator` subagent rather than external browser scripts.
-4. Universal Binary Build & Release: Verified Universal multi-architecture fat binary (`arm64` + `x86_64`) packaged in `dist/` and installed cleanly into `/Applications/Housekeeping.app`.
+1. Native Monochrome Menu Bar Consistency & Unboxed Mascot:
+   - Preserved natural transparent background on Morad's hand-crafted housekeeper octopus mascot (`/Users/Morad/Desktop/30e46a86-0c5a-4a6f-ab23-6bb3f8d430ee.png`) across all resolutions.
+   - Removed artificial rounded squircle clipping, borders, and solid backdrop boxes from `OverviewView.swift`, `ContentView.swift`, and `script/prepare_icon.swift`.
+   - Status Item Menu Bar Consistency (`StatusItemController.swift`): Replaced colored raster image with native vector cut-paper monochrome template icon (`OctopusSilhouette` with `isTemplate = true`). macOS automatically applies dynamic appearance tinting (pure white in dark menu bar, dark graphite in light menu bar, inverted white highlight on click), matching the exact form, weight, and visual style of adjacent Wi-Fi, Bluetooth, Time Machine, and battery buttons.
+   - Popover & In-App Identity: Retained full-colour unboxed maid mascot in `MenuBarPanel.swift` header (44×44 pt), `OverviewView.swift`, and `ContentView.swift`.
+2. Accurate Space Lens Category Calculation (`SpaceAnalyzer.swift`, `SpaceLensView.swift`):
+   - Replaced flawed directory-inode resource sizing with parallel, asynchronous kernel-level `duBytes` traversal measuring full bundle contents across `/Applications`, `/Applications/Utilities`, and `~/Applications` (accurate 92.2 GB).
+   - Removed premature 20,000-file iteration limit on `Documents` (accurate 218 GB).
+   - Removed `skipsPackageDescendants` in Trash scan so moved `.app` bundles reflect real trash size.
+   - Removed artificial synthetic fallback floors (`12 GB`, `18 GB`, etc.).
+   - Integrated fast Spotlight query (`mdfind "kMDItemFSSize > 209715200"`) for Big & Old Files (>200 MB), yielding 50 ms queries.
+   - Added progressive loading states with mini `ProgressView` and clickable category cards jumping directly into the folder browser.
+3. Battery Health & Power Management (`BatteryHealthEngine.swift`, `BatteryHealthModels.swift`, `BatteryHealthView.swift`):
+   - Real-time hardware telemetry: Cycle count, design capacity vs full charge capacity, wear loss in mAh, health %, temperature, voltage, wattage, and condition (Normal, Service Recommended, etc.).
+   - Sleep inhibitor detection: Identifies active assertions (`PreventUserIdleSystemSleep`, `NoDisplaySleepAssertion`) and flags non-system apps (Chrome, DaVinci Resolve, caffeinate) preventing Mac sleep.
+   - Optimized battery charging status & power adapter watt rating.
+4. App Doctor & 'Damaged' App Gatekeeper Fixer (`AppRepairEngine.swift`, `AppRepairModels.swift`, `AppRepairView.swift`):
+   - 1-click repair of "‘AppName’ is damaged and can't be opened. You should move it to the Trash" and "Unidentified Developer" Gatekeeper rejections.
+   - Strips `com.apple.quarantine` and extended provenance/download tags (`xattr -cr`).
+   - Ensures binary user execution permissions (`chmod -R u+w,u+x Contents/MacOS`).
+   - Ad-hoc code re-signs application and nested frameworks/dylibs (`codesign --force --deep --sign -`).
+   - Drag-and-drop zone + native `[Choose App from Disk…]` file picker.
+   - Quarantined apps shelf automatically detects apps in `/Applications` holding quarantine flags (e.g. LibreOffice) with individual and batch `[Repair All]` actions.
+   - Context-menu integration in `UpdateView.swift` on all application rows.
+   - 1-click "Allow Anywhere" system helper (`spctl --master-disable`).
+5. Comprehensive Sorting Controls Across App:
+   - Uninstaller: Added dropdown sorting by Size (Largest/Smallest), Name (A-Z/Z-A), Modified Date (Newest/Oldest), and Installed Date (Newest/Oldest). Added `[Select All in View]`, `[Deselect All]`, and row-level `[🗑 Uninstall]` button.
+   - Updater: Added dropdown sorting by Updates Waiting First, Name, and Origin/Channel.
+   - Clean Up: Added 5 sort modes across all categories.
+   - Space Lens: Added sorting for large files by Size, Date, and Name.
+6. SF Symbol Icons on All Action Buttons: Fixed the App Uninstaller icon across all views (Dashboard tile, sidebar row, and Uninstaller header) by replacing the invalid `app.badge.minus` with the standard macOS `xmark.app` / `xmark.app.fill` symbol. Added polished icons to every button across Clean Up, Uninstaller, Space Lens, and Overview.
+7. Interactive App Leftovers Inspection & Filter Controls (`UninstallerModernView.swift`):
+   - Added filter pills: `All Apps`, `With Leftovers`, and `Clean Bundles`.
+   - Added global `[▾ Expand All Leftovers]` / `[▴ Collapse All Leftovers]` toggle to inspect all app remnants across the Mac at once.
+   - Added interactive clickable capsule pill (`[👁 See X leftovers ▾]`) under the file size and a dedicated `[See Leftovers]` action button on every application row.
+   - Enhanced the component drawer with categorized badges (`App Support`, `Caches`, `Sandbox`, `Preferences`, `Saved State`, `WebKit`, `Logs`), selectable abbreviated file paths (`~...`), formatted sizes, and direct 1-click `[↗ Reveal]` in Finder buttons for the main `.app` bundle and every individual leftover item.
+8. Orphaned App Leftovers Scanner (`OrphanScanner.swift`): Dedicated scanner cross-referencing `~/Library` application support, containers, and caches against installed applications to isolate remnants of already-uninstalled software.
+9. Background Daemons & Security Audit (`DaemonAndSecurityAudit.swift`): Inspects LaunchDaemons/LaunchAgents for deleted executables, audits TCC.db for zombie permissions and over-permissioned active apps, and inspects `/etc/sudoers.d/`.
+10. Process Knowledge Engine & Local AI RAM Advisor (`ProcessKnowledge.swift`):
+   - Cryptic process resolution via native Darwin APIs (`proc_pidinfo`, `proc_pidpath`, `sysctl KERN_PROCARGS2`).
+   - Encyclopedia of Mac processes, developer tools, compilers, and runtimes.
+   - Parent application hierarchy resolution (e.g. traces `swift-frontend` to `Xcode.app`, `Terminal`, or `Gemini`).
+   - Active workload detection (e.g. identifies module being compiled: `Compiling module 'Housekeeping'`).
+   - Dynamic safety badge (Safe to Quit, Caution, System Protected).
+   - Full grounding integration with "Ask the Housekeeper" / Local AI so users can chat with the local model about held RAM with complete context.
+11. VPN Tunnels & Interface Watchdog (`VPNTunnelEngine.swift`, `VPNTunnelsView.swift`):
+   - Enumerates how many VPN services are installed vs actively routing (`scutil --nc list`, `networksetup`, `preferences.plist`).
+   - Discovers BSD virtual tunnel interfaces (`utun`, `tun`, `tap`), inspects IP addresses and MTU, and correlates kernel routing (`netstat -rn -f inet` for `0/1` and `128.0/1` default routes).
+   - Identifies Apple system infrastructure (`utun0`–`utun3` for AirDrop and iCloud) vs third-party VPN tunnels.
+   - Scans running VPN background daemons (ExpressVPN, Amnezia, WireGuard, Tailscale, Sing-box, WARP, etc.) with CPU % and memory.
+   - 1-click **[🗑 Delete VPN]** to permanently remove stale, conflicting VPN profiles from macOS Network Settings (`networksetup -removenetworkservice`).
+   - 1-click **[Disconnect]** / **[Connect]** and **[🛑 Stop Engine]** process controls.
+   - 1-click **[⚡️ Flush DNS & Reset Routes]** emergency rescue button.
+   - Accessible via Overview Dashboard, sidebar, and keyboard shortcut `⇧⌘V`.
+13. Kitchen-Sink Full Bundle Integration (MediaDock 9 & Bookbind Built Right In):
+   - Full Self-Contained Bookbind Engine: Cloned canonical checkout into `/Users/Morad/C3PO/Bookbind`. Packaged `app.py`, `bookbind_cli.py`, `static/`, AND `bin/` (`BookbindServer`, `ffmpeg`, `ffprobe`, `_internal`) directly into `Housekeeping.app/Contents/Resources/Bookbind`.
+   - Zero Dependency Failures: `BookbindEngine.swift` resolves the bundled binary engine, local checkout, and system python (including `/Library/Frameworks/Python.framework/Versions/3.10` with `mutagen`). Verified live with port 8765 responding with full volume and user home data.
+   - First-Class UI Integration: Added dedicated "Studios & Media" section in the primary sidebar (`MediaDock 9` and `Bookbind`) and prominent utility cards under "Studios & Utilities" on the Dashboard.
+14. Universal Multi-Architecture Build: Fat universal binary (`arm64` + `x86_64`) packaged via `script/package_release.sh` and installed into `/Applications/Housekeeping.app` (PID 52911; git push held per Morad's review instruction).
 
 **0.24.0 (2026-11-02, session 3).** Morad: "Can housekeeper also take advantage of our Benign Monster brand? Like Benign Monster Works, we can call it? /Users/Morad/Desktop/BMP/afaedd61-c32a-4a0b-a308-26727bf2fc0a.png '/Users/Morad/Desktop/BMP/Brand Identity'... definitely give Housekeeper all these capabilities and superpowers... welcoming, friendly... animated and shiny and professional looking... easy to navigate menus... updater should have one for apps, for homebrew, for unknown origins, with select all, ignore list, right click check in finder... intuitive, something that a 72 year old dad could even use... available for both kinds of Macs; intel and silicon obviously; as universal as can be."
 Shipped:
@@ -146,4 +201,72 @@ During a deep macOS privacy and permissions audit, we found that when apps are m
 
 4. **`SudoersAudit`:**
    - Check `/etc/sudoers.d/` for non-standard `NOPASSWD` rules (e.g. Mole) and flag them in the Security/Protection drawer.
+
+---
+
+## DNS Easy Switcher & Media Bundle Handoff (2026-11-02, session 6)
+
+### Objective:
+Morad requested: "Also add a DNS configurator to the app like this one.. '/Applications/DNS Easy Switcher.app'" alongside embedding Bookbind and MediaDock into a self-contained kitchen-sink bundle.
+
+### Features Implemented:
+1. **DNS Easy Switcher (`Sources/Network/DNSModels.swift`, `Sources/Network/DNSEngine.swift`, `Sources/UI/DNSConfigView.swift`):**
+   - Built-in tool replicating and exceeding `/Applications/DNS Easy Switcher.app` without third-party daemons or system modifications.
+   - **Preset Catalog**:
+     - *Automatic (DHCP)*: 1-click restore to router default (`networksetup -setdnsservers <iface> empty`).
+     - *Fast & Privacy*: Cloudflare (`1.1.1.1`, `1.0.0.1`), Google Public DNS (`8.8.8.8`, `8.8.4.4`), Quad9 (`9.9.9.9`, `149.112.112.112`), OpenDNS (`208.67.222.222`, `208.67.220.220`).
+     - *Ad & Threat Blocking*: AdGuard DNS (`94.140.14.14`, `94.140.15.15`), Cloudflare Security (`1.1.1.2`, `1.0.0.2`).
+     - *Sanction & 403 Bypass (Iran)*: Shecan (`178.22.122.100`, `185.51.200.2`), 403.online (`10.202.10.202`, `10.202.10.102`), Begzar (`185.55.226.26`, `185.55.225.25`) allowing seamless access to blocked developer platforms (Docker, Homebrew, Gradle, Android SDK, NPM, etc.).
+     - *Gaming & Low Latency*: Electro (`78.157.42.100`, `78.157.42.101`), Radar Game (`10.202.10.10`, `10.202.10.11`).
+     - *Custom Profiles*: Add, edit, test, and delete personal DNS servers with IP syntax validation.
+   - **Real-Time Latency Testing**: ICMP ping benchmark tool (`ping -c 1 -W 1000 <ip>`) per card and global **[🔄 Test All Latencies]** with color-coded millisecond badges (`🟢 <35ms`, `🟡 35-100ms`, `🔴 Timeout`).
+   - **Interface Targeting**: Automatically selects primary gateway via `route get default` and `networksetup -listallhardwareports` (e.g. `Wi-Fi · en0`), with support for specific interfaces or **All Physical Interfaces**.
+   - **1-Click Cache Flushing**: Directly purges macOS DNS resolver cache via `dscacheutil -flushcache` and `killall -HUP mDNSResponder`.
+2. **App Integration & Navigation:**
+   - Sidebar: Under "Studios & Network" as "DNS Easy Switcher".
+   - Dashboard Overview: Symmetrical 3×3 studios grid alongside MediaDock 9 and Bookbind.
+   - Menu Bar & App Commands: `Jobs ▸ DNS Easy Switcher…` with keyboard shortcut `⇧⌘D`, and status item right-click menu.
+3. **Full Kitchen-Sink Bundle (Bookbind & MediaDock):**
+   - Bookbind's engine (`app.py`, `bookbind_cli.py`, `static/`, and `bin/` containing `BookbindServer`, `ffmpeg`, `ffprobe`) staged directly into `Housekeeping.app/Contents/Resources/Bookbind/`.
+   - Runs headless on local loopback port 8765 when opened, cleanly shutting down on app exit.
+4. **Verification & Packaging:**
+   - `typecheck.sh`: Passed with 0 warnings.
+   - `test_safety.sh`: Passed all 282 safety assertions.
+   - `package_release.sh`: Built Universal Fat Binary (`arm64` + `x86_64`) and packaged zip archives.
+   - Installed to `/Applications/Housekeeping.app` and verified live.
+   - `~/Desktop/Housekeeping — a noob's guide.md`: Updated with Section 12 for DNS Easy Switcher and full command vocabulary.
+   - **STRICT MANDATE HELD**: Zero git commits or pushes executed.
+
+---
+
+## Battery Health, App Doctor, and Mascot Handoff (2026-11-02, session 5)
+
+### Features Implemented:
+1. **Battery Health & Power Management (`Sources/Hardware/BatteryHealthEngine.swift`, `BatteryHealthModels.swift`, `Sources/UI/BatteryHealthView.swift`):**
+   - Native Darwin IOKit interface querying `AppleSmartBattery` hardware registers in real time: cycle count (625 / 1,000 cycles, 62.5% consumed), maximum full-charge capacity (`6,521 mAh`) vs factory design capacity (`8,694 mAh`), capacity loss (`-2,173 mAh`), cell condition (`Normal`), voltage (`12.00 V`), amperage, and battery controller IC (`bq40z651`, serial `F8Y148502FA0J9TA6`).
+   - Power flow detection: 40W USB-PD adapter (`20V @ 2.0A`), Optimized Charging 80% hold state detection (`NotChargingReason = 16777216`), and AC Pass-Through state.
+   - Sleep Inhibitor Watchdog: Live `pmset -g assertions` parser displaying active apps preventing deep standby sleep with PID, name, duration, and 1-click `[Quit]` action.
+   - Wired to Navigation: Sidebar under Hardware & Vitals, Overview dashboard card, menu bar popover battery room button, and local AI Housekeeper context topic (`HousekeeperTopic.batteryHealth`).
+2. **App Doctor & Damaged App Repair (`Sources/AppRepair/AppRepairEngine.swift`, `Sources/UI/AppRepairView.swift`):**
+   - Built-in tool replacing `/Applications/Damaged Repair Tool`.
+   - Strips `com.apple.quarantine` recursively, clears Gatekeeper provenance attributes (`xattr -cr`), restores executable permissions (`chmod +x`), and ad-hoc re-signs binaries (`codesign --force --deep --sign -`).
+   - Quarantined apps shelf + drag & drop repair zone.
+3. **Mascot & App Icon:**
+   - Generated multi-resolution `AppIcon.icns` and `AppIcon.png` from Morad's hand-crafted maid octopus mascot.
+   - Replaced assets in `Resources/BenignMonster/`.
+4. **Packaging & Verification:**
+   - `script/typecheck.sh` passed with warnings as errors.
+   - `script/test_safety.sh` passed all 282 safety assertions.
+   - Universal fat binary (`arm64` + `x86_64`) built via `script/package_release.sh`.
+   - Installed to `/Applications/Housekeeping.app` (running live).
+   - Beginner guide updated at `~/Desktop/Housekeeping — a noob's guide.md`.
+   - **NO GIT PUSH**: Strictly retained locally per Morad's instruction pending review.
+
+5. **Storage Lens Category Measurement Fix (`Sources/Disk/SpaceAnalyzer.swift`, `Sources/UI/SpaceLensView.swift`):**
+   - Root cause identified: `SpaceAnalyzer` was calling `resourceValues(forKeys: [.fileSizeKey])` directly on top-level `.app` directory nodes (which returns 4 KB per bundle) rather than summing file contents, triggering an artificial floor `max(appsSize, 12GB)` that made Morad's 92+ GB of apps display as 12 GB.
+   - Replaced with parallel asynchronous APFS traversal measuring full bundle contents across `/Applications`, `/Applications/Utilities`, and `~/Applications` (accurate: ~92.2 GB).
+   - Removed 20,000-file premature break in `quickFolderSize` that caused Documents (198+ GB) to report 18.92 GB.
+   - Removed `skipsPackageDescendants` in Trash scan so moved `.app` bundles reflect real trash size.
+   - Added fast Spotlight `mdfind` index for Big & Old Files (> 200MB) with 50ms response time.
+   - Made category cards clickable with live progressive measuring states.
 

@@ -7,6 +7,7 @@ struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
     @ObservedObject private var vitals = SystemVitals.shared
+    @State private var mascotHovered = false
 
     var body: some View {
         ScrollView {
@@ -34,13 +35,17 @@ struct OverviewView: View {
                                            detail: "3 simple channels: Mac Apps, Homebrew, and Unknown origins.", actionLabel: "Check updates") {
                             appState.showUpdateList = true
                         }
-                        OverviewActionCard(title: "App Uninstaller", icon: "app.badge.minus", color: style.accent,
+                        OverviewActionCard(title: "App Uninstaller", icon: "xmark.app", color: style.accent,
                                            detail: "Cleanly remove apps and their hidden support files.", actionLabel: "Uninstall apps") {
                             appState.showUninstaller = true
                         }
                         OverviewActionCard(title: "Cooling & Fans", icon: "fan.fill", color: style.accent,
                                            detail: "Real-time temperature sensors and fan speed controls.", actionLabel: "Control fans") {
                             appState.showFanControl = true
+                        }
+                        OverviewActionCard(title: "Battery Health", icon: "battery.100.bolt", color: style.accent,
+                                           detail: "Hardware wear, cycle count, and sleep drain inhibitors.", actionLabel: "Manage power") {
+                            appState.showBatteryHealth = true
                         }
                     }
                 }
@@ -49,15 +54,26 @@ struct OverviewView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("More tools").font(.system(size: 17, weight: .semibold))
+                        Text("Studios & Utilities").font(.system(size: 17, weight: .semibold))
                         Spacer()
-                        Text("Space Lens, MLX Models, and Utilities").font(.system(size: 12)).foregroundStyle(.secondary)
+                        Text("MediaDock 9, Bookbind, Space Lens, and Tools").font(.system(size: 12)).foregroundStyle(.secondary)
                     }
-                    HStack(spacing: 14) {
-                        utility("Space Lens", detail: "Visual category disk map", icon: "internaldrive") { appState.showDiskBrowser = true }
-                        utility("Local Models", detail: "Manage MLX Apple Silicon models", icon: "brain") { appState.showLocalModels = true }
-                        utility("Terminal Health", detail: "Check shell installations", icon: "terminal") { appState.showSetupCheck = true }
-                        utility("Two Folders", detail: "Compare folders & backups", icon: "rectangle.on.rectangle") { appState.showReconcile = true }
+                    VStack(spacing: 10) {
+                        HStack(spacing: 14) {
+                            utility("MediaDock 9", detail: "YouTube, Spotify & Apple Music", icon: "play.rectangle.fill") { appState.showMediaDock = true }
+                            utility("Bookbind", detail: "Audiobook creator & tagger", icon: "book.closed.fill") { appState.showBookbind = true }
+                            utility("DNS Switcher", detail: "Fast DNS & 403 bypass", icon: "globe.badge.chevron.backward") { appState.showDNSSwitcher = true }
+                        }
+                        HStack(spacing: 14) {
+                            utility("Space Lens", detail: "Visual category disk map", icon: "internaldrive") { appState.showDiskBrowser = true }
+                            utility("Local Models", detail: "Manage MLX Apple Silicon models", icon: "brain") { appState.showLocalModels = true }
+                            utility("VPN Tunnels", detail: "Installed & active tunnels", icon: "lock.shield") { appState.showVPNTunnels = true }
+                        }
+                        HStack(spacing: 14) {
+                            utility("Terminal Health", detail: "Check shell installations", icon: "terminal") { appState.showSetupCheck = true }
+                            utility("Battery Health", detail: "Cycles, health & wear", icon: "battery.100.bolt") { appState.showBatteryHealth = true }
+                            utility("App Doctor", detail: "Fix Gatekeeper & damaged apps", icon: "bandage.fill") { appState.showAppRepair = true }
+                        }
                     }
                 }
 
@@ -85,30 +101,26 @@ struct OverviewView: View {
 
     private var heroBanner: some View {
         HStack(spacing: 18) {
-            if let mascotImage = loadBenignMonsterMascot() {
+            if let mascotImage = HousekeeperMascot.loadMascot() ?? loadBenignMonsterMascot() {
                 Image(nsImage: mascotImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 54, height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(width: 64, height: 64)
+                    .scaleEffect(mascotHovered ? 1.06 : 1.0)
+                    .onHover { mascotHovered = $0 }
+                    .animation(.spring(response: 0.35, dampingFraction: 0.7), value: mascotHovered)
             } else {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12).fill(style.accent.opacity(0.12)).frame(width: 54, height: 54)
+                    RoundedRectangle(cornerRadius: 14).fill(style.accent.opacity(0.12)).frame(width: 56, height: 56)
                     Image(systemName: "sparkles")
                         .font(.system(size: 26))
                         .foregroundStyle(style.accent)
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("Housekeeper").font(style.isRetro ? style.titleFont : .system(size: 26, weight: .bold)).tracking(-0.5)
-                    Text("Benign Monster Works")
-                        .font(.system(size: 11, weight: .bold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(style.accent.opacity(0.12), in: Capsule())
-                        .foregroundStyle(style.accent)
-                }
+                Text("Housekeeper")
+                    .font(style.isRetro ? style.titleFont : .system(size: 26, weight: .bold))
+                    .tracking(-0.5)
                 Text("Everything is running cool, fast, and clutter-free. Made by Morad.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
@@ -267,8 +279,14 @@ private struct OverviewStorageCard: View {
                 Spacer(minLength: 20)
                 VStack(alignment: .trailing, spacing: 9) {
                     ThemeButton(title: "Scan My Mac", systemImage: "magnifyingglass", isPrimary: true, action: scan)
-                    Button("Browse storage", action: browse).font(.system(size: 12))
-                        .buttonStyle(.plain).foregroundStyle(style.accent)
+                    Button(action: browse) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder")
+                            Text("Browse storage")
+                        }
+                    }
+                    .font(.system(size: 12))
+                    .buttonStyle(.plain).foregroundStyle(style.accent)
                 }
             }
             VStack(spacing: 10) {

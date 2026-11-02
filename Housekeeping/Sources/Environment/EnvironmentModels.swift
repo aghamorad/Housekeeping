@@ -59,6 +59,8 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
     /// Work that is not a fault: packages Homebrew has a newer version of, old
     /// versions taking up room, and dependencies nothing needs any more.
     case maintenance
+    /// Background launch daemons, zombie TCC privacy permissions, and sudoers rules.
+    case securityAndDaemons
 
     var id: String { rawValue }
 
@@ -72,6 +74,7 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
         case .packageManagers: return "Two package managers"
         case .runtimes: return "Runtimes installed by hand"
         case .maintenance: return "Updates and leftovers"
+        case .securityAndDaemons: return "Background daemons & permissions"
         }
     }
 
@@ -97,6 +100,8 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
             return "Language runtimes installed outside any package manager, and whether anything on this Mac still points at them. Nothing is changed in this group: runtimes live in system folders, which need an administrator, and an item moved by an administrator is one Housekeeping cannot restore on its own. What you get is the list of what still refers to it."
         case .maintenance:
             return "Homebrew's own answers to three questions: which installed packages have a newer version, how much room old versions are using, and which dependencies nothing needs any more. None of this is a fault, which is why none of it is ticked for you. Updating downloads; clearing old versions re-downloads them only if you roll back; removing unused dependencies is the one that needs the most thought. Each is one command you can approve or leave alone."
+        case .securityAndDaemons:
+            return "LaunchDaemons, LaunchAgents, and the macOS Privacy & Security database (TCC.db) were audited for uninstalled apps. Orphaned daemons pointing to missing executables and zombie permissions granted to deleted apps are identified with instructions to clean them."
         }
     }
 
@@ -110,6 +115,7 @@ enum EnvironmentCategory: String, CaseIterable, Identifiable {
         case .packageManagers: return 5
         case .runtimes: return 6
         case .maintenance: return 7
+        case .securityAndDaemons: return 8
         }
     }
 }

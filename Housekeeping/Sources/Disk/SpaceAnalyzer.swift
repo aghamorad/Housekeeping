@@ -10,12 +10,32 @@ import AppKit
 public struct StorageCategory: Identifiable, Sendable {
     public let id: String
     public let name: String
-    public let size: Int64
+    public var size: Int64
     public let colorName: String
     public let icon: String
+    public var isCalculating: Bool
+
+    public init(
+        id: String,
+        name: String,
+        size: Int64,
+        colorName: String,
+        icon: String,
+        isCalculating: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.size = size
+        self.colorName = colorName
+        self.icon = icon
+        self.isCalculating = isCalculating
+    }
 
     public var humanSize: String {
-        ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        if isCalculating && size == 0 {
+            return "Measuring…"
+        }
+        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
 }
 
@@ -87,76 +107,134 @@ public final class SpaceAnalyzer: ObservableObject {
         isAnalyzing = true
         let homeURL = self.home
 
+        // Initialize categories with measuring state if empty or refresh requested
+        if self.categories.isEmpty {
+            self.categories = [
+                StorageCategory(id: "apps", name: "Applications", size: 0, colorName: "blue", icon: "app.badge", isCalculating: true),
+                StorageCategory(id: "dev", name: "Developer & Caches", size: 0, colorName: "purple", icon: "hammer.fill", isCalculating: true),
+                StorageCategory(id: "media", name: "Media & Audio", size: 0, colorName: "pink", icon: "film.fill", isCalculating: true),
+                StorageCategory(id: "downloads", name: "Downloads", size: 0, colorName: "orange", icon: "arrow.down.circle.fill", isCalculating: true),
+                StorageCategory(id: "docs", name: "Documents", size: 0, colorName: "green", icon: "doc.fill", isCalculating: true),
+                StorageCategory(id: "trash", name: "Trash", size: 0, colorName: "gray", icon: "trash.fill", isCalculating: true)
+            ]
+        } else {
+            for i in self.categories.indices {
+                self.categories[i].isCalculating = true
+            }
+        }
+
         Task.detached(priority: .userInitiated) { [weak self] in
-            let fm = FileManager.default
+            // Run all 6 categories in parallel
+            async let appsTask = Self.duBytes(for: [
+                "/Applications",
+                "/Applications/Utilities",
+                homeURL.appendingPathComponent("Applications").path
+            ])
 
-            func quickFolderSize(_ url: URL) -> Int64 {
-                guard let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.totalFileAllocatedSizeKey, .fileSizeKey], options: [.skipsPackageDescendants]) else { return 0 }
-                var total: Int64 = 0
-                var count = 0
-                while let fileURL = enumerator.nextObject() as? URL {
-                    count += 1
-                    if count > 20000 { break } // Quick bounded sample
-                    if let values = try? fileURL.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .fileSizeKey]) {
-                        total += Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
-                    }
-                }
-                return total
-            }
+            async let downloadsTask = Self.duBytes(for: [
+                homeURL.appendingPathComponent("Downloads").path
+            ])
 
-            // 1. Applications
-            var appsSize: Int64 = 0
-            for appDir in [URL(fileURLWithPath: "/Applications"), homeURL.appendingPathComponent("Applications")] {
-                if let contents = try? fm.contentsOfDirectory(at: appDir, includingPropertiesForKeys: [.fileSizeKey, .totalFileAllocatedSizeKey], options: [.skipsHiddenFiles]) {
-                    for item in contents {
-                        if let res = try? item.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .fileSizeKey]) {
-                            appsSize += Int64(res.totalFileAllocatedSize ?? res.fileSize ?? 0)
-                        }
-                    }
-                }
-            }
+            async let trashTask = Self.duBytes(for: [
+                homeURL.appendingPathComponent(".Trash").path
+            ])
 
-            // 2. Developer & Caches
-            var devSize: Int64 = 0
-            for dir in [homeURL.appendingPathComponent("Library/Caches"), homeURL.appendingPathComponent(".cache")] {
-                devSize += quickFolderSize(dir)
-            }
+            async let mediaTask = Self.duBytes(for: [
+                homeURL.appendingPathComponent("Movies").path,
+                homeURL.appendingPathComponent("Music").path,
+                homeURL.appendingPathComponent("Pictures").path
+            ])
 
-            // 3. Downloads
-            let downloadsSize = quickFolderSize(homeURL.appendingPathComponent("Downloads"))
+            async let devTask = Self.duBytes(for: [
+                homeURL.appendingPathComponent("Library/Caches").path,
+                homeURL.appendingPathComponent(".cache").path,
+                homeURL.appendingPathComponent("Library/Developer/Xcode").path
+            ])
 
-            // 4. Media
-            var mediaSize: Int64 = 0
-            for dir in [homeURL.appendingPathComponent("Movies"), homeURL.appendingPathComponent("Music"), homeURL.appendingPathComponent("Pictures")] {
-                mediaSize += quickFolderSize(dir)
-            }
+            async let docsTask = Self.duBytes(for: [
+                homeURL.appendingPathComponent("Documents").path,
+                homeURL.appendingPathComponent("Desktop").path,
+                homeURL.appendingPathComponent("C3PO").path
+            ])
 
-            // 5. Documents & Projects
-            var docsSize: Int64 = 0
-            for dir in [homeURL.appendingPathComponent("Documents"), homeURL.appendingPathComponent("C3PO")] {
-                docsSize += quickFolderSize(dir)
-            }
+            async let largeFilesTask = Self.findLargeFiles(homeURL: homeURL)
 
-            // 6. Trash
-            let trashSize = quickFolderSize(homeURL.appendingPathComponent(".Trash"))
+            let (appsSize, downloadsSize, trashSize, mediaSize, devSize, docsSize, largeFiles) = await (
+                appsTask, downloadsTask, trashTask, mediaTask, devTask, docsTask, largeFilesTask
+            )
 
-            // Discover large files (> 200 MB)
-            var foundLargeFiles: [StorageItem] = []
-            let searchRoots = [
-                homeURL.appendingPathComponent("Downloads"),
-                homeURL.appendingPathComponent("Movies"),
-                homeURL.appendingPathComponent("Desktop"),
-                homeURL.appendingPathComponent("Documents")
+            let finalCategories: [StorageCategory] = [
+                StorageCategory(id: "apps", name: "Applications", size: appsSize, colorName: "blue", icon: "app.badge", isCalculating: false),
+                StorageCategory(id: "dev", name: "Developer & Caches", size: devSize, colorName: "purple", icon: "hammer.fill", isCalculating: false),
+                StorageCategory(id: "media", name: "Media & Audio", size: mediaSize, colorName: "pink", icon: "film.fill", isCalculating: false),
+                StorageCategory(id: "downloads", name: "Downloads", size: downloadsSize, colorName: "orange", icon: "arrow.down.circle.fill", isCalculating: false),
+                StorageCategory(id: "docs", name: "Documents", size: docsSize, colorName: "green", icon: "doc.fill", isCalculating: false),
+                StorageCategory(id: "trash", name: "Trash", size: trashSize, colorName: "gray", icon: "trash.fill", isCalculating: false)
             ]
 
-            for root in searchRoots {
-                guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey, .isDirectoryKey]) else { continue }
-                while let fileURL = enumerator.nextObject() as? URL {
-                    guard let vals = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isDirectoryKey]),
-                          vals.isDirectory != true,
-                          let size = vals.fileSize, size > 200 * 1024 * 1024 else { continue }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.categories = finalCategories
+                self.largeFiles = largeFiles
+                self.isAnalyzing = false
+            }
+        }
+    }
 
-                    let ext = fileURL.pathExtension.lowercased()
+    private nonisolated static func duBytes(for paths: [String]) async -> Int64 {
+        let existingPaths = paths.filter { FileManager.default.fileExists(atPath: $0) }
+        guard !existingPaths.isEmpty else { return 0 }
+
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/du")
+        task.arguments = ["-sk"] + existingPaths
+        let pipe = Pipe()
+        let errPipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = errPipe
+
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+            guard let output = String(data: data, encoding: .utf8) else { return 0 }
+            var totalKB: Int64 = 0
+            for line in output.components(separatedBy: "\n") {
+                let parts = line.split(whereSeparator: { $0.isWhitespace })
+                if let first = parts.first, let kb = Int64(first) {
+                    totalKB += kb
+                }
+            }
+            return totalKB * 1024
+        } catch {
+            return 0
+        }
+    }
+
+    private nonisolated static func findLargeFiles(homeURL: URL) async -> [StorageItem] {
+        // Fast Spotlight search for files > 200MB in home folder
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/mdfind")
+        task.arguments = ["kMDItemFSSize > 209715200", "-onlyin", homeURL.path]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = Pipe()
+
+        var items: [StorageItem] = []
+
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+            if let output = String(data: data, encoding: .utf8) {
+                let lines = output.components(separatedBy: "\n").filter { !$0.isEmpty }
+                for path in lines.prefix(50) {
+                    let url = URL(fileURLWithPath: path)
+                    guard let vals = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isDirectoryKey]),
+                          vals.isDirectory != true,
+                          let sz = vals.fileSize else { continue }
+
+                    let ext = url.pathExtension.lowercased()
                     let kind: String
                     if ["dmg", "iso", "zip", "tar", "gz", "pkg"].contains(ext) {
                         kind = "Archive / Installer"
@@ -168,36 +246,20 @@ public final class SpaceAnalyzer: ObservableObject {
                         kind = "File"
                     }
 
-                    foundLargeFiles.append(StorageItem(
-                        url: fileURL,
-                        name: fileURL.lastPathComponent,
-                        size: Int64(size),
+                    items.append(StorageItem(
+                        url: url,
+                        name: url.lastPathComponent,
+                        size: Int64(sz),
                         isDirectory: false,
                         modifiedDate: vals.contentModificationDate,
                         kind: kind
                     ))
-                    if foundLargeFiles.count >= 40 { break }
                 }
             }
-            foundLargeFiles.sort { $0.size > $1.size }
-            let finalLargeFiles = foundLargeFiles
+        } catch {}
 
-            let builtCategories: [StorageCategory] = [
-                StorageCategory(id: "apps", name: "Applications", size: max(appsSize, 12_000_000_000), colorName: "blue", icon: "app.badge"),
-                StorageCategory(id: "dev", name: "Developer & Caches", size: max(devSize, 18_000_000_000), colorName: "purple", icon: "hammer.fill"),
-                StorageCategory(id: "media", name: "Media & Audio", size: max(mediaSize, 15_000_000_000), colorName: "pink", icon: "film.fill"),
-                StorageCategory(id: "downloads", name: "Downloads", size: max(downloadsSize, 5_000_000_000), colorName: "orange", icon: "arrow.down.circle.fill"),
-                StorageCategory(id: "docs", name: "Documents", size: max(docsSize, 8_000_000_000), colorName: "green", icon: "doc.fill"),
-                StorageCategory(id: "trash", name: "Trash", size: trashSize, colorName: "gray", icon: "trash.fill")
-            ]
-
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.categories = builtCategories
-                self.largeFiles = finalLargeFiles
-                self.isAnalyzing = false
-            }
-        }
+        items.sort { $0.size > $1.size }
+        return items
     }
 
     public func loadFolder(path: String) {

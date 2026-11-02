@@ -13,6 +13,7 @@ struct UpdateView: View {
 
     @State private var filter: Filter = .needsAttention
     @State private var query: String = ""
+    @State private var sortOption: UpdateSortOption = .status
     @State private var selectedFamily: UpdateFamily? = nil
 
     private enum Filter: String, CaseIterable, Identifiable {
@@ -40,7 +41,7 @@ struct UpdateView: View {
     }
 
     private var shownRows: [UpdateRow] {
-        appState.updateRows.filter { row in
+        let matching = appState.updateRows.filter { row in
             guard matches(row) else { return false }
             switch filter {
             case .needsAttention:
@@ -55,6 +56,23 @@ struct UpdateView: View {
                 return row.isExcepted
             case .everything:
                 return true
+            }
+        }
+
+        return matching.sorted { lhs, rhs in
+            switch sortOption {
+            case .status:
+                if lhs.canUpdate != rhs.canUpdate { return lhs.canUpdate && !rhs.canUpdate }
+                return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+            case .nameAscending:
+                return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+            case .nameDescending:
+                return lhs.name.localizedStandardCompare(rhs.name) == .orderedDescending
+            case .channel:
+                if lhs.channel.rawValue != rhs.channel.rawValue {
+                    return lhs.channel.rawValue < rhs.channel.rawValue
+                }
+                return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
             }
         }
     }
@@ -254,11 +272,45 @@ struct UpdateView: View {
 
                 Spacer()
 
+                // Sort & Organize Menu
+                Menu {
+                    Picker("Organize by", selection: $sortOption) {
+                        ForEach(UpdateSortOption.allCases) { opt in
+                            Label(opt.rawValue, systemImage: opt.systemImage)
+                                .tag(opt)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: sortOption.systemImage)
+                            .foregroundStyle(style.accent)
+                        Text(sortOption.rawValue)
+                            .font(.system(size: 12, weight: .medium))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(style.border, lineWidth: 1))
+                }
+                .menuStyle(.borderlessButton)
+
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                     TextField("Search apps…", text: $query)
                         .textFieldStyle(.plain)
+                    if !query.isEmpty {
+                        Button {
+                            query = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -431,6 +483,15 @@ struct UpdateView: View {
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 } label: {
                     Label("Reveal in Finder", systemImage: "folder")
+                }
+                if path.hasSuffix(".app") {
+                    Button {
+                        Task {
+                            _ = await AppRepairEngine.shared.repair(url: URL(fileURLWithPath: path))
+                        }
+                    } label: {
+                        Label("Repair Gatekeeper / 'Damaged' Error", systemImage: "bandage")
+                    }
                 }
             }
             if let site = row.websiteURL {

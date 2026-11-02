@@ -109,16 +109,20 @@ struct CleanerView: View {
                 Button("Clear Search") { model.query = "" }
             }
             Picker("Sort", selection: $model.order) {
-                ForEach(FileOrder.allCases.filter { model.category != .uninstall || ($0 != .oldest && $0 != .newest) }) { order in
+                ForEach(FileOrder.allCases) { order in
                     Text(order.shortLabel).tag(order).help(order.rawValue)
                 }
             }.pickerStyle(.segmented).labelsHidden().frame(width: 360)
-            Button(showScanDetails ? "Hide Scan Details" : "Scan Details") { showScanDetails.toggle() }
+            Button {
+                showScanDetails.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: showScanDetails ? "chevron.up.circle" : "info.circle")
+                    Text(showScanDetails ? "Hide Details" : "Scan Details")
+                }
+            }
         }
         .font(style.smallFont)
-        .onChange(of: model.category) { category in
-            if category == .uninstall && (model.order == .oldest || model.order == .newest) { model.order = .largest }
-        }
     }
 
     private var scanDetails: some View {
@@ -413,8 +417,19 @@ struct CleanerView: View {
                 }
                 Spacer()
                 if app.isRunning { Text("Running").font(style.smallFont).foregroundColor(style.caution) }
-                Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([app.url]) }
-                ThemeButton(title: "Uninstall…", isEnabled: !app.isRunning && model.phase == .ready) {
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([app.url])
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder")
+                        Text("Reveal")
+                    }
+                }
+                ThemeButton(
+                    title: "Uninstall…",
+                    systemImage: "trash.fill",
+                    isEnabled: !app.isRunning && model.phase == .ready
+                ) {
                     model.requestUninstall(app)
                 }
             }

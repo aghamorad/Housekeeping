@@ -138,6 +138,10 @@ struct EnvironmentAudit: Sendable {
             ))
         }
 
+        // 6. Security & Background Daemons: orphaned daemons, zombie TCC grants, and excessive permissions
+        let securityFindings = await DaemonAndSecurityAudit(runner: runner).audit(installedIdentifiers: Set(installedNames))
+        findings.append(contentsOf: securityFindings)
+
         // A fix is only offered for something this reading actually saw. If the
         // subject has gone since, the row is dropped rather than shown, because
         // a button for a file that is no longer there can only fail.

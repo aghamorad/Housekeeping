@@ -343,8 +343,12 @@ private enum BookbindWhere {
 
     /// The checkout, when this is a development build rather than a release.
     static var checkout: String? {
-        let root = (NSHomeDirectory() as NSString).appendingPathComponent("Claude/Bookbind")
-        return fm.fileExists(atPath: root + "/app.py") ? root : nil
+        let home = NSHomeDirectory() as NSString
+        let c3po = home.appendingPathComponent("C3PO/Bookbind")
+        if fm.fileExists(atPath: c3po + "/app.py") { return c3po }
+        let claude = home.appendingPathComponent("Claude/Bookbind")
+        if fm.fileExists(atPath: claude + "/app.py") { return claude }
+        return nil
     }
 
     static var root: String? { bundled ?? checkout }
@@ -352,9 +356,19 @@ private enum BookbindWhere {
     /// A frozen server, when this copy carries one. Only the standalone app's
     /// builds have it; Housekeeping ships the plain sources and uses Python.
     static var frozenServer: String? {
-        guard let root = bundled else { return nil }
-        let p = root + "/bin/BookbindServer"
-        return fm.isExecutableFile(atPath: p) ? p : nil
+        #if arch(arm64)
+        let candidates = [
+            bundled.map { $0 + "/bin/BookbindServer" },
+            "/Applications/Bookbind.app/Contents/Resources/bin/BookbindServer",
+            checkout.map { $0 + "/Bookbind.app/Contents/Resources/bin/BookbindServer" },
+            checkout.map { $0 + "/bin/BookbindServer" }
+        ].compactMap { $0 }
+
+        for p in candidates where fm.isExecutableFile(atPath: p) {
+            return p
+        }
+        #endif
+        return nil
     }
 
     static var logFile: String {
@@ -392,7 +406,8 @@ private enum BookbindLaunch {
         var env = ProcessInfo.processInfo.environment
 
         if let frozen = BookbindWhere.frozenServer {
-            env["PATH"] = (root + "/bin") + ":/usr/bin:/bin:/usr/sbin:/sbin"
+            let binDir = (frozen as NSString).deletingLastPathComponent
+            env["PATH"] = binDir + ":/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
             process.executableURL = URL(fileURLWithPath: frozen)
         } else {
             guard let python = findPython() else {
@@ -488,7 +503,13 @@ private enum BookbindLaunch {
     /// falling back to any python3 at all, so the error can say what is missing
     /// rather than pretending there is no Python here.
     static func findPython() -> String? {
-        var candidates = ["/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"]
+        var candidates = [
+            "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+            "/usr/bin/python3"
+        ]
         for dir in (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":") {
             candidates.append(String(dir) + "/python3")
         }

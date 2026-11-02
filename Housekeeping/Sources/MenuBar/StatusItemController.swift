@@ -21,11 +21,14 @@ extension Notification.Name {
     static let housekeepingOpenPhone = Notification.Name("HousekeepingOpenPhone")
     static let housekeepingOpenMediaDock = Notification.Name("HousekeepingOpenMediaDock")
     static let housekeepingOpenBookbind = Notification.Name("HousekeepingOpenBookbind")
+    static let housekeepingOpenVPNTunnels = Notification.Name("HousekeepingOpenVPNTunnels")
+    static let housekeepingOpenDNSSwitcher = Notification.Name("HousekeepingOpenDNSSwitcher")
     /// Opens the housekeeper already holding a topic. The topic itself travels as
     /// the notification's object, because a reading is the reason it was opened.
     static let housekeepingAskAbout = Notification.Name("HousekeepingAskAbout")
     static let housekeepingOpenDisk = Notification.Name("HousekeepingOpenDisk")
     static let housekeepingOpenFanControl = Notification.Name("HousekeepingOpenFanControl")
+    static let housekeepingOpenBatteryHealth = Notification.Name("HousekeepingOpenBatteryHealth")
     static let housekeepingOpenUninstaller = Notification.Name("HousekeepingOpenUninstaller")
     static let housekeepingOpenUpdates = Notification.Name("HousekeepingOpenUpdates")
     /// The panel was dismissed, so the next opening starts at the overview rather
@@ -320,6 +323,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             onQuit: { NSApp.terminate(nil) },
             onClose: { [weak self] in self?.popover?.performClose(nil) },
             onDisk: { [weak self] in self?.openDisk() },
+            onBatteryHealth: { [weak self] in self?.openBatteryHealth() },
             onExplain: { [weak self] topic in self?.explain(topic) },
             onResize: { [weak self] height in self?.resize(to: height) }
         )
@@ -383,6 +387,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
     }
 
+    private func openBatteryHealth() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenBatteryHealth, object: nil)
+        }
+    }
+
     private func openUpdates() {
         WindowOpener.shared.withWindow {
             NotificationCenter.default.post(name: .housekeepingOpenUpdates, object: nil)
@@ -417,9 +427,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         menu.addItem(entry("Talk to the Housekeeper", #selector(askTheHousekeeper)))
         menu.addItem(.separator())
         menu.addItem(entry("Scan My Mac", #selector(scanNow)))
+        menu.addItem(entry("App Uninstaller…", #selector(openUninstaller)))
+        menu.addItem(entry("Battery Health…", #selector(openBatteryHealthMenu)))
         menu.addItem(entry("Spoof Location…", #selector(spoofLocation)))
         menu.addItem(entry("MediaDock 9…", #selector(openMediaDock)))
         menu.addItem(entry("Bookbind…", #selector(openBookbind)))
+        menu.addItem(entry("VPN Tunnels…", #selector(openVPNTunnels)))
+        menu.addItem(entry("DNS Easy Switcher…", #selector(openDNSSwitcher)))
         menu.addItem(.separator())
         menu.addItem(entry("Quit Housekeeping", #selector(quit)))
 
@@ -452,6 +466,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
     }
 
+    @objc private func openUninstaller() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenUninstaller, object: nil)
+        }
+    }
+
+    @objc private func openBatteryHealthMenu() {
+        openBatteryHealth()
+    }
+
     @objc private func spoofLocation() {
         WindowOpener.shared.withWindow {
             NotificationCenter.default.post(name: .housekeepingOpenPhone, object: nil)
@@ -467,6 +491,18 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     @objc private func openBookbind() {
         WindowOpener.shared.withWindow {
             NotificationCenter.default.post(name: .housekeepingOpenBookbind, object: nil)
+        }
+    }
+
+    @objc private func openVPNTunnels() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenVPNTunnels, object: nil)
+        }
+    }
+
+    @objc private func openDNSSwitcher() {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingOpenDNSSwitcher, object: nil)
         }
     }
 

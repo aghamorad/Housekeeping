@@ -170,6 +170,24 @@ struct HousekeepingApp: App {
                     appState.showUninstaller = true
                 }
 
+                Button("Repair Damaged App…") {
+                    appState.showAppRepair = true
+                }
+
+                Button("Battery Health…") {
+                    appState.showBatteryHealth = true
+                }
+
+                Button("VPN Tunnels & Interfaces…") {
+                    appState.showVPNTunnels = true
+                }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+
+                Button("DNS Easy Switcher…") {
+                    appState.showDNSSwitcher = true
+                }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+
                 // The one screen about the models themselves rather than the disk
                 // they sit on: what is installed, what is in memory, and the way
                 // out of it when the machine has none left.

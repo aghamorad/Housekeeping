@@ -47,10 +47,12 @@ SOURCES=(
   "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/SelfUpdate/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Environment/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/AppRepair/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Housekeeper/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Routes/*.swift
+  "$ROOT_DIR"/Housekeeping/Sources/Network/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Phone/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/MediaDock/*.swift
   "$ROOT_DIR"/Housekeeping/Sources/Bookbind/*.swift
@@ -141,18 +143,28 @@ stage() {
   chmod 755 "$app/Contents/Resources/llama-server"
   codesign --force --sign - "$app/Contents/Resources/llama-server"
 
-  # MediaDock 9 is no longer embedded as an app: its sources compile into this
-  # binary and it is a screen here. Bookbind's work is Python, so its program
-  # files travel inside the bundle — `Contents/Resources/Bookbind` — and the
-  # engine starts them with the Python that is already on the Mac. Missing is a
-  # normal state rather than a build failure: a source checkout may not have the
-  # folder, and the screen then says what is missing and where to get it.
+  # MediaDock 9 is compiled directly into this binary. Bookbind's work is
+  # Python/frozen binary, so its complete program files travel inside the bundle —
+  # `Contents/Resources/Bookbind` — including its engine, static assets, and
+  # pre-packaged standalone binaries (BookbindServer, ffmpeg, ffprobe) so it is 100% self-contained.
   local bookbind_dst="$app/Contents/Resources/Bookbind"
-  local bookbind_src="${HOUSEKEEPING_BOOKBIND_SRC:-$HOME/C3PO/Bookbind}"
+  local bookbind_src="${HOUSEKEEPING_BOOKBIND_SRC:-$ROOT_DIR/../Bookbind}"
+  [[ -d "$bookbind_src" ]] || bookbind_src="$HOME/C3PO/Bookbind"
   if [[ -f "$bookbind_src/app.py" && -f "$bookbind_src/bookbind_cli.py" && -d "$bookbind_src/static" ]]; then
     mkdir -p "$bookbind_dst"
     cp "$bookbind_src/app.py" "$bookbind_src/bookbind_cli.py" "$bookbind_dst/"
     ditto "$bookbind_src/static" "$bookbind_dst/static"
+    local bin_src=""
+    if [[ -d "/Applications/Bookbind.app/Contents/Resources/bin" ]]; then
+      bin_src="/Applications/Bookbind.app/Contents/Resources/bin"
+    elif [[ -d "$bookbind_src/Bookbind.app/Contents/Resources/bin" ]]; then
+      bin_src="$bookbind_src/Bookbind.app/Contents/Resources/bin"
+    fi
+    if [[ -n "$bin_src" && -d "$bin_src" ]]; then
+      mkdir -p "$bookbind_dst/bin"
+      ditto "$bin_src" "$bookbind_dst/bin"
+      chmod -R 755 "$bookbind_dst/bin"
+    fi
   else
     echo "  note: Bookbind's program files are not at $bookbind_src — this build ships without Bookbind"
   fi

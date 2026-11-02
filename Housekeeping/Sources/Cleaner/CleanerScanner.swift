@@ -33,6 +33,11 @@ struct CleanerScanner {
         var candidates = scanner.everydayJunk()
         publish(candidates, category: .everydayJunk)
 
+        progress("Scanning for orphaned app leftovers…")
+        let orphans = OrphanScanner.scan(progress: progress)
+        candidates += orphans
+        publish(candidates, category: .orphans)
+
         progress("Looking through developer caches…")
         candidates += scanner.developerCaches()
 

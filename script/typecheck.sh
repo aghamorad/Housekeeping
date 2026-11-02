@@ -48,10 +48,12 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR"/Housekeeping/Sources/Update/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/SelfUpdate/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Environment/*.swift \
+  "$ROOT_DIR"/Housekeeping/Sources/AppRepair/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/UI/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/MenuBar/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Housekeeper/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Routes/*.swift \
+  "$ROOT_DIR"/Housekeeping/Sources/Network/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Phone/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/MediaDock/*.swift \
   "$ROOT_DIR"/Housekeeping/Sources/Bookbind/*.swift \
