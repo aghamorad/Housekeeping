@@ -159,8 +159,8 @@ final class CleanerModel: ObservableObject {
 
     var visibleApps: [InstalledApp] {
         apps.filter { matches($0.name, path: $0.url.path, detail: $0.bundleIdentifier ?? "") }.sorted {
-            order.precedes(name: $0.name, size: $0.totalSize, modified: nil, path: $0.id,
-                           name: $1.name, size: $1.totalSize, modified: nil, path: $1.id)
+            order.precedes(name: $0.name, size: $0.totalSize, modified: $0.modifiedDate, path: $0.id,
+                           name: $1.name, size: $1.totalSize, modified: $1.modifiedDate, path: $1.id)
         }
     }
 

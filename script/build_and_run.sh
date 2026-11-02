@@ -37,6 +37,10 @@ if [[ -f "$BOOKBIND_SOURCE/app.py" && -f "$BOOKBIND_SOURCE/bookbind_cli.py" && -
   mkdir -p "$APP_BUNDLE/Contents/Resources/Bookbind"
   cp "$BOOKBIND_SOURCE/app.py" "$BOOKBIND_SOURCE/bookbind_cli.py" "$APP_BUNDLE/Contents/Resources/Bookbind/"
   ditto "$BOOKBIND_SOURCE/static" "$APP_BUNDLE/Contents/Resources/Bookbind/static"
+  if [[ -d "/Applications/Bookbind.app/Contents/Resources/bin" ]]; then
+    mkdir -p "$APP_BUNDLE/Contents/Resources/Bookbind/bin"
+    ditto "/Applications/Bookbind.app/Contents/Resources/bin" "$APP_BUNDLE/Contents/Resources/Bookbind/bin"
+  fi
 fi
 /usr/bin/codesign --force --deep --sign - "$APP_BUNDLE"
 /usr/bin/codesign --verify --deep --strict "$APP_BUNDLE"

@@ -416,3 +416,22 @@ struct UpdateOutcome: Identifiable, Equatable {
     let message: String
     let succeeded: Bool
 }
+
+/// Ordering options for installed application updates.
+enum UpdateSortOption: String, CaseIterable, Identifiable {
+    case status = "Updates Waiting First"
+    case nameAscending = "Name (A–Z)"
+    case nameDescending = "Name (Z–A)"
+    case channel = "Channel / Origin"
+
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .status: return "arrow.down.circle"
+        case .nameAscending: return "textformat.size.smaller"
+        case .nameDescending: return "textformat.size.larger"
+        case .channel: return "shippingbox"
+        }
+    }
+}

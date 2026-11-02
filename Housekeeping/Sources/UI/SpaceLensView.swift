@@ -13,6 +13,47 @@ struct SpaceLensView: View {
 
     @State private var activeTab: Tab = .categories
     @State private var searchFilter: String = ""
+    @State private var largeFileSort: LargeFileSort = .largest
+
+    private enum LargeFileSort: String, CaseIterable, Identifiable {
+        case largest = "Size (Largest)"
+        case smallest = "Size (Smallest)"
+        case newest = "Recently Modified"
+        case oldest = "Oldest Modified"
+        case name = "Name (A–Z)"
+
+        var id: String { rawValue }
+        var systemImage: String {
+            switch self {
+            case .largest: return "arrow.down.circle"
+            case .smallest: return "arrow.up.circle"
+            case .newest: return "clock.arrow.circlepath"
+            case .oldest: return "clock"
+            case .name: return "textformat.size.smaller"
+            }
+        }
+    }
+
+    private var sortedLargeFiles: [StorageItem] {
+        analyzer.largeFiles.sorted { lhs, rhs in
+            switch largeFileSort {
+            case .largest:
+                if lhs.size != rhs.size { return lhs.size > rhs.size }
+            case .smallest:
+                if lhs.size != rhs.size { return lhs.size < rhs.size }
+            case .newest:
+                if let l = lhs.modifiedDate, let r = rhs.modifiedDate, l != r { return l > r }
+                if (lhs.modifiedDate != nil) != (rhs.modifiedDate != nil) { return lhs.modifiedDate != nil }
+            case .oldest:
+                if let l = lhs.modifiedDate, let r = rhs.modifiedDate, l != r { return l < r }
+                if (lhs.modifiedDate != nil) != (rhs.modifiedDate != nil) { return lhs.modifiedDate != nil }
+            case .name:
+                let comp = lhs.name.localizedStandardCompare(rhs.name)
+                if comp != .orderedSame { return comp == .orderedAscending }
+            }
+            return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+    }
 
     private enum Tab: String, CaseIterable, Identifiable {
         case categories = "Storage Lens"
@@ -203,24 +244,32 @@ struct SpaceLensView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(cat.name)
                     .font(.system(size: 14, weight: .bold))
-                Text(cat.humanSize)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
+                if cat.isCalculating {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini)
+                        Text("Measuring…")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text(cat.humanSize)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
 
-            Button {
-                quickJumpToCategory(cat.id)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.tertiary)
-                    .padding(8)
-            }
-            .buttonStyle(.plain)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.tertiary)
+                .padding(8)
         }
         .padding(16)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            quickJumpToCategory(cat.id)
+        }
         .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(style.border, lineWidth: 1))
     }
@@ -245,9 +294,13 @@ struct SpaceLensView: View {
         case "dev":
             analyzer.loadFolder(path: home.appendingPathComponent("Library/Caches").path)
         case "media":
-            analyzer.loadFolder(path: home.appendingPathComponent("Movies").path)
+            analyzer.loadFolder(path: home.appendingPathComponent("Pictures").path)
         case "apps":
             analyzer.loadFolder(path: "/Applications")
+        case "trash":
+            analyzer.loadFolder(path: home.appendingPathComponent(".Trash").path)
+        case "docs":
+            analyzer.loadFolder(path: home.appendingPathComponent("Documents").path)
         default:
             analyzer.loadFolder(path: home.path)
         }
@@ -266,6 +319,31 @@ struct SpaceLensView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+
+                Menu {
+                    Picker("Organize by", selection: $largeFileSort) {
+                        ForEach(LargeFileSort.allCases) { opt in
+                            Label(opt.rawValue, systemImage: opt.systemImage)
+                                .tag(opt)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: largeFileSort.systemImage)
+                            .foregroundStyle(style.accent)
+                        Text(largeFileSort.rawValue)
+                            .font(.system(size: 11, weight: .medium))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(style.border, lineWidth: 1))
+                }
+                .menuStyle(.borderlessButton)
+
                 Text("\(analyzer.largeFiles.count) items found")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
@@ -284,7 +362,7 @@ struct SpaceLensView: View {
                 .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
             } else {
                 VStack(spacing: 1) {
-                    ForEach(analyzer.largeFiles) { item in
+                    ForEach(sortedLargeFiles) { item in
                         storageItemRow(item)
                     }
                 }

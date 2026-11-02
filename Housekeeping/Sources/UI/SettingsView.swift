@@ -170,6 +170,8 @@ struct SettingsView: View {
                 updateRow
                 LabeledContent("Apps it knows", value: "\(RuleEngine.shared.applications.count)")
                 LabeledContent("Purpose", value: "Find storage, explain it, and move nothing without you.")
+                LabeledContent("Studio", value: "Benign Monster Works")
+                LabeledContent("Author", value: "Made by Morad")
             }
         }
         .formStyle(.grouped)

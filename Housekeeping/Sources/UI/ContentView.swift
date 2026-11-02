@@ -42,6 +42,10 @@ struct ContentView: View {
             case .clean: CleanerView(model: appState.cleaner)
             case .fanControl: FanControlView()
             case .uninstaller: UninstallerModernView()
+            case .appRepair: AppRepairView()
+            case .batteryHealth: BatteryHealthView()
+            case .vpnTunnels: VPNTunnelsView()
+            case .dnsSwitcher: DNSConfigView()
             }
         }
         .environment(\.uiStyle, style)
@@ -116,6 +120,9 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenFanControl)) { _ in
                 appState.showFanControl = true
             }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenBatteryHealth)) { _ in
+                appState.showBatteryHealth = true
+            }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenUpdates)) { _ in
                 appState.showUpdateList = true
             }
@@ -133,6 +140,12 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenBookbind)) { _ in
                 appState.showBookbind = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenVPNTunnels)) { _ in
+                appState.showVPNTunnels = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenDNSSwitcher)) { _ in
+                appState.showDNSSwitcher = true
             }
     }
 }
@@ -372,6 +385,7 @@ private struct JobBar: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
     @State private var showAdvancedTools: Bool = false
+    @State private var mascotHovered: Bool = false
 
     var body: some View {
         if style.isRetro {
@@ -446,18 +460,20 @@ private struct JobBar: View {
     private var modernSidebar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                if let mascotImage = loadBenignMonsterMascot() {
+                if let mascotImage = HousekeeperMascot.loadMascot() ?? loadBenignMonsterMascot() {
                     Image(nsImage: mascotImage)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 34, height: 34)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .frame(width: 38, height: 38)
+                        .scaleEffect(mascotHovered ? 1.08 : 1.0)
+                        .onHover { mascotHovered = $0 }
+                        .animation(.spring(response: 0.3, dampingFraction: 0.65), value: mascotHovered)
                 } else {
                     Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 30, height: 30)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Housekeeper").font(.system(size: 14, weight: .bold))
-                    Text("Benign Monster Works").font(.system(size: 10, weight: .semibold)).foregroundStyle(style.accent)
+                    Text("System Care & Vitals").font(.system(size: 10)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -480,10 +496,33 @@ private struct JobBar: View {
                             sidebarJob(job, customTitle: "Update Apps", customIcon: "arrow.triangle.2.circlepath")
                         }
                         if let job = allJobs.first(where: { $0.id == "uninstaller" }) {
-                            sidebarJob(job, customTitle: "Uninstall Apps", customIcon: "app.badge.minus")
+                            sidebarJob(job, customTitle: "Uninstall Apps", customIcon: "xmark.app")
                         }
                         if let job = allJobs.first(where: { $0.id == "fans-thermals" }) {
                             sidebarJob(job, customTitle: "Cooling & Fans", customIcon: "fan.fill")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "battery-health" }) {
+                            sidebarJob(job, customTitle: "Battery Health", customIcon: "battery.100.bolt")
+                        }
+                    }
+
+                    Divider().padding(.horizontal, 4)
+
+                    // First-Class Kitchen-Sink Studios & Network
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Studios & Network").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+                            .padding(.horizontal, 10).padding(.bottom, 2)
+                        if let job = allJobs.first(where: { $0.id == "mediadock" }) {
+                            sidebarJob(job, customTitle: "MediaDock 9", customIcon: "play.rectangle.fill")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "bookbind" }) {
+                            sidebarJob(job, customTitle: "Bookbind", customIcon: "book.closed.fill")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "dns-switcher" }) {
+                            sidebarJob(job, customTitle: "DNS Easy Switcher", customIcon: "globe.badge.chevron.backward")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "vpn-tunnels" }) {
+                            sidebarJob(job, customTitle: "VPN Tunnels", customIcon: "lock.shield")
                         }
                     }
 
@@ -493,6 +532,9 @@ private struct JobBar: View {
                     DisclosureGroup(isExpanded: $showAdvancedTools) {
                         VStack(spacing: 4) {
                             sidebarSection("Power Tools", ids: [
+                                "dns-switcher",
+                                "vpn-tunnels",
+                                "repair-damaged-app",
                                 "browse-the-disk",
                                 "local-models",
                                 "check-my-setup",
@@ -559,6 +601,14 @@ private struct JobBar: View {
                 zone: .reading,
                 help: "Monitor temperatures and control Mac cooling fans in real time.",
                 action: { appState.showFanControl = true }
+            ),
+            Job(
+                id: "battery-health",
+                title: "Battery Health",
+                systemImage: "battery.100.bolt",
+                zone: .reading,
+                help: "Live hardware telemetry, cycle count, degradation, charger wattage, and sleep inhibitor drain analysis.",
+                action: { appState.showBatteryHealth = true }
             )
         ]
     }
@@ -616,6 +666,10 @@ private struct JobBar: View {
         case .routes: return "test-routes"
         case .phone: return "spoof-location"
         case .localModels: return "local-models"
+        case .appRepair: return "repair-damaged-app"
+        case .batteryHealth: return "battery-health"
+        case .vpnTunnels: return "vpn-tunnels"
+        case .dnsSwitcher: return "dns-switcher"
         default: return nil
         }
     }
@@ -702,6 +756,22 @@ private struct JobBar: View {
     private var routeJobs: [Job] {
         [
             Job(
+                id: "dns-switcher",
+                title: "DNS Easy Switcher",
+                systemImage: "globe.badge.chevron.backward",
+                zone: .route,
+                help: "Switch DNS servers in 1-click. Bypass 403 developer sanctions, block ads & tracking, or optimize gaming routing.",
+                action: { appState.showDNSSwitcher = true }
+            ),
+            Job(
+                id: "vpn-tunnels",
+                title: "VPN Tunnels",
+                systemImage: "lock.shield",
+                zone: .route,
+                help: "Discover installed VPN services, active utun tunnel devices, and running VPN background engines with 1-click delete.",
+                action: { appState.showVPNTunnels = true }
+            ),
+            Job(
                 id: "test-routes",
                 title: "Test Routes",
                 systemImage: "network",
@@ -738,7 +808,7 @@ private struct JobBar: View {
             Job(
                 id: "uninstaller",
                 title: "Uninstaller",
-                systemImage: "app.badge.minus",
+                systemImage: "xmark.app",
                 zone: .holding,
                 help: "Completely uninstall applications and remove all associated leftovers.",
                 action: { appState.showUninstaller = true }
@@ -790,6 +860,24 @@ private struct JobBar: View {
                 zone: .extra,
                 help: "Give it a folder of loose audio and it merges it into one .m4b with chapters, looks the book up for its cover and metadata, and checks the result. It runs on this Mac.",
                 action: { appState.showBookbind = true }
+            ),
+
+            Job(
+                id: "repair-damaged-app",
+                title: "Repair Damaged App",
+                systemImage: "bandage.fill",
+                zone: .app,
+                help: "Fixes 'App is damaged and can't be opened', unidentified developer, or Gatekeeper quarantine blocks on any Mac application with one click.",
+                action: { appState.showAppRepair = true }
+            ),
+
+            Job(
+                id: "vpn-tunnels",
+                title: "VPN Tunnels",
+                systemImage: "lock.shield",
+                zone: .app,
+                help: "Inspect installed VPN services, active utun interfaces, and running background engines. Disconnect or delete stale configurations to prevent network conflicts.",
+                action: { appState.showVPNTunnels = true }
             ),
 
             Job(

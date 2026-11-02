@@ -47,7 +47,7 @@ struct Uninstaller {
     }
 
     private func read(_ url: URL, index: LeftoverIndex) -> InstalledApp? {
-        let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey, .isPackageKey])
+        let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey, .isPackageKey, .contentModificationDateKey, .creationDateKey])
         guard values?.isSymbolicLink != true else { return nil }
         guard let bundle = Bundle(url: url) else { return nil }
 
@@ -72,7 +72,9 @@ struct Uninstaller {
             bundleIdentifier: identifier,
             version: version,
             size: size,
-            leftovers: leftovers
+            leftovers: leftovers,
+            modifiedDate: values?.contentModificationDate,
+            createdDate: values?.creationDate
         )
     }
 

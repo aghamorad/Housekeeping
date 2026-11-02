@@ -303,27 +303,85 @@ extension HousekeeperTopic {
         )
     }
 
+    static func batteryHealth(_ telemetry: BatteryTelemetry) -> HousekeeperTopic {
+        guard telemetry.hasBattery else {
+            return HousekeeperTopic(
+                id: "battery-health-desktop",
+                title: "Battery Health",
+                label: "Desktop Mac",
+                tone: .plain,
+                facts: ["This Mac does not have an internal battery and runs on continuous AC mains."],
+                opener: "Does my Mac have a battery I need to look after?"
+            )
+        }
+
+        var facts: [String] = [
+            "Current charge: \(telemetry.chargePercent)%.",
+            "Battery health condition: \(telemetry.condition.title) with \(telemetry.healthPercent)% of original design capacity.",
+            "Cycle count: \(telemetry.cycleCount) out of \(telemetry.designCycleCount) rated cycles (\(telemetry.cyclesRemaining) cycles remaining).",
+            "Full charge capacity: \(telemetry.fullChargeCapacityMah) mAh vs factory design \(telemetry.designCapacityMah) mAh (loss: \(telemetry.capacityLossMah) mAh).",
+            "Voltage: \(String(format: "%.2f V", telemetry.voltageVolts)) with draw of \(telemetry.amperageMa) mA."
+        ]
+
+        if let watts = telemetry.adapterWatts {
+            facts.append("Connected to a \(watts)W power adapter (\(telemetry.adapterDescription ?? "USB-PD")).")
+        }
+        if telemetry.isOptimizedHold {
+            facts.append("macOS is currently holding the charge at 80% to protect the battery from cell oxidation.")
+        }
+        if !telemetry.sleepInhibitors.isEmpty {
+            let names = telemetry.sleepInhibitors.filter { !$0.isSystem }.map(\.name).prefix(3).joined(separator: ", ")
+            if !names.isEmpty {
+                facts.append("Active apps preventing sleep: \(names).")
+            }
+        }
+
+        return HousekeeperTopic(
+            id: "battery-health-manager",
+            title: "Battery Health",
+            label: "\(telemetry.healthPercent)%",
+            tone: telemetry.healthPercent < 70 ? .caution : .plain,
+            facts: facts,
+            opener: "How is my battery holding up at \(telemetry.healthPercent)% health and \(telemetry.cycleCount) cycles? What should I do to make it last longer?"
+        )
+    }
+
     /// One process, as the panel saw it when the reader pressed its row.
-    static func process(_ load: ProcessLoad, totalMemory: UInt64) -> HousekeeperTopic {
+    static func process(_ load: ProcessLoad, totalMemory: UInt64, knowledge: ProcessIdentity? = nil) -> HousekeeperTopic {
+        let k = knowledge ?? ProcessKnowledge.resolve(pid: load.id, name: load.name)
         let cpu = load.cpu > 0.001
             ? "\(VitalsFormat.share(load.cpu)) of one core"
             : "no measurable processor time"
         let share = totalMemory > 0 ? Double(load.memory) / Double(totalMemory) : 0
 
-        let facts: [String] = [
-            "\(load.name) (process \(load.id)) was using \(cpu) and holding \(VitalsFormat.megabytes(load.memory)), about \(VitalsFormat.percent(share)) of the Mac's memory.",
-            "A quit is a request: the process can save, close and exit on its own terms. A force quit takes the memory away where it stands, and anything unsaved in it is lost.",
-            "The name comes from the process itself. Housekeeping does not know what installed it, when it started, or what it is partway through.",
-            "Housekeeping will not stop the system's own processes or itself, and macOS refuses for anything owned by another user.",
+        var facts: [String] = [
+            "\(k.displayName) (\(load.name), PID \(load.id)) is holding \(VitalsFormat.megabytes(load.memory)) of RAM (about \(VitalsFormat.percent(share)) of system memory) and using \(cpu).",
+            "What it is: \(k.summary) Category: \(k.category)."
         ]
+
+        if let parent = k.parentApp {
+            facts.append("Connected Application: Spawned by or attached to \(parent)\(k.parentPid.map { " (PID \($0))" } ?? "").")
+        }
+        if let work = k.workingOn {
+            facts.append("Active Workload: \(work).")
+        }
+        if let path = k.executablePath {
+            facts.append("Executable Location: \(path).")
+        }
+
+        facts.append("Safety Assessment: \(k.safetyAdvice) (Status: \(k.safetyLevelText)).")
+        facts.append("A quit sends a polite request (SIGTERM) allowing the process to finish active buffers and exit cleanly. A force quit (SIGKILL) immediately reclaims all memory where it stands.")
+        facts.append("Housekeeping protects vital macOS system components and user data integrity.")
+
+        let displayTitle = k.displayName != load.name ? "\(k.displayName) (\(load.name))" : load.name
 
         return HousekeeperTopic(
             id: "process-\(load.id)",
-            title: load.name,
+            title: displayTitle,
             label: "process \(load.id)",
-            tone: load.cpu > 1 ? .caution : .plain,
+            tone: (k.safetyLevel == .systemProtected || load.cpu > 1) ? .caution : .plain,
             facts: facts,
-            opener: "What is \(load.name), and is it safe to quit it?"
+            opener: "What is \(k.displayName), what app is it connected to, and is it safe to quit it?"
         )
     }
 }

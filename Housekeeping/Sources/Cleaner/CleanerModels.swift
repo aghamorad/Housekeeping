@@ -8,6 +8,7 @@ import Foundation
 /// already been used, files that are merely big, apps, and the Trash.
 enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
     case everydayJunk
+    case orphans
     case developerLeftovers
     case installers
     case largeFiles
@@ -19,6 +20,7 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .everydayJunk: return "Everyday Junk"
+        case .orphans: return "Orphaned Leftovers"
         case .developerLeftovers: return "Developer Leftovers"
         case .installers: return "Installers"
         case .largeFiles: return "Big & Old Files"
@@ -30,10 +32,11 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
     var systemImage: String {
         switch self {
         case .everydayJunk: return "sparkles"
+        case .orphans: return "person.crop.circle.badge.minus"
         case .developerLeftovers: return "hammer"
         case .installers: return "shippingbox"
         case .largeFiles: return "doc.zipper"
-        case .uninstall: return "app.badge.minus"
+        case .uninstall: return "xmark.app"
         case .trash: return "trash"
         }
     }
@@ -43,6 +46,8 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .everydayJunk:
             return "Caches, logs and temporary files that apps rebuild on their own."
+        case .orphans:
+            return "Support folders, caches, and containers left by apps already uninstalled."
         case .developerLeftovers:
             return "node_modules, build folders and download caches from coding."
         case .installers:
@@ -61,6 +66,8 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .everydayJunk:
             return "These are the folders apps use as scratch space. macOS and the apps rebuild them when they need them again, so an app may need to rebuild or download data on its next launch. Cached offline content and saved window state may be lost; inspect anything you still use."
+        case .orphans:
+            return "When you drag an app to the Trash, macOS leaves behind its preferences, container sandboxes, and application support folders in ~/Library. None of the applications that created these files are installed on your Mac anymore. All moved files are protected in Quarantine."
         case .developerLeftovers:
             return "These are things a build or a package manager made. Every one of them can be made again from the project's source, usually by running the same command that made it the first time. Only folders that can be proved to belong to a project are listed."
         case .installers:
@@ -132,6 +139,8 @@ struct InstalledApp: Identifiable, Equatable, Sendable {
     let size: Int64
     var leftovers: [CleanCandidate]
     var isSelected: Bool = false
+    var modifiedDate: Date? = nil
+    var createdDate: Date? = nil
 
     var leftoverSize: Int64 { leftovers.reduce(0) { $0 + $1.size } }
     var totalSize: Int64 { size + leftoverSize }
@@ -139,6 +148,46 @@ struct InstalledApp: Identifiable, Equatable, Sendable {
     /// True when the process owning this bundle is running right now. An app
     /// that is running should be quit before it is moved.
     var isRunning: Bool { Uninstaller.isRunning(self) }
+}
+
+/// Rich sorting options for application inventories (Uninstaller).
+public enum AppSortOption: String, CaseIterable, Identifiable, Sendable {
+    case sizeDescending = "Size (Largest First)"
+    case sizeAscending = "Size (Smallest First)"
+    case nameAscending = "Name (A–Z)"
+    case nameDescending = "Name (Z–A)"
+    case modifiedNewest = "Recently Modified"
+    case modifiedOldest = "Oldest Modified"
+    case installedNewest = "Recently Installed"
+    case installedOldest = "Oldest Installed"
+
+    public var id: String { rawValue }
+
+    public var shortLabel: String {
+        switch self {
+        case .sizeDescending: return "Largest"
+        case .sizeAscending: return "Smallest"
+        case .nameAscending: return "A → Z"
+        case .nameDescending: return "Z → A"
+        case .modifiedNewest: return "Recent Mod"
+        case .modifiedOldest: return "Old Mod"
+        case .installedNewest: return "Recent Add"
+        case .installedOldest: return "Old Add"
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .sizeDescending: return "arrow.down.circle"
+        case .sizeAscending: return "arrow.up.circle"
+        case .nameAscending: return "textformat.size.smaller"
+        case .nameDescending: return "textformat.size.larger"
+        case .modifiedNewest: return "clock.arrow.circlepath"
+        case .modifiedOldest: return "clock"
+        case .installedNewest: return "sparkles"
+        case .installedOldest: return "calendar"
+        }
+    }
 }
 
 /// What the Trash holds, measured but not listed item by item.

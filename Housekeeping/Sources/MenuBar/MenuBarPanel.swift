@@ -58,6 +58,7 @@ struct MenuBarPanel: View {
     let onQuit: () -> Void
     let onClose: () -> Void
     let onDisk: () -> Void
+    var onBatteryHealth: (() -> Void)? = nil
     let onExplain: (HousekeeperTopic) -> Void
     let onResize: (CGFloat) -> Void
 
@@ -137,7 +138,14 @@ struct MenuBarPanel: View {
             // the app put together. The mark in the menu bar still breathes, and so
             // does the one in the window; this one is the price the panel is not
             // going to pay.
-            panelMark(at: 0)
+            if let mascot = HousekeeperMascot.loadMascot() {
+                Image(nsImage: mascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 44, height: 44)
+            } else {
+                panelMark(at: 0)
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("HOUSEKEEPING")
@@ -750,15 +758,23 @@ struct MenuBarPanel: View {
             .padding(.horizontal, 14)
 
         case .battery:
-            if !snapshot.processes.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    sectionLabel("ENERGY CONSUMERS")
-                    ForEach(snapshot.processes.prefix(3)) { process in
-                        detailHand(process, value: VitalsFormat.share(process.cpu))
+            VStack(alignment: .leading, spacing: 8) {
+                if let onBatteryHealth {
+                    detailButton("Battery Health Management", icon: "battery.100.bolt", primary: true) {
+                        onClose()
+                        onBatteryHealth()
                     }
                 }
-                .padding(.horizontal, 14)
+                if !snapshot.processes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        sectionLabel("ENERGY CONSUMERS")
+                        ForEach(snapshot.processes.prefix(3)) { process in
+                            detailHand(process, value: VitalsFormat.share(process.cpu))
+                        }
+                    }
+                }
             }
+            .padding(.horizontal, 14)
 
         case .network, .graphics:
             EmptyView()
@@ -852,16 +868,37 @@ struct MenuBarPanel: View {
             ?? snapshot.memoryHogs.first { $0.id == stored.id }
             ?? stored
         let running = isRunning(process)
+        let knowledge = ProcessKnowledge.resolve(pid: process.id, name: process.name)
 
         return VStack(alignment: .leading, spacing: 9) {
             detailHeader("process \(process.id)")
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(process.name)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(HousekeepingInk.text)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+                HStack(spacing: 6) {
+                    Image(systemName: knowledge.icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(HousekeepingInk.redLifted)
+                    Text(knowledge.displayName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(HousekeepingInk.text)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 4)
+                    Text(knowledge.category)
+                        .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(HousekeepingInk.surfaceRaised)
+                        )
+                        .foregroundStyle(HousekeepingInk.secondaryText)
+                }
+
+                if knowledge.displayName != process.name {
+                    Text(process.name)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(HousekeepingInk.secondaryText)
+                }
 
                 HStack(spacing: 10) {
                     reading(VitalsFormat.share(process.cpu))
@@ -880,8 +917,73 @@ struct MenuBarPanel: View {
             }
             .padding(.horizontal, 14)
 
+            // Housekeeping Knowledge Card
+            VStack(alignment: .leading, spacing: 6) {
+                if let parent = knowledge.parentApp {
+                    HStack(spacing: 5) {
+                        Image(systemName: "link")
+                            .font(.system(size: 9.5, weight: .bold))
+                            .foregroundStyle(HousekeepingInk.redLifted)
+                        Text("Connected to:")
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(HousekeepingInk.secondaryText)
+                        Text(parent)
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(HousekeepingInk.text)
+                        if let ppid = knowledge.parentPid {
+                            Text("(PID \(ppid))")
+                                .font(.system(size: 8.5, design: .monospaced))
+                                .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.8))
+                        }
+                    }
+                }
+
+                if let work = knowledge.workingOn {
+                    HStack(spacing: 5) {
+                        Image(systemName: "hammer.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(HousekeepingInk.redLifted)
+                        Text("Active workload:")
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(HousekeepingInk.secondaryText)
+                        Text(work)
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(HousekeepingInk.text)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                Text(knowledge.summary)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(HousekeepingInk.text.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(alignment: .top, spacing: 5) {
+                    Circle()
+                        .fill(safetyColor(knowledge.safetyLevel))
+                        .frame(width: 6, height: 6)
+                        .padding(.top, 4)
+                    Text(knowledge.safetyAdvice)
+                        .font(.system(size: 9))
+                        .foregroundStyle(HousekeepingInk.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(HousekeepingInk.surfaceRaised)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(HousekeepingInk.hairline, lineWidth: 1)
+            )
+            .padding(.horizontal, 14)
+
             bodyText(running
-                ? "A quit is a request: it can save, close and exit on its own terms. A force quit takes the memory away where it stands, and anything unsaved in it is lost. The name comes from the process itself — Housekeeping does not know what installed it or what it is partway through."
+                ? "A quit is a request: it can save, close and exit on its own terms. A force quit takes the memory away where it stands, and anything unsaved in it is lost."
                 : "This process is no longer running. It is kept here until you go back so the row does not vanish under your hand.")
 
             if let stopNote {
@@ -897,22 +999,38 @@ struct MenuBarPanel: View {
                     confirmation(pendingStop, process)
                 } else {
                     HStack(spacing: 8) {
-                        detailButton("Quit", icon: "xmark.circle", primary: true) {
-                            stopNote = nil
-                            pendingStop = .quit
-                        }
-                        detailButton("Force Quit", icon: "bolt.circle") {
-                            stopNote = nil
-                            pendingStop = .force
+                        if knowledge.safetyLevel == .systemProtected {
+                            Text("System Protected Process")
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(HousekeepingInk.caution)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                        } else {
+                            detailButton("Quit", icon: "xmark.circle", primary: true) {
+                                stopNote = nil
+                                pendingStop = .quit
+                            }
+                            detailButton("Force Quit", icon: "bolt.circle") {
+                                stopNote = nil
+                                pendingStop = .force
+                            }
                         }
                     }
                     .padding(.horizontal, 14)
                 }
             }
 
-            askButton(.process(process, totalMemory: snapshot.memoryTotal))
+            askButton(.process(process, totalMemory: snapshot.memoryTotal, knowledge: knowledge))
         }
         .padding(.bottom, 12)
+    }
+
+    private func safetyColor(_ level: ProcessSafetyLevel) -> Color {
+        switch level {
+        case .safeToQuit: return HousekeepingInk.positive
+        case .caution: return HousekeepingInk.caution
+        case .systemProtected: return HousekeepingInk.negative
+        }
     }
 
     private func confirmation(_ kind: StopKind, _ process: ProcessLoad) -> some View {
@@ -1124,7 +1242,7 @@ struct MenuBarPanel: View {
     }
 
     private var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.24.1"
     }
 }
 
