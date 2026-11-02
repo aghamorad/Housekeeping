@@ -6,40 +6,39 @@ import AppKit
 struct OverviewView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
+    @ObservedObject private var vitals = SystemVitals.shared
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text("Overview").font(style.isRetro ? style.titleFont : .system(size: 30, weight: .semibold)).tracking(style.isRetro ? 0 : -0.7)
-                        Text("See what is taking up space. Choose what happens next.")
-                            .font(.system(size: 14)).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Label(Host.current().localizedName ?? "This Mac", systemImage: "desktopcomputer")
-                        .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        .padding(.top, 10)
+            VStack(alignment: .leading, spacing: 24) {
+                heroBanner
+
+                if let zombie = vitals.snapshot.zombieCandidates.first {
+                    zombieAlertBanner(zombie)
+                }
+
+                if let inhibitor = vitals.snapshot.sleepInhibitor {
+                    sleepInhibitorBanner(inhibitor)
                 }
 
                 OverviewStorageCard(scan: { appState.startScan() }, browse: { appState.showDiskBrowser = true })
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Start here").font(.system(size: 17, weight: .semibold))
+                    Text("Daily Maintenance").font(.system(size: 17, weight: .semibold))
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 14)], spacing: 14) {
                         OverviewActionCard(title: "Clean Up", icon: "sparkles", color: style.accent,
-                                           detail: "Review caches, build files, installers, and app data.", actionLabel: "Review files") {
+                                           detail: "Review caches, AI model files, installers, and app data.", actionLabel: "Clean files") {
                             appState.showClean = true
                         }
-                        OverviewActionCard(title: "Space Lens", icon: "internaldrive", color: style.accent,
-                                           detail: "Instant visual breakdown of disk categories and large files.", actionLabel: "Explore space") {
-                            appState.showDiskBrowser = true
-                        }
                         OverviewActionCard(title: "Update Apps", icon: "arrow.triangle.2.circlepath", color: style.accent,
-                                           detail: "One-click updates with automatic sudo escalation.", actionLabel: "Check updates") {
+                                           detail: "3 simple channels: Mac Apps, Homebrew, and Unknown origins.", actionLabel: "Check updates") {
                             appState.showUpdateList = true
                         }
-                        OverviewActionCard(title: "Fans & Thermals", icon: "fan.fill", color: style.accent,
+                        OverviewActionCard(title: "App Uninstaller", icon: "app.badge.minus", color: style.accent,
+                                           detail: "Cleanly remove apps and their hidden support files.", actionLabel: "Uninstall apps") {
+                            appState.showUninstaller = true
+                        }
+                        OverviewActionCard(title: "Cooling & Fans", icon: "fan.fill", color: style.accent,
                                            detail: "Real-time temperature sensors and fan speed controls.", actionLabel: "Control fans") {
                             appState.showFanControl = true
                         }
@@ -52,11 +51,11 @@ struct OverviewView: View {
                     HStack {
                         Text("More tools").font(.system(size: 17, weight: .semibold))
                         Spacer()
-                        Text(style.isRetro ? "Available in the toolbar" : "Available in the sidebar").font(.system(size: 12)).foregroundStyle(.secondary)
+                        Text("Space Lens, MLX Models, and Utilities").font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     HStack(spacing: 14) {
-                        utility("App Uninstaller", detail: "Cleanly remove apps & leftovers", icon: "app.badge.minus") { appState.showUninstaller = true }
-                        utility("Local Models", detail: "Manage MLX & Apple Silicon models", icon: "brain") { appState.showLocalModels = true }
+                        utility("Space Lens", detail: "Visual category disk map", icon: "internaldrive") { appState.showDiskBrowser = true }
+                        utility("Local Models", detail: "Manage MLX Apple Silicon models", icon: "brain") { appState.showLocalModels = true }
                         utility("Terminal Health", detail: "Check shell installations", icon: "terminal") { appState.showSetupCheck = true }
                         utility("Two Folders", detail: "Compare folders & backups", icon: "rectangle.on.rectangle") { appState.showReconcile = true }
                     }
@@ -78,10 +77,134 @@ struct OverviewView: View {
                 }
             }
             .frame(maxWidth: 1120, alignment: .leading)
-            .padding(36)
+            .padding(32)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background { HousekeepingBackdrop(style: style) }
+    }
+
+    private var heroBanner: some View {
+        HStack(spacing: 18) {
+            if let mascotImage = loadBenignMonsterMascot() {
+                Image(nsImage: mascotImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 54, height: 54)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12).fill(style.accent.opacity(0.12)).frame(width: 54, height: 54)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 26))
+                        .foregroundStyle(style.accent)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("Housekeeper").font(style.isRetro ? style.titleFont : .system(size: 26, weight: .bold)).tracking(-0.5)
+                    Text("Benign Monster Works")
+                        .font(.system(size: 11, weight: .bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(style.accent.opacity(0.12), in: Capsule())
+                        .foregroundStyle(style.accent)
+                }
+                Text("Everything is running cool, fast, and clutter-free. Made by Morad.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Label(Host.current().localizedName ?? "This Mac", systemImage: "desktopcomputer")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(style.border, lineWidth: 1))
+    }
+
+    private func zombieAlertBanner(_ process: ProcessLoad) -> some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle().fill(Color.red.opacity(0.15)).frame(width: 44, height: 44)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.red)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Runaway Task Detected: \(process.name)")
+                    .font(.system(size: 15, weight: .bold))
+                Text("Consuming \(Int(process.cpu * 100))% CPU continuously. It appears trapped in an infinite loop.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button {
+                SystemVitals.terminate(pid: process.id, force: true)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark.circle.fill")
+                    Text("Stop Task Now")
+                }
+                .font(.system(size: 12, weight: .bold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.red, in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.red.opacity(0.3), lineWidth: 1))
+    }
+
+    private func sleepInhibitorBanner(_ process: ProcessLoad) -> some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle().fill(Color.orange.opacity(0.15)).frame(width: 44, height: 44)
+                Image(systemName: "cup.and.saucer.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.orange)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Mac Sleep Prevented")
+                    .font(.system(size: 15, weight: .bold))
+                Text("The '\(process.name)' command is forbidding your Mac from sleeping automatically.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button {
+                SystemVitals.terminate(pid: process.id, force: false)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.stars.fill")
+                    Text("Allow Sleep")
+                }
+                .font(.system(size: 12, weight: .bold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.orange, in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+    }
+
+    private func loadBenignMonsterMascot() -> NSImage? {
+        let bundlePath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/BenignMonster/mascot.png")
+        if FileManager.default.fileExists(atPath: bundlePath.path), let img = NSImage(contentsOf: bundlePath) {
+            return img
+        }
+        let fallback = URL(fileURLWithPath: "/Users/Morad/Desktop/BMP/afaedd61-c32a-4a0b-a308-26727bf2fc0a.png")
+        if FileManager.default.fileExists(atPath: fallback.path), let img = NSImage(contentsOf: fallback) {
+            return img
+        }
+        return nil
     }
 
     private func utility(_ title: String, detail: String, icon: String, action: @escaping () -> Void) -> some View {

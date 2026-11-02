@@ -2,6 +2,15 @@
 
 ## Objective
 
+**0.24.0 (2026-11-02, session 3).** Morad: "Can housekeeper also take advantage of our Benign Monster brand? Like Benign Monster Works, we can call it? /Users/Morad/Desktop/BMP/afaedd61-c32a-4a0b-a308-26727bf2fc0a.png '/Users/Morad/Desktop/BMP/Brand Identity'... definitely give Housekeeper all these capabilities and superpowers... welcoming, friendly... animated and shiny and professional looking... easy to navigate menus... updater should have one for apps, for homebrew, for unknown origins, with select all, ignore list, right click check in finder... intuitive, something that a 72 year old dad could even use... available for both kinds of Macs; intel and silicon obviously; as universal as can be."
+Shipped:
+1. Benign Monster Works Brand Integration: Mascot artwork (`mascot.png`, `badge.png`), welcoming hero banner, and clear studio provenance ("Made by Morad · Benign Monster Works").
+2. 5-Room Dad-Simple Navigation: Simplified sidebar to 5 primary rooms (Dashboard, Clean Up, Update Apps, Uninstall Apps, Cooling & Fans). Organized specialized power tools under an expandable "Advanced Tools" drawer.
+3. Zombie & Runaway Process Watchdog: Real-time detection of high-CPU runaway loops (>60% CPU for >3m or script interpreters >75%) and sleep inhibitors (`caffeinate`) with a 1-click `[Stop Task Now]` button.
+4. Modern Developer & AI Cache Cleaner: Scans and purges `~/.cache/uv`, `~/.cache/huggingface/hub`, `~/.cache/mlx-vlm`, `~/.cache/codex-runtimes`, Apple Music `AMPArtworkAgent` album art cache, and app updater caches.
+5. 3-Tab Intuitive Updater: Dedicated tabs for `Mac Apps`, `Homebrew Tools`, and `Unknown Origins`, plus quick `[Select All]` / `[Deselect All]` controls, an `Ignore List`, and right-click `Reveal in Finder` on all rows.
+6. Universal Binary (`arm64` + `x86_64`): Native compilation and lipo packaging for Apple Silicon and Intel Macs.
+
 **0.23.0 (2026-11-02, session 2).** Morad: "see the menu bar choices are so damn dififcult too... and even the parts where you can close stuff that take ram etc you should just even be able to kill it with one click - and you should be able to see better throughout the interface with better icons, better spacing... even the model loader doesnt quite work - since it doesnt even notice the two MLX models I have for example... Reverse engineer both CleanMyMac and Mole... The updater too should be able to update some apps from the websites they were downloaded from, and the app store stuff it recognizes it should open the app store for you... And it shouldn't download it all in this hidden cache in its own app library... clean with this app - not messy".
 Shipped:
 1. Re-architected Menu Bar Panel: Replaced niche subtools with CleanMyMac-style quick actions (`[Open App]`, `[Free RAM]`, `[Clean]`, `[Cooling]`, and `[Updates]`). Added high-contrast hardware gauges, instant thermal chips, and streamlined room detail views without long walls of text.

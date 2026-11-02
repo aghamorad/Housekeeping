@@ -24,6 +24,10 @@ struct ProcessLoad: Identifiable, Equatable {
     /// Physical memory the process is holding, the same figure Activity Monitor
     /// calls its memory. Read from the same rusage as the CPU time.
     let memory: UInt64
+    /// Total CPU lifetime in seconds
+    var totalCPUTime: TimeInterval = 0
+    /// Whether this process is stuck in an infinite loop or runaway condition
+    var isZombieCandidate: Bool = false
 }
 
 struct BatteryState: Equatable {
@@ -60,6 +64,10 @@ struct VitalsSnapshot: Equatable {
     /// The biggest holders of memory, which are rarely the busiest hands — a
     /// browser idles at no processor time while holding gigabytes.
     var memoryHogs: [ProcessLoad] = []
+    /// Detected task actively preventing sleep (e.g. caffeinate).
+    var sleepInhibitor: ProcessLoad?
+    /// Runaway zombie tasks trapped in infinite loops or consuming high CPU over time.
+    var zombieCandidates: [ProcessLoad] = []
 
     var memoryFraction: Double {
         memoryTotal > 0 ? Double(memoryUsed) / Double(memoryTotal) : 0
@@ -259,6 +267,8 @@ final class SystemVitals: NSObject, ObservableObject {
         let hands = readProcesses()
         next.processes = hands.busy
         next.memoryHogs = hands.holding
+        next.zombieCandidates = hands.zombies
+        next.sleepInhibitor = hands.inhibitor
         snapshot = next
     }
 
@@ -454,7 +464,7 @@ final class SystemVitals: NSObject, ObservableObject {
         return usageByPID
     }
 
-    private func readProcesses() -> (busy: [ProcessLoad], holding: [ProcessLoad]) {
+    private func readProcesses() -> (busy: [ProcessLoad], holding: [ProcessLoad], zombies: [ProcessLoad], inhibitor: ProcessLoad?) {
         let now = Date()
         let elapsed = now.timeIntervalSince(lastProcessSample)
         // Every tick would mean reading a rusage for every process on the machine
@@ -462,13 +472,14 @@ final class SystemVitals: NSObject, ObservableObject {
         // is the tick right after the panel opens, which finishes the pair the
         // baseline left half-done.
         guard elapsed >= (quickProcessSample ? 0.4 : 2.5) else {
-            return (snapshot.processes, snapshot.memoryHogs)
+            return (snapshot.processes, snapshot.memoryHogs, snapshot.zombieCandidates, snapshot.sleepInhibitor)
         }
         lastProcessSample = now
         quickProcessSample = false
 
         let usages = readProcessUsage()
         var loads: [ProcessLoad] = []
+        var sleepInhibitorCandidate: ProcessLoad?
 
         for (pid, usage) in usages {
             // The first reading of a process only establishes a baseline. Its
@@ -484,7 +495,26 @@ final class SystemVitals: NSObject, ObservableObject {
             var nameBuffer = [CChar](repeating: 0, count: 128)
             let named = proc_name(pid, &nameBuffer, UInt32(nameBuffer.count))
             let name = named > 0 ? String(cString: nameBuffer) : "pid \(pid)"
-            loads.append(ProcessLoad(id: pid, name: name, cpu: share, memory: usage.memory))
+            let lowerName = name.lowercased()
+
+            let totalSecs = Double(usage.cpu) / 1_000_000_000
+            let isScript = ["python", "python3", "node", "ruby", "perl", "bash", "sh", "zsh", "swift"].contains { lowerName.contains($0) }
+            // A runaway task: high continuous CPU (>60% of a core for >3 min) or script interpreter pinned >75%
+            let isZombie = (share > 0.60 && totalSecs > 180) || (share > 0.75 && isScript) || (totalSecs > 1800 && share > 0.50)
+
+            let item = ProcessLoad(
+                id: pid,
+                name: name,
+                cpu: share,
+                memory: usage.memory,
+                totalCPUTime: totalSecs,
+                isZombieCandidate: isZombie
+            )
+            loads.append(item)
+
+            if lowerName == "caffeinate" {
+                sleepInhibitorCandidate = item
+            }
         }
 
         previousProcessTimes = usages
@@ -499,8 +529,18 @@ final class SystemVitals: NSObject, ObservableObject {
         let holding = loads
             .filter { $0.memory > 8 * 1_048_576 }
             .sorted { $0.memory > $1.memory }
+        let zombies = loads
+            .filter { $0.isZombieCandidate }
+            .sorted { $0.cpu > $1.cpu }
 
-        return (Array(busy.prefix(4)), Array(holding.prefix(6)))
+        return (Array(busy.prefix(4)), Array(holding.prefix(6)), zombies, sleepInhibitorCandidate)
+    }
+
+    /// Terminate any process with a clean signal (SIGTERM) or forced stop (SIGKILL).
+    @discardableResult
+    public static func terminate(pid: pid_t, force: Bool = false) -> Bool {
+        let sig = force ? SIGKILL : SIGTERM
+        return Darwin.kill(pid, sig) == 0
     }
 
     // MARK: - Machine
