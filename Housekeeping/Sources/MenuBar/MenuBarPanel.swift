@@ -208,6 +208,12 @@ struct MenuBarPanel: View {
             chip(VitalsFormat.gigabytes(ProcessInfo.processInfo.physicalMemory))
             chip(vitals.osVersion)
             chip("up \(VitalsFormat.uptime(snapshot.uptime))")
+            if let temp = snapshot.cpuTemperature {
+                chip("\(Int(temp.rounded()))°C")
+            }
+            if let fan = snapshot.fanRPM, fan > 0 {
+                chip("\(Int(fan.rounded())) RPM")
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)

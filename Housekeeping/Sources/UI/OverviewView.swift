@@ -26,18 +26,22 @@ struct OverviewView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Start here").font(.system(size: 17, weight: .semibold))
-                    HStack(spacing: 14) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 14)], spacing: 14) {
                         OverviewActionCard(title: "Clean Up", icon: "sparkles", color: style.accent,
                                            detail: "Review caches, build files, installers, and app data.", actionLabel: "Review files") {
                             appState.showClean = true
                         }
-                        OverviewActionCard(title: "Browse Storage", icon: "internaldrive", color: style.accent,
-                                           detail: "Measure folders. Find the files taking up the most room.", actionLabel: "Open disk browser") {
+                        OverviewActionCard(title: "Space Lens", icon: "internaldrive", color: style.accent,
+                                           detail: "Instant visual breakdown of disk categories and large files.", actionLabel: "Explore space") {
                             appState.showDiskBrowser = true
                         }
                         OverviewActionCard(title: "Update Apps", icon: "arrow.triangle.2.circlepath", color: style.accent,
-                                           detail: "See available updates and where each one comes from.", actionLabel: "Check updates") {
+                                           detail: "One-click updates with automatic sudo escalation.", actionLabel: "Check updates") {
                             appState.showUpdateList = true
+                        }
+                        OverviewActionCard(title: "Fans & Thermals", icon: "fan.fill", color: style.accent,
+                                           detail: "Real-time temperature sensors and fan speed controls.", actionLabel: "Control fans") {
+                            appState.showFanControl = true
                         }
                     }
                 }
@@ -51,6 +55,7 @@ struct OverviewView: View {
                         Text(style.isRetro ? "Available in the toolbar" : "Available in the sidebar").font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                     HStack(spacing: 14) {
+                        utility("App Uninstaller", detail: "Cleanly remove apps & container leftovers", icon: "app.badge.minus") { appState.showUninstaller = true }
                         utility("Terminal Health", detail: "Check commands and installations", icon: "terminal") { appState.showSetupCheck = true }
                         utility("Two Folders", detail: "Compare a folder with its backup", icon: "rectangle.on.rectangle") { appState.showReconcile = true }
                     }

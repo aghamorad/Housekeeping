@@ -1,3 +1,12 @@
+## 0.22.0 — Fans & thermals, modern updater with sudo, Space Lens, and dedicated uninstaller
+
+A comprehensive overhaul giving the kitchen-sink experience breathing room, intuitive navigation, and direct hardware control:
+
+- **Fans & Thermals Control**: Native Apple SMC and IOHID thermal interface for Apple Silicon (M1/M2/M3/M4/M5) and Intel Macs. Live readouts of CPU, GPU, Battery, and system average temperatures alongside real-time fan RPM gauges. Five cooling profiles: *System Auto* (macOS thermal algorithm), *Quiet* (minimum baseline RPM), *Balanced* (50% sustained cooling), *Full Blast* (100% maximum RPM), and *Custom* with a live slider. Automatic safety guards restore Apple thermal control on exit. Integrated across Overview, sidebar, keyboard shortcuts, and menu bar vitals.
+- **Rebuilt App & Package Updater**: Overhauled with spacious CleanMyMac-style cards. Hero banner with one-click *Update All*, live progress bars, and individual *Update* buttons per row. Includes automatic macOS administrator authorization (sudo via native authentication prompt) when Homebrew formulae or casks require installer privileges, eliminating terminal hangs. Built-in Full Disk Access check and one-click guidance.
+- **Space Lens & Storage Explorer**: Instant volume breakdown (Used vs Available) with visual segmented bar. Fast category intelligence (Applications, Developer & Caches, Media, Downloads, Documents, Trash) without multi-minute crawling freezes. Dedicated *Large & Old Files* explorer (>200 MB) and fluid *Folder Explorer* with instant drill-down, breadcrumb navigation, and Finder integration.
+- **Dedicated App Uninstaller**: Clean removal of applications and their scattered leftovers across `~/Library/Application Support`, `~/Library/Caches`, `~/Library/Preferences`, `~/Library/Saved Application State`, and `~/Library/Containers`. Granular component inspection and safe Quarantine archiving.
+
 ## 0.21.1 — the Bookbind catalogue search reaches the catalogue
 
 **Search online catalogue**, on the Bookbind screen, failed on this Mac with

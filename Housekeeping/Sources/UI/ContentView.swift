@@ -27,7 +27,7 @@ struct ContentView: View {
             case .cleanupPreview: CleanupPreviewView(items: appState.recommendedCleanupItems)
             case .quarantine: QuarantineView()
             case .protectionList: ProtectionView()
-            case .diskBrowser: DiskBrowserView(model: appState.diskBrowser)
+            case .diskBrowser: SpaceLensView()
             case .reconcile: ReconcileView(model: appState.reconciler)
             case .updateList: UpdateView()
             case .setupCheck: EnvironmentView()
@@ -39,6 +39,8 @@ struct ContentView: View {
             case .localModels: ModelsView(model: appState.localModels)
             case .selfUpdate: SelfUpdateView()
             case .clean: CleanerView(model: appState.cleaner)
+            case .fanControl: FanControlView()
+            case .uninstaller: UninstallerModernView()
             }
         }
         .environment(\.uiStyle, style)
@@ -109,6 +111,12 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenDisk)) { _ in
                 appState.showDiskBrowser = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenFanControl)) { _ in
+                appState.showFanControl = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenUninstaller)) { _ in
+                appState.showUninstaller = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingScanNow)) { _ in
                 appState.startScan()
@@ -459,7 +467,8 @@ private struct JobBar: View {
                             } else { appState.startScan() }
                         }
                     }
-                    sidebarSection("Storage", ids: ["clean", "browse-the-disk", "quarantine", "left-alone"])
+                    sidebarSection("Hardware", ids: ["fans-thermals"])
+                    sidebarSection("Storage", ids: ["clean", "uninstaller", "browse-the-disk", "quarantine", "left-alone"])
                     sidebarSection("Maintenance", ids: ["look-everywhere", "update-apps", "check-my-setup", "two-folders", "local-models"])
                     sidebarSection("Utilities", ids: ["mediadock", "bookbind", "test-routes", "spoof-location"])
                 }.padding(.horizontal, 12)
@@ -493,7 +502,20 @@ private struct JobBar: View {
         .overlay(alignment: .trailing) { Divider() }
     }
 
-    private var allJobs: [Job] { readingJobs + holdingJobs + appJobs + routeJobs + deviceJobs }
+    private var allJobs: [Job] { hardwareJobs + readingJobs + holdingJobs + appJobs + routeJobs + deviceJobs }
+
+    private var hardwareJobs: [Job] {
+        [
+            Job(
+                id: "fans-thermals",
+                title: "Fans & Thermals",
+                systemImage: "fan.fill",
+                zone: .reading,
+                help: "Monitor temperatures and control Mac cooling fans in real time.",
+                action: { appState.showFanControl = true }
+            )
+        ]
+    }
 
     private func sidebarSection(_ title: String, ids: [String]) -> some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -514,6 +536,8 @@ private struct JobBar: View {
     private var selectedJobID: String? {
         guard let workspace = appState.workspace else { return nil }
         switch workspace {
+        case .fanControl: return "fans-thermals"
+        case .uninstaller: return "uninstaller"
         case .clean: return "clean"
         case .diskBrowser: return "browse-the-disk"
         case .quarantine: return "quarantine"
@@ -645,6 +669,15 @@ private struct JobBar: View {
     /// What Housekeeping has already done, and where the doing can be taken back.
     private var holdingJobs: [Job] {
         [
+            Job(
+                id: "uninstaller",
+                title: "Uninstaller",
+                systemImage: "app.badge.minus",
+                zone: .holding,
+                help: "Completely uninstall applications and remove all associated leftovers.",
+                action: { appState.showUninstaller = true }
+            ),
+
             Job(
                 id: "quarantine",
                 title: "Quarantine",

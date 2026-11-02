@@ -25,6 +25,8 @@ extension Notification.Name {
     /// the notification's object, because a reading is the reason it was opened.
     static let housekeepingAskAbout = Notification.Name("HousekeepingAskAbout")
     static let housekeepingOpenDisk = Notification.Name("HousekeepingOpenDisk")
+    static let housekeepingOpenFanControl = Notification.Name("HousekeepingOpenFanControl")
+    static let housekeepingOpenUninstaller = Notification.Name("HousekeepingOpenUninstaller")
     /// The panel was dismissed, so the next opening starts at the overview rather
     /// than on whichever page was left behind.
     static let housekeepingPanelClosed = Notification.Name("HousekeepingPanelClosed")

@@ -62,7 +62,7 @@ final class AppState: ObservableObject {
         case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
         case protectionList, diskBrowser, reconcile, updateList, setupCheck
         case housekeeper, routes, phone, mediaDock, bookbind, selfUpdate
-        case clean, localModels
+        case clean, localModels, fanControl, uninstaller
 
         var id: String { rawValue }
 
@@ -70,7 +70,7 @@ final class AppState: ObservableObject {
             switch self {
             case .clean, .diskBrowser, .reconcile, .updateList, .setupCheck, .routes,
                  .phone, .mediaDock, .bookbind, .quarantine, .protectionList,
-                 .localModels: return true
+                 .localModels, .fanControl, .uninstaller: return true
             default: return false
             }
         }
@@ -177,6 +177,14 @@ final class AppState: ObservableObject {
     var showLocalModels: Bool {
         get { screen == .localModels }
         set { show(.localModels, newValue) }
+    }
+    var showFanControl: Bool {
+        get { screen == .fanControl }
+        set { show(.fanControl, newValue) }
+    }
+    var showUninstaller: Bool {
+        get { screen == .uninstaller }
+        set { show(.uninstaller, newValue) }
     }
     /// Whether the two-folder comparison is open. Only the flag lives here, for
     /// the same reason as the disk browser: which pair is on screen and what the
