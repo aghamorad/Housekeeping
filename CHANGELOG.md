@@ -1,3 +1,14 @@
+## 0.24.0 — Benign Monster Works edition, 5-room Dad-Simple navigation, runaway zombie watchdog, and 3-tab updater
+
+A major milestone release introducing the Benign Monster Works brand identity, a complete "72-year-old dad" navigation overhaul, and powerful diagnostic superpowers:
+
+- **Benign Monster Works Brand Identity**: Welcoming mascot artwork, polished typography, and clear provenance ("Made by Morad · Benign Monster Works").
+- **5-Room Dad-Simple Navigation**: Replaced the 15-item sidebar clutter with 5 clear, unmistakable primary rooms: **Dashboard**, **Clean Up**, **Update Apps**, **Uninstall Apps**, and **Cooling & Fans**. All advanced utilities (Space Lens, Local MLX Models, Terminal Health, Bookbind, MediaDock, Two Folders, Routes, Quarantine) are neatly organized inside a collapsible "Advanced Tools" drawer.
+- **Zombie & Runaway Process Watchdog**: Real-time detection of infinite loops (such as multi-day runaway Python scripts) and indefinite sleep inhibitors (`caffeinate`). Immediately displays a prominent, friendly alert card on the Dashboard and Menu Bar with a 1-click **[Stop Task Now]** button.
+- **Modern Developer & AI Cache Hunter**: Deep detection and safe purging for `uv` package caches, Hugging Face AI models and tokenizers (`~/.cache/huggingface`), MLX vision model caches, Codex runtimes, Apple Music cached album covers (`AMPArtworkAgent`), and updater caches.
+- **3-Tab Intuitive Updater**: Segmented into **Mac Apps**, **Homebrew Tools**, and **Unknown Origins**. Includes quick **[Select All]** and **[Deselect All]** actions, an **Ignore List** for skipped packages, and a right-click **"Reveal in Finder"** context menu on every installed application.
+- **Universal Binary (`arm64` + `x86_64`)**: Native high-performance executable compiled for both Apple Silicon (M1/M2/M3/M4) and Intel Macs on macOS 13.0+.
+
 ## 0.23.0 — Menu bar one-click process killer, Free RAM purge, Apple Silicon MLX model loader, and clean updater
 
 A targeted UX and capability leap inspired by CleanMyMac and Mole:

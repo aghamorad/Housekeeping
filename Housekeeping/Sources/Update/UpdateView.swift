@@ -17,9 +17,11 @@ struct UpdateView: View {
 
     private enum Filter: String, CaseIterable, Identifiable {
         case needsAttention = "Updates Available"
+        case macApps = "Mac Apps"
+        case homebrew = "Homebrew Tools"
+        case unknownOrigins = "Unknown Origins"
+        case ignored = "Ignored"
         case everything = "All Installed"
-        case homebrew = "Homebrew"
-        case appStore = "App Store"
 
         var id: String { rawValue }
     }
@@ -43,12 +45,16 @@ struct UpdateView: View {
             switch filter {
             case .needsAttention:
                 return isNoteworthy(row)
+            case .macApps:
+                return !row.isExcepted && (row.channel == .macAppStore || row.channel == .sparkleFeed || row.channel == .githubRelease)
+            case .homebrew:
+                return !row.isExcepted && (row.channel == .homebrewFormula || row.channel == .homebrewCask)
+            case .unknownOrigins:
+                return !row.isExcepted && (row.channel == .unidentified || row.channel == .systemSoftware)
+            case .ignored:
+                return row.isExcepted
             case .everything:
                 return true
-            case .homebrew:
-                return row.channel == .homebrewFormula || row.channel == .homebrewCask
-            case .appStore:
-                return row.channel == .macAppStore
             }
         }
     }
@@ -214,47 +220,98 @@ struct UpdateView: View {
     // MARK: - Filter and Search Bar
 
     private var filterAndSearchBar: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 6) {
-                ForEach(Filter.allCases, id: \.self) { f in
-                    let isSelected = filter == f
-                    let countLabel: String = {
-                        switch f {
-                        case .needsAttention: return " (\(noteworthyCount))"
-                        case .everything: return " (\(totalCount))"
-                        case .homebrew: return " (\(appState.updateRows.filter { $0.channel == .homebrewFormula || $0.channel == .homebrewCask }.count))"
-                        case .appStore: return " (\(appState.updateRows.filter { $0.channel == .macAppStore }.count))"
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Filter.allCases, id: \.self) { f in
+                            let isSelected = filter == f
+                            let countLabel: String = {
+                                switch f {
+                                case .needsAttention: return " (\(noteworthyCount))"
+                                case .macApps: return " (\(appState.updateRows.filter { !rowIsIgnored($0) && ($0.channel == .macAppStore || $0.channel == .sparkleFeed || $0.channel == .githubRelease) }.count))"
+                                case .homebrew: return " (\(appState.updateRows.filter { !rowIsIgnored($0) && ($0.channel == .homebrewFormula || $0.channel == .homebrewCask) }.count))"
+                                case .unknownOrigins: return " (\(appState.updateRows.filter { !rowIsIgnored($0) && ($0.channel == .unidentified || $0.channel == .systemSoftware) }.count))"
+                                case .ignored: return " (\(appState.updateRows.filter { $0.isExcepted }.count))"
+                                case .everything: return " (\(totalCount))"
+                                }
+                            }()
+
+                            Button {
+                                filter = f
+                            } label: {
+                                Text("\(f.rawValue)\(countLabel)")
+                                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(isSelected ? style.accent.opacity(0.12) : Color.clear, in: Capsule())
+                                    .foregroundStyle(isSelected ? style.accent : .secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
-                    }()
-
-                    Button {
-                        filter = f
-                    } label: {
-                        Text("\(f.rawValue)\(countLabel)")
-                            .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(isSelected ? style.accent.opacity(0.12) : Color.clear, in: Capsule())
-                            .foregroundStyle(isSelected ? style.accent : .secondary)
                     }
-                    .buttonStyle(.plain)
                 }
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search apps…", text: $query)
+                        .textFieldStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(style.border, lineWidth: 1))
+                .frame(maxWidth: 220)
             }
 
-            Spacer()
-
+            // Quick select-all / deselect-all actions for dad
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
+                Button {
+                    let ids = shownRows.filter { $0.canUpdate && $0.channel.canInstall }.map(\.id)
+                    appState.setUpdateSelection(ids: ids, selected: true)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle")
+                        Text("Select All Updates in View")
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(style.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                    .foregroundStyle(style.accent)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    let ids = shownRows.map(\.id)
+                    appState.setUpdateSelection(ids: ids, selected: false)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "circle")
+                        Text("Deselect All")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(style.groupingBackground, in: RoundedRectangle(cornerRadius: 6))
                     .foregroundStyle(.secondary)
-                TextField("Search apps…", text: $query)
-                    .textFieldStyle(.plain)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text("Right-click any row to reveal in Finder or ignore.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(style.border, lineWidth: 1))
-            .frame(maxWidth: 240)
         }
+    }
+
+    private func rowIsIgnored(_ row: UpdateRow) -> Bool {
+        row.isExcepted
     }
 
     // MARK: - Cards List
@@ -367,6 +424,37 @@ struct UpdateView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(row.isSelected ? style.accent : style.border, lineWidth: row.isSelected ? 1.5 : 1)
         )
+        .contextMenu {
+            if let path = row.path {
+                Button {
+                    let url = URL(fileURLWithPath: path)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                } label: {
+                    Label("Reveal in Finder", systemImage: "folder")
+                }
+            }
+            if let site = row.websiteURL {
+                Button {
+                    NSWorkspace.shared.open(site)
+                } label: {
+                    Label("Visit Official Website", systemImage: "safari")
+                }
+            }
+            Divider()
+            Button {
+                if row.isExcepted {
+                    appState.offerUpdateAgain(row)
+                } else {
+                    appState.ignoreUpdate(row)
+                }
+            } label: {
+                if row.isExcepted {
+                    Label("Stop Ignoring Updates", systemImage: "eye")
+                } else {
+                    Label("Ignore Updates for this App", systemImage: "eye.slash")
+                }
+            }
+        }
     }
 
     private func channelIcon(_ channel: UpdateChannel) -> String {

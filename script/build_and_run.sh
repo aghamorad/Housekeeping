@@ -28,6 +28,10 @@ DEVELOPER_DIR="$XCODE_DEVELOPER_DIR" "$XCODEBUILD" \
 
 # Keep the runnable development bundle equivalent to packaged builds. These
 # optional Bookbind resources live beside this repository, outside Swift sources.
+if [[ -d "$ROOT_DIR/Housekeeping/Resources/BenignMonster" ]]; then
+  mkdir -p "$APP_BUNDLE/Contents/Resources/BenignMonster"
+  ditto "$ROOT_DIR/Housekeeping/Resources/BenignMonster" "$APP_BUNDLE/Contents/Resources/BenignMonster"
+fi
 BOOKBIND_SOURCE="${HOUSEKEEPING_BOOKBIND_SRC:-$ROOT_DIR/../Bookbind}"
 if [[ -f "$BOOKBIND_SOURCE/app.py" && -f "$BOOKBIND_SOURCE/bookbind_cli.py" && -d "$BOOKBIND_SOURCE/static" ]]; then
   mkdir -p "$APP_BUNDLE/Contents/Resources/Bookbind"

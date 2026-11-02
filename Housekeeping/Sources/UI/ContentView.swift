@@ -11,6 +11,7 @@ import AppKit
 struct ContentView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.openWindow) private var openWindow
+    @State private var showAdvancedTools: Bool = false
 
 
     /// The view a sheet shows, one screen per case. Each is given the
@@ -370,6 +371,7 @@ private struct Job: Identifiable {
 private struct JobBar: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
+    @State private var showAdvancedTools: Bool = false
 
     var body: some View {
         if style.isRetro {
@@ -444,36 +446,77 @@ private struct JobBar: View {
     private var modernSidebar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 30, height: 30)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Housekeeping").font(.system(size: 14, weight: .bold))
-                    Text("Your Mac, at a glance").font(.system(size: 11)).foregroundStyle(.secondary)
+                if let mascotImage = loadBenignMonsterMascot() {
+                    Image(nsImage: mascotImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 34, height: 34)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 30, height: 30)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Housekeeper").font(.system(size: 14, weight: .bold))
+                    Text("Benign Monster Works").font(.system(size: 10, weight: .semibold)).foregroundStyle(style.accent)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 18).padding(.top, 24).padding(.bottom, 24)
+            .padding(.horizontal, 18).padding(.top, 24).padding(.bottom, 20)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Core 5 Rooms for Dad-Simple Navigation
                     VStack(spacing: 3) {
-                        SidebarNavigationRow(title: "Overview", icon: "square.grid.2x2",
+                        SidebarNavigationRow(title: "Dashboard", icon: "square.grid.2x2",
                                              selected: appState.workspace == nil && appState.showOverview) {
                             appState.workspace = nil
                             appState.showOverview = true
                             appState.showSweepResults = false
                         }
-                        SidebarNavigationRow(title: appState.scanState == .complete ? "Scan Results" : "Scan My Mac", icon: "magnifyingglass",
-                                             selected: appState.workspace == nil && !appState.showOverview) {
-                            if appState.scanState == .scanning || appState.scanState == .complete {
-                                appState.workspace = nil
-                                appState.showOverview = false
-                            } else { appState.startScan() }
+                        if let job = allJobs.first(where: { $0.id == "clean" }) {
+                            sidebarJob(job, customTitle: "Clean Up", customIcon: "sparkles")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "update-apps" }) {
+                            sidebarJob(job, customTitle: "Update Apps", customIcon: "arrow.triangle.2.circlepath")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "uninstaller" }) {
+                            sidebarJob(job, customTitle: "Uninstall Apps", customIcon: "app.badge.minus")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "fans-thermals" }) {
+                            sidebarJob(job, customTitle: "Cooling & Fans", customIcon: "fan.fill")
                         }
                     }
-                    sidebarSection("Hardware", ids: ["fans-thermals"])
-                    sidebarSection("Storage", ids: ["clean", "uninstaller", "browse-the-disk", "quarantine", "left-alone"])
-                    sidebarSection("Maintenance", ids: ["look-everywhere", "update-apps", "check-my-setup", "two-folders", "local-models"])
-                    sidebarSection("Utilities", ids: ["mediadock", "bookbind", "test-routes", "spoof-location"])
+
+                    Divider().padding(.horizontal, 4)
+
+                    // Advanced Power Tools in a neat disclosure section
+                    DisclosureGroup(isExpanded: $showAdvancedTools) {
+                        VStack(spacing: 4) {
+                            sidebarSection("Power Tools", ids: [
+                                "browse-the-disk",
+                                "local-models",
+                                "check-my-setup",
+                                "two-folders",
+                                "bookbind",
+                                "mediadock",
+                                "test-routes",
+                                "quarantine",
+                                "left-alone"
+                            ])
+                        }
+                        .padding(.top, 4)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                            Text("Advanced Tools")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                    }
                 }.padding(.horizontal, 12)
             }
             Divider().padding(.horizontal, 16).padding(.top, 12)
@@ -530,10 +573,22 @@ private struct JobBar: View {
         }
     }
 
-    private func sidebarJob(_ job: Job) -> some View {
-        SidebarNavigationRow(title: job.title, icon: job.systemImage,
+    private func sidebarJob(_ job: Job, customTitle: String? = nil, customIcon: String? = nil) -> some View {
+        SidebarNavigationRow(title: customTitle ?? job.title, icon: customIcon ?? job.systemImage,
                              selected: selectedJobID == job.id, enabled: job.isEnabled, action: job.action)
             .help(job.help)
+    }
+
+    private func loadBenignMonsterMascot() -> NSImage? {
+        let bundlePath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/BenignMonster/mascot.png")
+        if FileManager.default.fileExists(atPath: bundlePath.path), let img = NSImage(contentsOf: bundlePath) {
+            return img
+        }
+        let fallback = URL(fileURLWithPath: "/Users/Morad/Desktop/BMP/afaedd61-c32a-4a0b-a308-26727bf2fc0a.png")
+        if FileManager.default.fileExists(atPath: fallback.path), let img = NSImage(contentsOf: fallback) {
+            return img
+        }
+        return nil
     }
 
     private var selectedJobID: String? {

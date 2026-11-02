@@ -128,6 +128,9 @@ stage() {
   done
   cp "$ROOT_DIR/Housekeeping/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
   ditto "$ROOT_DIR/Housekeeping/Resources/Rules" "$app/Contents/Resources/Rules"
+  if [[ -d "$ROOT_DIR/Housekeeping/Resources/BenignMonster" ]]; then
+    ditto "$ROOT_DIR/Housekeeping/Resources/BenignMonster" "$app/Contents/Resources/BenignMonster"
+  fi
 
   # The housekeeper's runtime travels inside the bundle. It is a single static
   # binary that links nothing but system frameworks — which is the whole reason a
