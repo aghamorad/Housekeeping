@@ -1,25 +1,41 @@
 // Housekeeping — the Local Models screen
 //
 // One list of everything on this Mac that can hold a model in memory, what each one
-// weighs on disk, and which of them are holding memory right now — with a button on
-// each row that puts it in or takes it out.
-//
-// The screen is deliberately quiet about the biggest number on it. Total memory in
-// use is the honest figure and it moves every second; what a reader needs before
-// pressing Load is whether *this* model fits in what is left, so the row says that,
-// in its own words, and the button is only offered when the answer is yes.
+// weighs on disk, which tools intersect with it, and what is necessary vs extra —
+// with controls to load, unload, or safely move orphaned leftovers to Trash.
 
 import SwiftUI
+import AppKit
+
+enum ModelFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case necessary = "Necessary"
+    case optional = "Optional"
+    case extra = "Extra / Orphaned"
+
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .all: return "square.grid.2x2"
+        case .necessary: return "checkmark.shield.fill"
+        case .optional: return "info.circle"
+        case .extra: return "exclamationmark.triangle.fill"
+        }
+    }
+}
 
 struct ModelsView: View {
     @ObservedObject var model: LocalModelInventory
     @Environment(\.uiStyle) private var style
+    @State private var selectedFilter: ModelFilter = .all
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 memoryPanel
+                filterBar
 
                 if let problem = model.problem {
                     ThemePanel(padding: 10) {
@@ -77,9 +93,9 @@ struct ModelsView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Local Models")
+                Text("Local Models & AI Runtimes")
                     .font(style.titleFont)
-                Text("Every model installed on this Mac, and what each one is holding in memory. Loading and unloading happen here; nothing is downloaded.")
+                Text("Every model and AI runtime on this Mac: which tools intersect with it, what is necessary to keep, and what is extra or safe to clean.")
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -93,6 +109,53 @@ struct ModelsView: View {
             ) {
                 Task { await model.read() }
             }
+        }
+    }
+
+    // MARK: Filter Bar
+
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            ForEach(ModelFilter.allCases, id: \.self) { filter in
+                let count = countForFilter(filter)
+                Button {
+                    selectedFilter = filter
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: filter.systemImage)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(filter.rawValue)
+                            .font(style.smallFont)
+                        Text("\(count)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(selectedFilter == filter ? Color.white.opacity(0.2) : style.groupingBackground)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .foregroundColor(selectedFilter == filter ? .white : style.text)
+                    .background(selectedFilter == filter ? style.accent : style.groupingBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(selectedFilter == filter ? style.accent : style.border, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func countForFilter(_ filter: ModelFilter) -> Int {
+        let all = model.groups.flatMap { $0.models }
+        switch filter {
+        case .all: return all.count
+        case .necessary: return all.filter { $0.necessity == .necessary }.count
+        case .optional: return all.filter { $0.necessity == .optional }.count
+        case .extra: return all.filter { $0.necessity == .extra }.count
         }
     }
 
@@ -142,8 +205,6 @@ struct ModelsView: View {
         model.memory.total > 0 ? Double(model.memory.used) / Double(model.memory.total) : 0
     }
 
-    /// The bar says the same thing the numbers do: a machine with room left is not
-    /// a warning, whatever the number is.
     private var barColour: Color {
         switch usedFraction {
         case ..<0.8: return style.positive
@@ -177,44 +238,56 @@ struct ModelsView: View {
 
     // MARK: One runtime
 
+    @ViewBuilder
     private func groupSection(_ group: ModelGroup) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(group.runtime.title)
-                    .font(style.labelFont)
-                Text(group.models.count == 1 ? "1 model" : "\(group.models.count) models")
+        let visibleModels = group.models.filter { item in
+            switch selectedFilter {
+            case .all: return true
+            case .necessary: return item.necessity == .necessary
+            case .optional: return item.necessity == .optional
+            case .extra: return item.necessity == .extra
+            }
+        }
+
+        if !visibleModels.isEmpty || (selectedFilter == .all && group.hint != nil) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(group.runtime.title)
+                        .font(style.labelFont)
+                    Text(visibleModels.count == 1 ? "1 model" : "\(visibleModels.count) models")
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                    Spacer(minLength: 0)
+                }
+                Text(group.runtime.summary)
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
-                Spacer(minLength: 0)
-            }
-            Text(group.runtime.summary)
-                .font(style.smallFont)
-                .foregroundColor(style.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let hint = group.hint {
-                Text(hint)
-                    .font(style.smallFont)
-                    .foregroundColor(style.caution)
                     .fixedSize(horizontal: false, vertical: true)
-            }
 
-            if !group.models.isEmpty {
-                ThemePanel(padding: 0) {
-                    VStack(spacing: 0) {
-                        ForEach(Array(group.models.enumerated()), id: \.element.id) { index, entry in
-                            row(entry)
-                            if index < group.models.count - 1 {
-                                Rectangle()
-                                    .fill(style.border)
-                                    .frame(height: 1)
+                if let hint = group.hint {
+                    Text(hint)
+                        .font(style.smallFont)
+                        .foregroundColor(style.caution)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !visibleModels.isEmpty {
+                    ThemePanel(padding: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(Array(visibleModels.enumerated()), id: \.element.id) { index, entry in
+                                row(entry)
+                                if index < visibleModels.count - 1 {
+                                    Rectangle()
+                                        .fill(style.border)
+                                        .frame(height: 1)
+                                }
                             }
                         }
                     }
                 }
             }
+            .padding(.top, 4)
         }
-        .padding(.top, 4)
     }
 
     // MARK: One model
@@ -225,8 +298,8 @@ struct ModelsView: View {
         let blocked = model.busy != nil && !working
 
         return HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
                     Text(entry.name)
                         .font(style.bodyFont)
                         .foregroundColor(style.text)
@@ -245,6 +318,8 @@ struct ModelsView: View {
                                     .stroke(style.positive.opacity(0.5), lineWidth: 1)
                             )
                     }
+
+                    necessityBadge(entry.necessity)
                 }
 
                 if !entry.facts.isEmpty {
@@ -254,15 +329,22 @@ struct ModelsView: View {
                         .lineLimit(1)
                 }
 
-                if let note = entry.note {
+                if !entry.intersections.isEmpty {
+                    entryIntersectionsView(entry.intersections)
+                }
+
+                if let exp = entry.intersectionExplanation {
+                    Text(exp)
+                        .font(style.smallFont)
+                        .foregroundColor(entry.necessity == .extra ? style.caution : style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let note = entry.note {
                     Text(note)
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                // The refusal is the honest thing to show where the button would
-                // have been, rather than a button that is only going to say no.
                 if !entry.loaded, let refusal {
                     Text(refusal)
                         .font(style.smallFont)
@@ -280,16 +362,113 @@ struct ModelsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func entryIntersectionsView(_ intersections: [String]) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text("Intersects:")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(style.secondaryText)
+                .padding(.top, 1)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(intersections, id: \.self) { inter in
+                        Text(inter)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(style.text)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(style.groupingBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(style.border, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func necessityBadge(_ status: NecessityStatus) -> some View {
+        switch status {
+        case .necessary:
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 9, weight: .bold))
+                Text("NECESSARY")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundColor(style.positive)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(style.positive.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+
+        case .optional:
+            HStack(spacing: 3) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 9))
+                Text("OPTIONAL")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            .foregroundColor(style.secondaryText)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(style.groupingBackground)
+            .overlay(
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(style.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+
+        case .extra:
+            HStack(spacing: 3) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 9, weight: .bold))
+                Text("EXTRA / ORPHANED")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundColor(style.caution)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(style.caution.opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+        }
+    }
+
     @ViewBuilder
     private func control(for entry: LocalModel, refusal: String?, working: Bool, blocked: Bool) -> some View {
         if working {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text(entry.loaded ? "Unloading…" : "Loading…")
+                Text(entry.loaded ? "Unloading…" : "Working…")
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
             }
-            .frame(width: 130, alignment: .trailing)
+            .frame(width: 140, alignment: .trailing)
+        } else if entry.control == .trash || (entry.necessity == .extra && entry.path != nil) {
+            HStack(spacing: 6) {
+                if let path = entry.path {
+                    ThemeButton(
+                        title: "Reveal",
+                        systemImage: "arrow.up.right.square",
+                        isEnabled: true,
+                        help: "Shows this item in Finder."
+                    ) {
+                        NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: "")
+                    }
+                }
+                ThemeButton(
+                    title: "Trash",
+                    systemImage: "trash",
+                    isEnabled: !blocked,
+                    help: "Safely moves this orphaned folder/model to macOS Trash."
+                ) {
+                    Task { await model.moveToTrash(entry) }
+                }
+            }
+            .frame(width: 140, alignment: .trailing)
         } else if entry.loaded {
             ThemeButton(
                 title: "Unload",
@@ -299,7 +478,7 @@ struct ModelsView: View {
             ) {
                 Task { await model.unload(entry) }
             }
-            .frame(width: 130, alignment: .trailing)
+            .frame(width: 140, alignment: .trailing)
         } else if entry.control == .loadAndUnload {
             ThemeButton(
                 title: entry.runtime == .mlx ? "Set Default" : "Load",
@@ -309,7 +488,7 @@ struct ModelsView: View {
             ) {
                 Task { await model.load(entry) }
             }
-            .frame(width: 130, alignment: .trailing)
+            .frame(width: 140, alignment: .trailing)
         } else if entry.control == .unloadOnly {
             ThemeButton(
                 title: "Unload",
@@ -319,19 +498,19 @@ struct ModelsView: View {
             ) {
                 Task { await model.unload(entry) }
             }
-            .frame(width: 130, alignment: .trailing)
+            .frame(width: 140, alignment: .trailing)
         } else {
             Text("Not loadable")
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
-                .frame(width: 130, alignment: .trailing)
+                .frame(width: 140, alignment: .trailing)
         }
     }
 
     // MARK: Footer
 
     private var footer: some View {
-        Text("Read from Ollama's own service, LM Studio's model store and command, the housekeeper's weights, a local MLX server if one is running, and the Hugging Face cache. Nothing here is downloaded and nothing is deleted; the only change this screen makes is to memory.")
+        Text("Read from Draw Things, ComfyUI, Ollama, LM Studio, the housekeeper's weights, local MLX servers, and the Hugging Face cache. Shows which tools intersect with each model and what is necessary versus safe to clean.")
             .font(style.smallFont)
             .foregroundColor(style.secondaryText)
             .fixedSize(horizontal: false, vertical: true)
