@@ -149,63 +149,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// inline because the 72 px template is only a few kilobytes; the menu bar
     /// uses its alpha as a mask and lets macOS supply the appearance-aware tint.
     private static let menuBarTemplate: NSImage? = {
-        let encoded = "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    private func buildFrames() -> [NSImage] {
-        if let source = Self.menuBarTemplate {
-            source.size = NSSize(width: Self.markSize, height: Self.markSize)
-
-            return (0..<Self.frameCount).map { index in
-                let time = Double(index) * Self.frameInterval
-                let breath = 1 + 0.022 * sin(time * 1.25)
-                let renderer = ImageRenderer(
-                    content: Image(nsImage: source)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
-                        .frame(width: Self.markSize, height: Self.markSize)
-                        .scaleEffect(breath)
-                )
-                renderer.scale = 2
-
-                let size = NSSize(width: Self.markSize, height: Self.markSize)
-                let image = renderer.nsImage ?? NSImage(size: size)
-                image.size = size
-                image.isTemplate = true
-                return image
-            }
-        }
-
-        // Keep the original vector mark as a fallback if the embedded artwork
-        // cannot be decoded, so the status item still appears and remains usable.
-        return buildVectorFrames()
-    }
-
-    private func buildVectorFrames() -> [NSImage] {
-        (0..<Self.frameCount).map { index in
-            let renderer = ImageRenderer(
-                content: OctopusMark(
-                    time: Double(index) * Self.frameInterval,
-                    color: .black,
-                    // The menu bar gets a template image — one tint, decided by
-                    // whether the bar is light or dark. Anything drawn in a second
-                    // colour would come out as the first, so she is handed over as
-                    // a cut-paper silhouette instead.
-                    rendering: .singleColour
-                )
-                .frame(width: Self.markSize, height: Self.markSize)
-            )
-            // Two, so the mark is sharp on every Mac this app runs on. The renderer
-            // carries the scale; the status item picks the right representation.
-            renderer.scale = 2
-
-            let size = NSSize(width: Self.markSize, height: Self.markSize)
-            let image = renderer.nsImage ?? NSImage(size: size)
-            image.size = size
-            image.isTemplate = true
-            return image
-        }
-    }
-
-4wTVDSic1rhSTzjHvm9570WRWQaTP8iSzisKYHuKn9yf7nNK8t5JCfjT4gPukAD2MMVRQ+tpjMc1gykCdaK36efObxaVX3oZr40qspt9LN1U8uFTIXVqzGLNdiCFqumtbtZwI/elOoalmvYgx9xfbW13yqO9wBUGe9oHh1rXnCikCGDby7JLcMWVpiYG0nqQqlkzuzHCtiRK9i8Tw6pprbM3yJOudC45tXKmArja9MiP3YwFEV97GfhXRyKHUolio1q0pS50qjyoWfM4XoFco5bt5O7u7u6HE6sbef9ZtNbY09XV2br1+FdAq+RYO1Aog0/Te41W4HWO9bwbeJ80Y5p1tW38rqK9br+iBA3KKKBaga/GPM0wBfS8D11mvHU8rSdel0ZZwkpZ9qnyoTTLzdl3tomyq9Ta8GPfpeagR/uMgySuBxuPDRNvBhvabOO8q/nwIYguD1YDiw5s+G1DgXD85H1f5ymE8xVAQyScvnq8o1T7thhuOGR+vcHoaYYMTX6+WC50kdWRcFUpmKE+q7fCWiChrO9qD1bMHMc40TnyoYuBn4sNeQrH4Sr1LCsNUuvUrCnAF9pp3vEvEE8X0OvdiMUK8XdRljHbhU6pwzcE9B8nTxkqqK5W9f+u0JZphqdp+zUUTlZMSiX+S9HcEGqM8rMnjAdXpXJTcfU0fRh0rfyurKJEGp/phPauNy1bZKEJH/5xSoaP/jeFzubAKyIN6ex4n1hL+JT+lr27dbfu1t26W3dbv9v/APzeCe0EZpf8AAAAAElFTkSuQmCC"
+        let encoded = "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"
         guard let data = Data(base64Encoded: encoded) else { return nil }
         return NSImage(data: data)
     }()
@@ -279,6 +223,36 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     // MARK: - Drawing
 
     private func buildFrames() -> [NSImage] {
+        if let source = Self.menuBarTemplate {
+            source.size = NSSize(width: Self.markSize, height: Self.markSize)
+
+            return (0..<Self.frameCount).map { index in
+                let time = Double(index) * Self.frameInterval
+                let breath = 1 + 0.022 * sin(time * 1.25)
+                let renderer = ImageRenderer(
+                    content: Image(nsImage: source)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFit()
+                        .frame(width: Self.markSize, height: Self.markSize)
+                        .scaleEffect(breath)
+                )
+                renderer.scale = 2
+
+                let size = NSSize(width: Self.markSize, height: Self.markSize)
+                let image = renderer.nsImage ?? NSImage(size: size)
+                image.size = size
+                image.isTemplate = true
+                return image
+            }
+        }
+
+        // Keep the original vector mark as a fallback if the embedded artwork
+        // cannot be decoded, so the status item still appears and remains usable.
+        return buildVectorFrames()
+    }
+
+    private func buildVectorFrames() -> [NSImage] {
         (0..<Self.frameCount).map { index in
             let renderer = ImageRenderer(
                 content: OctopusMark(
