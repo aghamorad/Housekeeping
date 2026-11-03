@@ -51,6 +51,31 @@ struct OrphanScanner: Sendable {
         var orphans: [CleanCandidate] = []
         let fm = FileManager.default
 
+        // 3. Known application and tool user home caches when parent app is deleted
+        let homeToolChecks: [(name: String, appName: String, path: URL)] = [
+            (name: ".lmstudio", appName: "LM Studio", path: home.appendingPathComponent(".lmstudio", isDirectory: true)),
+            (name: ".comfyui", appName: "ComfyUI", path: home.appendingPathComponent(".comfyui", isDirectory: true)),
+            (name: ".cache/comfyui", appName: "ComfyUI", path: home.appendingPathComponent(".cache/comfyui", isDirectory: true))
+        ]
+
+        for check in homeToolChecks {
+            guard fm.fileExists(atPath: check.path.path) else { continue }
+            let lowerApp = check.appName.lowercased()
+            if !installedNames.contains(lowerApp) && !installedIdentifiers.contains(where: { $0.contains(lowerApp) }) {
+                let size = CleanerScanner.size(of: check.path)
+                guard size > 4096 else { continue }
+                let modDate = (try? check.path.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+                orphans.append(CleanCandidate(
+                    url: check.path,
+                    size: size,
+                    modified: modDate,
+                    category: .orphans,
+                    name: check.name,
+                    detail: "\(check.name) — Leftover folder from uninstalled \(check.appName)"
+                ))
+            }
+        }
+
         for (rootURL, reason) in searchRoots {
             guard fm.fileExists(atPath: rootURL.path) else { continue }
             guard let items = try? fm.contentsOfDirectory(at: rootURL, includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey], options: [.skipsHiddenFiles]) else { continue }

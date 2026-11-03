@@ -2,6 +2,34 @@
 
 ## Objective
 
+**0.25.0 Intersection & AI Runtime Engine Update (2026-11-03, session 2).** Morad: "Okay, delete the leftovers that we dont need at all please, i beg you - and add this to our housekeeping app to that it does this too - tell you which intersects with what and what is necessary - it should remain the same release just updated"
+Shipped:
+1. AI Tool Intersections & Necessity Intelligence:
+   - Evaluates dependency mapping for every model & runtime on the Mac (`LocalModels.swift` `evaluateNecessity`):
+     - Draw Things (7.3 GB FLUX.2 Klein 4B 6-bit): Tagged `NECESSARY` with active callers `Jeopardy (generate_image.sh)`, `Agent Skill (generate-image)`, and `draw-things-cli`.
+     - Apple Silicon MLX Models: Tagged `NECESSARY` with callers `Hermes (hermes-local 4b/9b)`, resident LaunchAgent `:18434`, `DeepSeek Harness`, and `~/Models/llm`.
+     - Whisper, SenseVoice, Silero VAD, Fish Speech, Apple Depth Pro: Tagged `NECESSARY` with exact caller applications (`VoiceStudio.app`, `DeepSeek Harness.app`, `Madavi`).
+     - Standalone engines (Parakeet TDT, OmniVoice, Meta NLLB-200, Ollama): Tagged `OPTIONAL` with clear usage rationale.
+     - Unused/Orphaned runtimes: Tagged `EXTRA / ORPHANED` (e.g. `ComfyUI` with 0 generation checkpoints, or uninstalled host apps like `LM Studio` leaving `~/.lmstudio`).
+   - Integrated safe 1-click `[🗑 Trash]` action (`FileManager.default.trashItem(at:resultingItemURL:)`) moving leftovers safely to `~/.Trash`, plus `[↗ Reveal in Finder]`.
+   - Accurate size calculation combining `.ckpt` weight files and `-tensordata` storage (`fileOrDirectorySize`).
+2. Interactive Filter Bar & High-Contrast Visual Stencils (`ModelsView.swift`):
+   - Added filter pills with dynamic item counters: `All`, `Necessary`, `Optional`, `Extra / Orphaned`.
+   - Distinct system badges with icons: green `checkmark.shield.fill` (`NECESSARY`), neutral `info.circle` (`OPTIONAL`), amber `exclamationmark.triangle.fill` (`EXTRA / ORPHANED`).
+   - Horizontal capsule tags displaying exact system intersections (`INTERSECTS:`).
+   - Plain-language explanation text under each item detailing why it is needed or why it is safe to clean.
+3. User Home Orphaned AI Cache Scanner (`OrphanScanner.swift`):
+   - Expanded Clean Up's "Orphaned Leftovers" scanner to detect root dot-directories of uninstalled AI applications (`~/.lmstudio`, `~/.comfyui`, `~/.cache/comfyui`).
+4. Machine Leftovers Purge:
+   - Moved inactive `~/C3PO/Tools/ComfyUI` (3.1 GB, 0 checkpoints) to `~/.Trash`.
+   - Moved orphaned `~/.lmstudio` (2.0 GB uninstalled app cache) to `~/.Trash`.
+   - Removed dead `~/Models/llm/nomic-embed-text-v1.5` symlink to `~/.Trash` and updated `~/Models/MODELS.md`. Total freed: ~5.1 GB.
+5. In-Place Release Packaging & Verification:
+   - Verified zero compiler warnings (`./script/typecheck.sh`), passed 282 safety assertions (`./script/test_safety.sh`).
+   - Built fat universal binary (`arm64` + `x86_64`) via `package_release.sh`.
+   - Installed into `/Applications/Housekeeping.app` (verified running, PID 19554).
+   - Retained release `v0.25.0` in place per instruction.
+
 **0.25.0 Update (2026-11-03).** Morad: "two things - one can this be the Housekeeping menu bar template Icon? and the other be the release banner in the latest release to be updated? (not a new release but just updating the previous release) '/Users/Morad/Desktop/git release banner.png' '/Users/Morad/Desktop/menu bar template Icon.png'"
 Shipped:
 1. Custom Menu Bar Template Icon (`menu_bar_template.png`, `.tiff`, `@2x`, `@3x`):

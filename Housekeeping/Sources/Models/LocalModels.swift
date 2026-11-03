@@ -25,6 +25,8 @@ import Foundation
 
 enum ModelRuntime: String, CaseIterable, Identifiable {
     case mlx
+    case drawThings
+    case comfyUI
     case ollama
     case lmStudio
     case housekeeper
@@ -36,6 +38,8 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .mlx: return "Apple Silicon MLX & Local Registry"
+        case .drawThings: return "Draw Things (Metal / MPS)"
+        case .comfyUI: return "ComfyUI"
         case .ollama: return "Ollama"
         case .lmStudio: return "LM Studio"
         case .housekeeper: return "The housekeeper"
@@ -49,6 +53,8 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
     var summary: String {
         switch self {
         case .mlx: return "Native Metal-accelerated MLX models and central registry located in ~/Models and ~/.mlx-lm."
+        case .drawThings: return "Native Metal-accelerated image generation engine for Apple Silicon (~/Library/Containers/com.liuliu.draw-things)."
+        case .comfyUI: return "Node-based visual image synthesis workbench and local server."
         case .ollama: return "A background service that loads a model when something asks and unloads it after a few idle minutes."
         case .lmStudio: return "An app with its own model store. Models are loaded into it explicitly, and stay loaded until they are taken out."
         case .housekeeper: return "This app's own chat model, run by the llama-server that ships inside Housekeeping."
@@ -58,12 +64,21 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
     }
 }
 
+enum NecessityStatus: String, CaseIterable, Identifiable, Sendable {
+    case necessary = "Necessary"
+    case optional = "Optional"
+    case extra = "Extra / Orphaned"
+
+    var id: String { rawValue }
+}
+
 struct LocalModel: Identifiable {
     /// What the row is allowed to do. A downloaded file that nothing can load is
     /// still worth listing, and listing it with a Load button would be a lie.
     enum Control {
         case loadAndUnload
         case unloadOnly
+        case trash
         case none
     }
 
@@ -81,6 +96,10 @@ struct LocalModel: Identifiable {
     /// The name the runtime itself uses, which is not always what is shown.
     var reference: String?
     var note: String?
+
+    var necessity: NecessityStatus = .optional
+    var intersections: [String] = []
+    var intersectionExplanation: String?
 
     var sizeLabel: String? {
         guard let bytes, bytes > 0 else { return nil }
@@ -578,7 +597,15 @@ final class LocalModelInventory: ObservableObject {
             .filter { !$0.url.lastPathComponent.hasSuffix(".partial") }
             .sorted { $0.bytes > $1.bytes }
             .map { file in
-                LocalModel(
+                let eval = Self.evaluateNecessity(
+                    runtime: .housekeeper,
+                    name: file.url.deletingPathExtension().lastPathComponent,
+                    path: file.url.path,
+                    bytes: file.bytes,
+                    isLoaded: port != nil,
+                    isCurrentMLX: false
+                )
+                return LocalModel(
                     id: "housekeeper:\(file.url.lastPathComponent)",
                     runtime: .housekeeper,
                     name: file.url.deletingPathExtension().lastPathComponent,
@@ -587,7 +614,10 @@ final class LocalModelInventory: ObservableObject {
                     loaded: port != nil,
                     control: LlamaServer.isAvailable ? .loadAndUnload : .unloadOnly,
                     reference: file.url.path,
-                    note: port == nil ? nil : "The housekeeper is running on port \(port!)."
+                    note: port == nil ? nil : "The housekeeper is running on port \(port!).",
+                    necessity: eval.status,
+                    intersections: eval.intersections,
+                    intersectionExplanation: eval.explanation
                 )
             }
 
@@ -606,15 +636,26 @@ final class LocalModelInventory: ObservableObject {
             return group
         }
         group.hint = "The Hermes server is running and offers \(list.count) model\(list.count == 1 ? "" : "s"). It holds whichever one it was last asked to run; Unload frees the memory without stopping the server."
-        group.models = list.compactMap { entry in
+        group.models = list.compactMap { (entry: [String: Any]) -> LocalModel? in
             guard let id = entry["id"] as? String else { return nil }
+            let eval = Self.evaluateNecessity(
+                runtime: .hermes,
+                name: id,
+                path: nil,
+                bytes: nil,
+                isLoaded: true,
+                isCurrentMLX: false
+            )
             return LocalModel(
                 id: "hermes:\(id)",
                 runtime: .hermes,
                 name: id,
                 facts: ["offered by the server"],
                 control: .unloadOnly,
-                reference: id
+                reference: id,
+                necessity: eval.status,
+                intersections: eval.intersections,
+                intersectionExplanation: eval.explanation
             )
         }
         return group
@@ -666,19 +707,223 @@ final class LocalModelInventory: ObservableObject {
             let readable = name
                 .replacingOccurrences(of: "models--", with: "")
                 .replacingOccurrences(of: "--", with: "/")
+            let eval = Self.evaluateNecessity(
+                runtime: .huggingFace,
+                name: readable,
+                path: nil,
+                bytes: bytes,
+                isLoaded: false,
+                isCurrentMLX: false
+            )
             return LocalModel(
                 id: "hf:\(name)",
                 runtime: .huggingFace,
                 name: readable,
                 facts: [ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)],
                 bytes: bytes,
-                control: .none
+                control: .none,
+                necessity: eval.status,
+                intersections: eval.intersections,
+                intersectionExplanation: eval.explanation
             )
         }
         if group.models.isEmpty {
             group.hint = "Nothing has been downloaded into the Hugging Face cache."
         }
         return group
+    }
+
+    // MARK: - Necessity & Intersections Engine
+
+    static func evaluateNecessity(
+        runtime: ModelRuntime,
+        name: String,
+        path: String?,
+        bytes: Int64?,
+        isLoaded: Bool,
+        isCurrentMLX: Bool
+    ) -> (status: NecessityStatus, intersections: [String], explanation: String) {
+        let lower = (name + " " + (path ?? "")).lowercased()
+
+        // 1. Draw Things / FLUX.2
+        if runtime == .drawThings || lower.contains("draw-things") || lower.contains("flux_2") || lower.contains("flux") {
+            return (
+                status: .necessary,
+                intersections: ["Jeopardy (generate_image.sh)", "Agent Skill (generate-image)", "draw-things-cli"],
+                explanation: "Actively used as the local offline image generation engine by Jeopardy (generate_image.sh) and the universal 'generate-image' agent skill. Essential to retain."
+            )
+        }
+
+        // 2. Qwen MLX Models (Resident & Default)
+        if lower.contains("qwen") || lower.contains("heretic") {
+            let activeNote = isCurrentMLX ? " (Active Default)" : ""
+            return (
+                status: .necessary,
+                intersections: ["Hermes CLI (hermes-local 4b/9b)", "Resident MLX Server (:18434)", "DeepSeek Harness", "Local Registry (~/Models/llm)"],
+                explanation: "Primary local LLM lane\(activeNote). Served by LaunchAgent on port 18434 and referenced by Hermes, DeepSeek Harness, and system agent skills."
+            )
+        }
+
+        // 3. Speech-to-text: Whisper
+        if lower.contains("whisper") {
+            return (
+                status: .necessary,
+                intersections: ["VoiceStudio.app (mlx-whisper / faster-whisper)", "mlx_whisper CLI", "DeepSeek Harness"],
+                explanation: "Core speech-to-text model for VoiceStudio and local transcription workflows."
+            )
+        }
+
+        // 4. Speech-to-text: SenseVoice & Silero
+        if lower.contains("sensevoice") || lower.contains("silero") {
+            return (
+                status: .necessary,
+                intersections: ["DeepSeek Harness.app (Live Dictation / Mic)"],
+                explanation: "DeepSeek Harness microphone input and speech-to-text engine. Removing this breaks the in-app dictation mic."
+            )
+        }
+
+        // 5. Voice Synthesis: Fish Speech
+        if lower.contains("fish-speech") || lower.contains("fishaudio") {
+            return (
+                status: .necessary,
+                intersections: ["VoiceStudio.app (fish-clone engine via mlx-speech)"],
+                explanation: "Local voice cloning and audio synthesis engine utilized by VoiceStudio."
+            )
+        }
+
+        // 6. Vision: Apple Depth Pro
+        if lower.contains("depth-pro") || lower.contains("depth_pro") {
+            return (
+                status: .necessary,
+                intersections: ["Madavi Project (depth.py)"],
+                explanation: "Metric depth field estimation engine utilized by the Madavi project."
+            )
+        }
+
+        // 7. Speech-to-text: Parakeet
+        if lower.contains("parakeet") {
+            return (
+                status: .optional,
+                intersections: ["VoiceStudio.app (High-Speed English ASR)"],
+                explanation: "Ultra-fast English transcription model; optional high-speed alternative to Whisper."
+            )
+        }
+
+        // 8. Voice Synthesis: OmniVoice / MOSS TTS
+        if lower.contains("omnivoice") || lower.contains("moss-tts") {
+            return (
+                status: .optional,
+                intersections: ["VoiceStudio.app (CPU TTS Clone)"],
+                explanation: "Standalone voice synthesis runtime. Available when CPU-based voice cloning is requested."
+            )
+        }
+
+        // 9. Translation: NLLB-200
+        if lower.contains("nllb") {
+            return (
+                status: .optional,
+                intersections: ["Local Persian↔English Translation Tools"],
+                explanation: "Offline translation model for Persian↔English when internet connectivity is unavailable."
+            )
+        }
+
+        // 10. ComfyUI
+        if runtime == .comfyUI || lower.contains("comfyui") {
+            return (
+                status: .extra,
+                intersections: ["None (No Active Workflows)"],
+                explanation: "No image generation checkpoints found in ComfyUI models directory. Redundant with native Draw Things engine; safe to clean to reclaim space."
+            )
+        }
+
+        // 11. LM Studio
+        if runtime == .lmStudio || lower.contains("lmstudio") {
+            let appExists = FileManager.default.fileExists(atPath: "/Applications/LM Studio.app")
+                || FileManager.default.fileExists(atPath: FileManager.default.homeDirectoryForCurrentUser.path + "/Applications/LM Studio.app")
+            if !appExists {
+                return (
+                    status: .extra,
+                    intersections: ["None (App uninstalled)"],
+                    explanation: "LM Studio.app is uninstalled from /Applications. Leftover ~/.lmstudio data contains orphaned backends and caches."
+                )
+            } else {
+                return (
+                    status: .optional,
+                    intersections: ["LM Studio.app"],
+                    explanation: "Model installed inside LM Studio's store."
+                )
+            }
+        }
+
+        // 12. Ollama
+        if runtime == .ollama || lower.contains("ollama") {
+            return (
+                status: .optional,
+                intersections: ["Ollama Service (:11434)"],
+                explanation: "Available for on-demand local inference when Ollama service is running."
+            )
+        }
+
+        // 13. Hugging Face Cache
+        if runtime == .huggingFace || lower.contains("huggingface") {
+            return (
+                status: .optional,
+                intersections: ["Hugging Face Download Cache"],
+                explanation: "Cached model weights downloaded from Hugging Face hub. Can be purged or re-downloaded."
+            )
+        }
+
+        // Fallback
+        if isLoaded {
+            return (
+                status: .necessary,
+                intersections: ["Active Running Process"],
+                explanation: "Currently loaded into system memory."
+            )
+        }
+
+        return (
+            status: .optional,
+            intersections: ["Local Standalone Storage"],
+            explanation: "Installed locally on disk."
+        )
+    }
+
+    func moveToTrash(_ model: LocalModel) async {
+        guard let path = model.path, !path.isEmpty else { return }
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+        busy = model.id
+        problem = nil
+        note = "Moving \(model.name) to the Trash…"
+
+        do {
+            var trashedURL: NSURL?
+            try FileManager.default.trashItem(at: url, resultingItemURL: &trashedURL)
+            note = "Moved \(model.name) to the Trash."
+            await read()
+        } catch {
+            problem = "Could not move \(model.name) to the Trash: \(error.localizedDescription)"
+        }
+        busy = nil
+        note = nil
+    }
+
+    nonisolated private static func fileOrDirectorySize(_ url: URL) -> Int64 {
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { return 0 }
+        if isDir.boolValue {
+            return directorySize(url)
+        } else {
+            var total: Int64 = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+            let tensordata = URL(fileURLWithPath: url.path + "-tensordata")
+            if FileManager.default.fileExists(atPath: tensordata.path) {
+                let tensorSize = (try? tensordata.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+                total += tensorSize
+            }
+            return total
+        }
     }
 
     nonisolated private static func directorySize(_ url: URL) -> Int64 {
@@ -734,7 +979,7 @@ final class LocalModelInventory: ObservableObject {
             if let reference = model.reference, LlamaServer.isAvailable {
                 Housekeeper.shared.server.start(model: URL(fileURLWithPath: reference))
             }
-        case .hermes, .huggingFace: break
+        case .hermes, .huggingFace, .drawThings, .comfyUI: break
         }
 
         busy = nil
@@ -757,7 +1002,7 @@ final class LocalModelInventory: ObservableObject {
         case .lmStudio: await unloadFromLMStudio(model)
         case .housekeeper: Housekeeper.shared.server.stopAndWait()
         case .hermes: await unloadHermes()
-        case .huggingFace: break
+        case .huggingFace, .drawThings, .comfyUI: break
         }
 
         busy = nil
