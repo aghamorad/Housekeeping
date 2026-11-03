@@ -1,5 +1,9 @@
 # Housekeeping
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/aghamorad/Housekeeping/main/docs/images/release_banner.png" width="860" alt="Housekeeper 0.25.0 Release Banner" />
+</p>
+
 I made Housekeeping because I kept having the same slightly ridiculous problem on my Mac: tens of gigabytes would disappear into Claude projects, local AI models, Hugging Face caches, Python environments, logs, and application folders, and I could never quite tell what was genuinely needed, what could be recreated, and what would be a terrible idea to delete. One of my own Claude folders was tens of gigabytes. The usual storage tools could tell me that a folder was large, of course, but “large” is not the same thing as unnecessary.
 
 Housekeeping is my attempt to make that whole business legible. It scans a defined set of places used by Claude, ChatGPT, Goose, Ollama, Hugging Face, LM Studio, MLX, Whisper.cpp, MacWhisper, GPT4All, Jan, Draw Things, ComfyUI, pip, and uv, measures what is actually there, and then shows each result as something you can click and inspect. You can sort by size, category, item, or safety status. For each item, the app tries to answer the questions I wanted answered myself: what is this, why is it here, is it normally necessary, and what is the actual risk if I move it?
@@ -8,7 +12,7 @@ I also did not want to make one of those cleaners that announces that it has fou
 
 Housekeeping has two appearances: a burgundy desktop interface with a grouped sidebar, and a Platinum skin with beveled controls, gray panels, and a striped title bar. Both use the same storage overview and tools. The octopus in the menu bar is the housekeeper.
 
-[Download Housekeeping 0.21.1](https://github.com/aghamorad/Housekeeping/releases/tag/v0.21.1) · [Release notes](releases/v0.21.1.md)
+[Download Housekeeper 0.25.0](https://github.com/aghamorad/Housekeeping/releases/tag/v0.25.0) · [Release notes](RELEASE_NOTES_v0.25.0.md)
 
 ## What you actually do with it
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/aghamorad/Housekeeping/main/docs/images/mascot.png" width="180" alt="Housekeeper Mascot" />
+  <img src="https://raw.githubusercontent.com/aghamorad/Housekeeping/main/docs/images/release_banner.png" width="860" alt="Housekeeper 0.25.0 Release Banner" />
   <h1 align="center">Housekeeper 0.25.0</h1>
   <p align="center"><strong>The All-in-One Native macOS Companion & System Maintenance Suite</strong><br>
   <em>Made by Morad · No Subscriptions · Zero Idle Drain · The Full Kitchen Sink</em></p>
