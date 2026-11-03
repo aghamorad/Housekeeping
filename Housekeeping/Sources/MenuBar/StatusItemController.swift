@@ -190,7 +190,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// still image is always the same still image.
     private func setAnimating(_ animating: Bool) {
         if animating {
-            guard timer == nil, !frames.isEmpty else { return }
+            guard timer == nil, frames.count > 1 else { return }
             let timer = Timer(
                 timeInterval: Self.frameInterval,
                 target: self,
@@ -214,7 +214,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     // MARK: - Drawing
 
     private func buildFrames() -> [NSImage] {
-        (0..<Self.frameCount).map { index in
+        if let templateIcon = HousekeeperMascot.loadMenuBarTemplate() {
+            return [templateIcon]
+        }
+
+        return (0..<Self.frameCount).map { index in
             let renderer = ImageRenderer(
                 content: OctopusMark(
                     time: Double(index) * Self.frameInterval,
@@ -240,7 +244,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func advance() {
-        guard !frames.isEmpty else { return }
+        guard frames.count > 1 else { return }
         tick = (tick + 1) % frames.count
         item?.button?.image = frames[tick]
     }
