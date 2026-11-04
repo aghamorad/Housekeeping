@@ -2,6 +2,26 @@
 
 ## Objective
 
+**0.25.0 Menu Bar Panel Ergonomics & Process Intelligence Update (2026-11-04).** Morad: "so, for housekeeping, i need you to help me do a couple of things (when you finish, just update the last release honestly; you don't need to go through the release page thing again)... everything - the spacing especially in the menu bar icon is really, really tight, like this... see, disk usage and stuff... further more, you see how little the fonts are, and how cramped everything is - i also should be able to expand and see all the stuff taking up my memory you know?... to make it more pleasing to the eye, i dont mind for each process shown even in the menu bar drop-down - for ram and shit, all of them to have little icons next to them - not only would it make them pleasing on the eye, but also gives it more space. the fonts should also be bigger, not so cramped - it is hard on the eyes. we want something balanced."
+Shipped:
+1. Spacious Menu Bar Panel Layout & Senior-Friendly Typography (75-Year-Old Rule):
+   - Widened popover frame from 352 pt to 392 pt in `MenuBarPanel.swift` and `StatusItemController.swift`, giving grid cards (Processor, Memory, Disk, Network) 175 pt of horizontal breathing room.
+   - Upgraded all tiny, cramped 8–10 pt monospace labels to balanced, high-contrast 10.5–12 pt typography with proportional line heights.
+   - Fixed cramped disk and memory readings so percentages and free space ("45.2 GB free", "12.2 of 16.0 GB") fit comfortably on one line without squeezing or clipping.
+   - Upgraded bottom door action buttons with 14.5 pt SF Symbols and 10 pt bold labels.
+2. Native Process Application Icons (`ProcessIconProvider` & `ProcessIconView`):
+   - Added multi-tier process icon resolution engine with in-memory caching (`ProcessIconProvider.shared`): resolves live icons via `NSRunningApplication`, executable bundle path traversal via `proc_pidpath`, `NSWorkspace.runningApplications` matching, Electron/Chromium helper stripping (`Codex (Renderer)` -> `Codex.app`), and disk application scanning.
+   - Integrated crisp 18×18 pt macOS native app icons in all process rows (Top CPU, Top RAM in main dropdown; Biggest Holders, Busiest Hands, and Energy Consumers in detail drilldowns), replacing generic chip symbols and empty spaces with authentic application visuals.
+3. Interactive Memory & Process Expansion Controls:
+   - Expanded `SystemVitals.readProcesses()` capture buffers from 4/6 to 20 busy processes and 35 memory holders.
+   - Added interactive `[▾ Expand All (X)]` / `[▴ Top 5]` toggle in the Memory room drilldown with a smooth scrollable list (bounded to `maxHeight: 320`) to inspect everything holding system memory without overflowing the display.
+   - Added `[Show more / Show fewer]` toggle to the main popover Top Consumers list.
+4. Packaging & In-Place Release Update:
+   - Passed zero compiler warnings (`typecheck.sh`) and all 282 safety assertions (`test_safety.sh`).
+   - Packaged universal fat binary (`x86_64` + `arm64`), staged into `/Applications/Housekeeping.app` (running PID 58441).
+   - Updated GitHub Release `v0.25.0` binary assets with `--clobber` per instructions.
+   - Updated beginner guide at `~/Desktop/Housekeeping — a noob's guide.md`.
+
 **0.25.0 Intersection & AI Runtime Engine Update (2026-11-03, session 2).** Morad: "Okay, delete the leftovers that we dont need at all please, i beg you - and add this to our housekeeping app to that it does this too - tell you which intersects with what and what is necessary - it should remain the same release just updated"
 Shipped:
 1. AI Tool Intersections & Necessity Intelligence:

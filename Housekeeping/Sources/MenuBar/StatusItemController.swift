@@ -301,7 +301,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.contentViewController?.view.layoutSubtreeIfNeeded()
         let fitting = popover.contentViewController?.view.fittingSize ?? .zero
         if fitting.height > 0 {
-            popover.contentSize = NSSize(width: max(352, fitting.width), height: fitting.height)
+            popover.contentSize = NSSize(width: max(392, fitting.width), height: fitting.height)
         }
 
         // Active first: a popover shown into an inactive app is dismissed by the
@@ -358,7 +358,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// to the height the page actually settled at.
     private func resize(to height: CGFloat) {
         guard let popover, popover.isShown, height > 0 else { return }
-        let target = NSSize(width: 352, height: ceil(height))
+        let target = NSSize(width: 392, height: ceil(height))
         guard abs(popover.contentSize.height - target.height) > 1 else { return }
 
         pendingResize?.cancel()

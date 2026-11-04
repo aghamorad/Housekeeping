@@ -73,6 +73,9 @@ struct MenuBarPanel: View {
     @State private var stopNote: String?
     @State private var stopNoteIsProblem = false
     @State private var selectedConsumerTab: ConsumerTab = .cpu
+    @State private var isTopConsumersExpanded: Bool = false
+    @State private var isMemoryExpanded: Bool = false
+    @State private var isProcessorExpanded: Bool = false
 
     private var snapshot: VitalsSnapshot { vitals.snapshot }
 
@@ -106,7 +109,7 @@ struct MenuBarPanel: View {
             door
             credit
         }
-        .frame(width: 352)
+        .frame(width: 392)
         .background(HousekeepingInk.surface)
         // The popover is sized once, from the view it was built with. A detail
         // page is taller than the overview, so the page reports its own height
@@ -149,21 +152,21 @@ struct MenuBarPanel: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("HOUSEKEEPING")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .tracking(1.6)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .tracking(1.4)
                     .foregroundStyle(HousekeepingInk.secondaryText)
 
                 if snapshot.isMeasuring {
                     Text("Measuring the house…")
-                        .font(RetroTypography.titleFont)
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(HousekeepingInk.text)
                 } else {
                     HStack(spacing: 6) {
                         Text(verdict)
-                            .font(RetroTypography.titleFont)
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(scoreColor)
                         Text("· \(snapshot.healthScore)")
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(.system(size: 13, design: .monospaced))
                             .foregroundStyle(HousekeepingInk.secondaryText)
                             .monospacedDigit()
                     }
@@ -173,7 +176,7 @@ struct MenuBarPanel: View {
             Spacer(minLength: 4)
             scoreRing
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
 
@@ -208,11 +211,11 @@ struct MenuBarPanel: View {
                 .stroke(scoreColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(snapshot.healthScore)")
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
                 .foregroundStyle(HousekeepingInk.text)
                 .monospacedDigit()
         }
-        .frame(width: 38, height: 38)
+        .frame(width: 40, height: 40)
         .help("One reading of the whole house: processor, memory and disk together.")
     }
 
@@ -232,18 +235,18 @@ struct MenuBarPanel: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 12)
     }
 
     private func chip(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+            .font(.system(size: 10, weight: .semibold, design: .monospaced))
             .foregroundStyle(HousekeepingInk.secondaryText)
             .lineLimit(1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3.5)
             .background(Capsule().fill(HousekeepingInk.surfaceRaised))
             .overlay(Capsule().stroke(HousekeepingInk.hairline, lineWidth: 1))
     }
@@ -256,10 +259,10 @@ struct MenuBarPanel: View {
 
             LazyVGrid(
                 columns: [
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8)
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
                 ],
-                spacing: 8
+                spacing: 10
             ) {
                 roomButton(.processor, help: "What the processor is doing, what the number means, and who is using it.") {
                     cpuCard
@@ -285,7 +288,7 @@ struct MenuBarPanel: View {
                 }
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.bottom, 12)
     }
 
@@ -300,11 +303,11 @@ struct MenuBarPanel: View {
             card()
                 .overlay(alignment: .topTrailing) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8.5, weight: .bold))
                         .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.55))
                         .padding(8)
                 }
-                .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
         // A plain button still takes keyboard focus, and the panel opens already
@@ -319,22 +322,20 @@ struct MenuBarPanel: View {
                 reading(VitalsFormat.percent(snapshot.cpu))
                 Spacer(minLength: 2)
                 Text("\(snapshot.coreCount) cores")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 10.5, design: .monospaced))
                     .foregroundStyle(HousekeepingInk.secondaryText)
             }
             Sparkline(values: snapshot.cpuHistory, color: HousekeepingInk.redLifted)
-                .frame(height: 22)
+                .frame(height: 24)
         }
     }
 
     private var memoryCard: some View {
         VitalsCard(title: "MEMORY") {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
-                // The unit is in the "of", so the reading is just the number: at
-                // this width "11.3 GB of 16.0 GB" cannot fit and gets cut off.
                 reading(String(format: "%.1f", Double(snapshot.memoryUsed) / 1_000_000_000))
                 Text("of \(VitalsFormat.gigabytes(snapshot.memoryTotal))")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(HousekeepingInk.secondaryText)
                 Spacer(minLength: 2)
 
@@ -342,17 +343,17 @@ struct MenuBarPanel: View {
                     _ = vitals.freeRAM()
                 } label: {
                     Text("Free")
-                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.positive)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(HousekeepingInk.positive.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2.5)
+                        .background(HousekeepingInk.positive.opacity(0.14), in: RoundedRectangle(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)
                 .help("Free RAM by flushing memory caches and compacting pages")
             }
             Sparkline(values: snapshot.memoryHistory, color: HousekeepingInk.caution)
-                .frame(height: 22)
+                .frame(height: 24)
         }
     }
 
@@ -362,7 +363,7 @@ struct MenuBarPanel: View {
                 reading(VitalsFormat.percent(snapshot.diskFraction))
                 Spacer(minLength: 2)
                 Text("\(VitalsFormat.gigabytes(snapshot.diskFree)) free")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 10.5, design: .monospaced))
                     .foregroundStyle(HousekeepingInk.secondaryText)
                     .lineLimit(1)
             }
@@ -386,12 +387,12 @@ struct MenuBarPanel: View {
                 Label(VitalsFormat.rate(snapshot.upPerSecond), systemImage: "arrow.up")
                 Spacer(minLength: 0)
             }
-            .font(.system(size: 9, weight: .medium, design: .monospaced))
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
             .foregroundStyle(HousekeepingInk.text)
             .lineLimit(1)
 
             Sparkline(values: snapshot.networkHistory, color: HousekeepingInk.positive)
-                .frame(height: 22)
+                .frame(height: 24)
         }
     }
 
@@ -412,7 +413,7 @@ struct MenuBarPanel: View {
                 reading("\(battery.percent)%")
                 Spacer(minLength: 2)
                 Text(batteryNote(battery))
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 10.5, design: .monospaced))
                     .foregroundStyle(HousekeepingInk.secondaryText)
                     .lineLimit(1)
             }
@@ -434,24 +435,24 @@ struct MenuBarPanel: View {
     // MARK: - Top Resource Consumers
 
     private var topResourceConsumers: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .center) {
                 sectionLabel("TOP CONSUMERS")
                 Spacer()
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     ForEach(ConsumerTab.allCases, id: \.self) { tab in
                         Button {
                             selectedConsumerTab = tab
                         } label: {
                             Text(tab.rawValue)
-                                .font(.system(size: 8.5, weight: selectedConsumerTab == tab ? .bold : .medium, design: .monospaced))
-                                .foregroundStyle(selectedConsumerTab == tab ? HousekeepingInk.text : HousekeepingInk.secondaryText.opacity(0.7))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
+                                .font(.system(size: 10, weight: selectedConsumerTab == tab ? .bold : .medium, design: .monospaced))
+                                .foregroundStyle(selectedConsumerTab == tab ? HousekeepingInk.text : HousekeepingInk.secondaryText.opacity(0.75))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
                                 .background(
                                     selectedConsumerTab == tab
-                                        ? RoundedRectangle(cornerRadius: 4).fill(HousekeepingInk.surfaceRaised)
-                                        : RoundedRectangle(cornerRadius: 4).fill(Color.clear)
+                                        ? RoundedRectangle(cornerRadius: 5).fill(HousekeepingInk.surfaceRaised)
+                                        : RoundedRectangle(cornerRadius: 5).fill(Color.clear)
                                 )
                         }
                         .buttonStyle(.plain)
@@ -461,15 +462,16 @@ struct MenuBarPanel: View {
             }
 
             let processes = selectedConsumerTab == .cpu ? snapshot.processes : snapshot.memoryHogs
+            let limit = isTopConsumersExpanded ? 8 : 3
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 if processes.isEmpty {
                     Text("watching…")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.6))
                         .padding(.vertical, 6)
                 } else {
-                    ForEach(processes.prefix(3)) { process in
+                    ForEach(processes.prefix(limit)) { process in
                         consumerRow(
                             process,
                             value: selectedConsumerTab == .cpu
@@ -478,34 +480,50 @@ struct MenuBarPanel: View {
                             isCPU: selectedConsumerTab == .cpu
                         )
                     }
+
+                    if processes.count > 3 {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isTopConsumersExpanded.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: isTopConsumersExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 8.5, weight: .bold))
+                                Text(isTopConsumersExpanded ? "Show fewer" : "Show more (\(min(processes.count, 8)))")
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            }
+                            .foregroundStyle(HousekeepingInk.redLifted)
+                            .padding(.top, 2)
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                    }
                 }
                 Spacer(minLength: 0)
             }
-            .frame(minHeight: 58, alignment: .topLeading)
+            .frame(minHeight: isTopConsumersExpanded ? 180 : 70, alignment: .topLeading)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.bottom, 12)
     }
 
     private func consumerRow(_ process: ProcessLoad, value: String, isCPU: Bool) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: isCPU ? "cpu" : "memorychip")
-                .font(.system(size: 9))
-                .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.6))
-                .frame(width: 12)
+        HStack(spacing: 8) {
+            ProcessIconView(pid: process.id, name: process.name, isCPU: isCPU, size: 18)
 
             Button {
                 show(process)
             } label: {
                 HStack(spacing: 6) {
                     Text(process.name)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .medium, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.text)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer(minLength: 4)
                     Text(value)
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                         .monospacedDigit()
                 }
@@ -520,8 +538,8 @@ struct MenuBarPanel: View {
                 performStop(.quit, process)
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(HousekeepingInk.negative.opacity(0.8))
+                    .font(.system(size: 13))
+                    .foregroundStyle(HousekeepingInk.negative.opacity(0.85))
             }
             .buttonStyle(.plain)
             .focusable(false)
@@ -531,17 +549,17 @@ struct MenuBarPanel: View {
                 show(process)
             } label: {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.45))
             }
             .buttonStyle(.plain)
             .focusable(false)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(HousekeepingInk.surfaceRaised.opacity(0.5))
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(HousekeepingInk.surfaceRaised.opacity(0.55))
         )
     }
 
@@ -566,16 +584,18 @@ struct MenuBarPanel: View {
         stopNote = nil
         openProcess = nil
         openRoom = nil
+        isMemoryExpanded = false
+        isProcessorExpanded = false
     }
 
     private func detailHeader(_ title: String) -> some View {
         HStack(spacing: 6) {
             Button(action: leaveDetail) {
-                HStack(spacing: 2) {
+                HStack(spacing: 3) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                     Text("Back")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
                 }
                 .foregroundStyle(HousekeepingInk.redLifted)
                 .contentShape(Rectangle())
@@ -586,24 +606,24 @@ struct MenuBarPanel: View {
             Spacer(minLength: 6)
 
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                 .tracking(1.2)
                 .foregroundStyle(HousekeepingInk.secondaryText)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 8)
     }
 
     private func bodyText(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5))
+            .font(.system(size: 11.5))
             .foregroundStyle(HousekeepingInk.secondaryText)
-            .lineSpacing(2)
+            .lineSpacing(2.5)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
     }
 
     // MARK: - A room's page
@@ -627,29 +647,29 @@ struct MenuBarPanel: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     reading(VitalsFormat.percent(snapshot.cpu))
                     Spacer(minLength: 2)
-                    Text("\(snapshot.coreCount) cores · \(VitalsFormat.share(snapshot.cpu * Double(snapshot.coreCount))) of the whole chip")
-                        .font(.system(size: 9, design: .monospaced))
+                    Text("\(snapshot.coreCount) cores · \(VitalsFormat.share(snapshot.cpu * Double(snapshot.coreCount))) of chip")
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                 }
                 Sparkline(values: snapshot.cpuHistory, color: HousekeepingInk.redLifted)
-                    .frame(height: 30)
+                    .frame(height: 32)
 
             case .memory:
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     reading(String(format: "%.1f", Double(snapshot.memoryUsed) / 1_000_000_000))
                     Text("of \(VitalsFormat.gigabytes(snapshot.memoryTotal)) in use")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                     Spacer(minLength: 2)
                 }
                 Sparkline(values: snapshot.memoryHistory, color: HousekeepingInk.caution)
-                    .frame(height: 30)
+                    .frame(height: 32)
 
             case .disk:
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     reading(VitalsFormat.percent(snapshot.diskFraction))
                     Text("\(VitalsFormat.gigabytes(snapshot.diskFree)) free of \(VitalsFormat.gigabytes(snapshot.diskTotal))")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                     Spacer(minLength: 2)
                 }
@@ -664,7 +684,7 @@ struct MenuBarPanel: View {
                 .font(.system(size: 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(HousekeepingInk.text)
                 Sparkline(values: snapshot.networkHistory, color: HousekeepingInk.positive)
-                    .frame(height: 30)
+                    .frame(height: 32)
 
             case .graphics:
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -685,7 +705,7 @@ struct MenuBarPanel: View {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         reading("\(battery.percent)%")
                         Text(batteryNote(battery))
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(.system(size: 10.5, design: .monospaced))
                             .foregroundStyle(HousekeepingInk.secondaryText)
                         Spacer(minLength: 2)
                     }
@@ -695,12 +715,12 @@ struct MenuBarPanel: View {
                     )
                 } else {
                     Text("This Mac did not report a battery.")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                 }
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
     }
 
     private func roomExplanation(_ room: Room) -> String {
@@ -724,12 +744,54 @@ struct MenuBarPanel: View {
     private func roomList(_ room: Room) -> some View {
         switch room {
         case .processor:
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 if !snapshot.processes.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        sectionLabel("BUSIEST HANDS")
-                        ForEach(snapshot.processes.prefix(4)) { process in
-                            detailHand(process, value: VitalsFormat.share(process.cpu))
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            sectionLabel("BUSIEST HANDS (\(snapshot.processes.count))")
+                            Spacer()
+                            if snapshot.processes.count > 4 {
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                        isProcessorExpanded.toggle()
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(isProcessorExpanded ? "Top 4" : "Expand All (\(snapshot.processes.count))")
+                                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        Image(systemName: isProcessorExpanded ? "chevron.up" : "chevron.down")
+                                            .font(.system(size: 8.5, weight: .bold))
+                                    }
+                                    .foregroundStyle(HousekeepingInk.redLifted)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                            .fill(HousekeepingInk.redLifted.opacity(0.12))
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .focusable(false)
+                            }
+                        }
+
+                        let displayedProcesses = isProcessorExpanded ? snapshot.processes : Array(snapshot.processes.prefix(4))
+                        if isProcessorExpanded && snapshot.processes.count > 6 {
+                            ScrollView(.vertical, showsIndicators: true) {
+                                VStack(spacing: 5) {
+                                    ForEach(displayedProcesses) { process in
+                                        detailHand(process, value: VitalsFormat.share(process.cpu))
+                                    }
+                                }
+                                .padding(.trailing, 2)
+                            }
+                            .frame(maxHeight: 300)
+                        } else {
+                            VStack(spacing: 5) {
+                                ForEach(displayedProcesses) { process in
+                                    detailHand(process, value: VitalsFormat.share(process.cpu))
+                                }
+                            }
                         }
                     }
                 }
@@ -738,27 +800,68 @@ struct MenuBarPanel: View {
                     onFans()
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
 
         case .memory:
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 detailButton("Free RAM Now", icon: "memorychip", primary: true) {
                     _ = vitals.freeRAM()
                 }
 
                 if !snapshot.memoryHogs.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        sectionLabel("BIGGEST HOLDERS")
-                        ForEach(snapshot.memoryHogs.prefix(5)) { process in
-                            detailHand(process, value: VitalsFormat.megabytes(process.memory))
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            sectionLabel("BIGGEST HOLDERS (\(snapshot.memoryHogs.count))")
+                            Spacer()
+                            if snapshot.memoryHogs.count > 5 {
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                        isMemoryExpanded.toggle()
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(isMemoryExpanded ? "Top 5" : "Expand All (\(snapshot.memoryHogs.count))")
+                                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        Image(systemName: isMemoryExpanded ? "chevron.up" : "chevron.down")
+                                            .font(.system(size: 8.5, weight: .bold))
+                                    }
+                                    .foregroundStyle(HousekeepingInk.redLifted)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                            .fill(HousekeepingInk.redLifted.opacity(0.12))
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .focusable(false)
+                            }
+                        }
+
+                        if isMemoryExpanded && snapshot.memoryHogs.count > 6 {
+                            ScrollView(.vertical, showsIndicators: true) {
+                                VStack(spacing: 5) {
+                                    ForEach(snapshot.memoryHogs) { process in
+                                        detailHand(process, value: VitalsFormat.megabytes(process.memory))
+                                    }
+                                }
+                                .padding(.trailing, 2)
+                            }
+                            .frame(maxHeight: 320)
+                        } else {
+                            VStack(spacing: 5) {
+                                ForEach(snapshot.memoryHogs.prefix(5)) { process in
+                                    detailHand(process, value: VitalsFormat.megabytes(process.memory))
+                                }
+                            }
                         }
                     }
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
 
         case .battery:
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 if let onBatteryHealth {
                     detailButton("Battery Health Management", icon: "battery.100.bolt", primary: true) {
                         onClose()
@@ -766,21 +869,21 @@ struct MenuBarPanel: View {
                     }
                 }
                 if !snapshot.processes.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         sectionLabel("ENERGY CONSUMERS")
-                        ForEach(snapshot.processes.prefix(3)) { process in
+                        ForEach(snapshot.processes.prefix(4)) { process in
                             detailHand(process, value: VitalsFormat.share(process.cpu))
                         }
                     }
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
 
         case .network, .graphics:
             EmptyView()
 
         case .disk:
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 detailButton("Explore with Space Lens", icon: "internaldrive", primary: true) {
                     onClose()
                     onDisk()
@@ -790,24 +893,26 @@ struct MenuBarPanel: View {
                     onScan()
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
         }
     }
 
     private func detailHand(_ process: ProcessLoad, value: String) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
+            ProcessIconView(pid: process.id, name: process.name, size: 18)
+
             Button {
                 show(process)
             } label: {
                 HStack(spacing: 6) {
                     Text(process.name)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .medium, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.text)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer(minLength: 4)
                     Text(value)
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                         .monospacedDigit()
                 }
@@ -820,8 +925,8 @@ struct MenuBarPanel: View {
                 performStop(.quit, process)
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(HousekeepingInk.negative.opacity(0.8))
+                    .font(.system(size: 13))
+                    .foregroundStyle(HousekeepingInk.negative.opacity(0.85))
             }
             .buttonStyle(.plain)
             .focusable(false)
@@ -831,17 +936,17 @@ struct MenuBarPanel: View {
                 show(process)
             } label: {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.45))
             }
             .buttonStyle(.plain)
             .focusable(false)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(HousekeepingInk.surfaceRaised.opacity(0.65))
         )
     }
@@ -874,10 +979,8 @@ struct MenuBarPanel: View {
             detailHeader("process \(process.id)")
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: knowledge.icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(HousekeepingInk.redLifted)
+                HStack(spacing: 8) {
+                    ProcessIconView(pid: process.id, name: process.name, size: 22)
                     Text(knowledge.displayName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(HousekeepingInk.text)
@@ -885,9 +988,9 @@ struct MenuBarPanel: View {
                         .truncationMode(.middle)
                     Spacer(minLength: 4)
                     Text(knowledge.category)
-                        .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
+                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2.5)
                         .background(
                             Capsule().fill(HousekeepingInk.surfaceRaised)
                         )
@@ -896,26 +999,26 @@ struct MenuBarPanel: View {
 
                 if knowledge.displayName != process.name {
                     Text(process.name)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     reading(VitalsFormat.share(process.cpu))
                     Text("of one core")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                     Spacer(minLength: 2)
                     Text(VitalsFormat.megabytes(process.memory))
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.text)
                         .monospacedDigit()
                     Text("held")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 10.5, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.secondaryText)
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
 
             // Housekeeping Knowledge Card
             VStack(alignment: .leading, spacing: 6) {
@@ -980,7 +1083,7 @@ struct MenuBarPanel: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(HousekeepingInk.hairline, lineWidth: 1)
             )
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
 
             bodyText(running
                 ? "A quit is a request: it can save, close and exit on its own terms. A force quit takes the memory away where it stands, and anything unsaved in it is lost."
@@ -988,10 +1091,10 @@ struct MenuBarPanel: View {
 
             if let stopNote {
                 Text(stopNote)
-                    .font(.system(size: 9.5, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(stopNoteIsProblem ? HousekeepingInk.negative : HousekeepingInk.positive)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 16)
             }
 
             if running {
@@ -1001,7 +1104,7 @@ struct MenuBarPanel: View {
                     HStack(spacing: 8) {
                         if knowledge.safetyLevel == .systemProtected {
                             Text("System Protected Process")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(HousekeepingInk.caution)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
@@ -1016,7 +1119,7 @@ struct MenuBarPanel: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 16)
                 }
             }
 
@@ -1060,7 +1163,7 @@ struct MenuBarPanel: View {
                 }
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
     }
 
     private func performStop(_ kind: StopKind, _ process: ProcessLoad) {
@@ -1089,15 +1192,15 @@ struct MenuBarPanel: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 11.5, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
             }
             .foregroundStyle(primary ? Color.white : HousekeepingInk.text)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -1118,7 +1221,7 @@ struct MenuBarPanel: View {
             onClose()
             onExplain(topic)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .help("Opens the housekeeper on this reading. It explains; Housekeeping decides.")
     }
 
@@ -1132,7 +1235,7 @@ struct MenuBarPanel: View {
                         .font(.system(size: 11))
                         .foregroundStyle(HousekeepingInk.positive)
                     Text(note)
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.text)
                 }
                 .padding(.vertical, 4)
@@ -1158,7 +1261,7 @@ struct MenuBarPanel: View {
                 ))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(HousekeepingInk.secondaryText)
                 // Same reason as the door buttons: the panel opens key, and the
                 // switch would arrive with a blue ring around it.
@@ -1168,7 +1271,7 @@ struct MenuBarPanel: View {
 
                 Button("Quit") { onQuit() }
                     .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundStyle(HousekeepingInk.secondaryText)
                     .focusable(false)
                     .help("Quit Housekeeping. The octopus leaves the menu bar.")
@@ -1177,11 +1280,11 @@ struct MenuBarPanel: View {
             if loginItem.needsApproval {
                 HStack(spacing: 4) {
                     Text("macOS is waiting for you to allow it.")
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.caution)
                     Button("Allow…") { loginItem.openSystemSettings() }
                         .buttonStyle(.plain)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
                         .foregroundStyle(HousekeepingInk.redLifted)
                         .focusable(false)
                     Spacer(minLength: 0)
@@ -1190,13 +1293,13 @@ struct MenuBarPanel: View {
 
             if let problem = loginItem.problem {
                 Text(problem)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(HousekeepingInk.negative)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
     }
@@ -1214,14 +1317,14 @@ struct MenuBarPanel: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .tracking(1.4)
+            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+            .tracking(1.2)
             .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.85))
     }
 
     private func reading(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 19, weight: .semibold, design: .monospaced))
+            .font(.system(size: 21, weight: .bold, design: .monospaced))
             .foregroundStyle(HousekeepingInk.text)
             .monospacedDigit()
             .lineLimit(1)
@@ -1235,7 +1338,7 @@ struct MenuBarPanel: View {
 
     private var credit: some View {
         Text("Made by Morad · Housekeeping \(version)")
-            .font(.system(size: 8, design: .monospaced))
+            .font(.system(size: 9.5, design: .monospaced))
             .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.55))
             .frame(maxWidth: .infinity)
             .padding(.bottom, 8)
@@ -1269,19 +1372,19 @@ struct VitalsCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .tracking(1.2)
+                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                .tracking(1.1)
                 .foregroundStyle(HousekeepingInk.secondaryText)
             content
         }
-        .padding(9)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(HousekeepingInk.surfaceRaised)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(HousekeepingInk.hairline, lineWidth: 1)
         )
     }
@@ -1296,13 +1399,13 @@ struct DoorButton: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14.5, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
             }
             .foregroundStyle(HousekeepingInk.text)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
+            .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(HousekeepingInk.surfaceRaised)
@@ -1389,5 +1492,116 @@ struct MeterBar: View {
             }
         }
         .frame(height: 6)
+    }
+}
+
+// MARK: - Process Icon Resolution
+
+public final class ProcessIconProvider {
+    public static let shared = ProcessIconProvider()
+    private let cache = NSCache<NSString, NSImage>()
+
+    private init() {
+        cache.countLimit = 300
+    }
+
+    public func icon(for pid: pid_t, name: String) -> NSImage? {
+        let key = "\(pid):\(name)" as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+
+        // 1. NSRunningApplication lookup by PID
+        if pid > 0, let runningApp = NSRunningApplication(processIdentifier: pid), let icon = runningApp.icon {
+            cache.setObject(icon, forKey: key)
+            return icon
+        }
+
+        // 2. Binary path inspection via proc_pidpath
+        let execPath = ProcessKnowledge.path(for: pid)
+        if !execPath.isEmpty {
+            if let appRange = execPath.range(of: ".app") {
+                let bundlePath = String(execPath[...appRange.upperBound])
+                let icon = NSWorkspace.shared.icon(forFile: bundlePath)
+                cache.setObject(icon, forKey: key)
+                return icon
+            }
+        }
+
+        // 3. Match against running applications localizedName or bundleIdentifier
+        let runningApps = NSWorkspace.shared.runningApplications
+        if let app = runningApps.first(where: {
+            guard let loc = $0.localizedName else { return false }
+            return loc.localizedCaseInsensitiveCompare(name) == .orderedSame ||
+                   name.localizedCaseInsensitiveContains(loc) ||
+                   loc.localizedCaseInsensitiveContains(name)
+        }), let icon = app.icon {
+            cache.setObject(icon, forKey: key)
+            return icon
+        }
+
+        // 4. Clean name for Electron/Chromium helpers or secondary processes
+        var cleanName = name
+        for suffix in [" (Renderer)", " (GPU)", " (Plugin)", " Helper", " Web Content", " Networking"] {
+            cleanName = cleanName.replacingOccurrences(of: suffix, with: "")
+        }
+
+        if let app = runningApps.first(where: {
+            guard let loc = $0.localizedName else { return false }
+            return loc.localizedCaseInsensitiveCompare(cleanName) == .orderedSame
+        }), let icon = app.icon {
+            cache.setObject(icon, forKey: key)
+            return icon
+        }
+
+        // 5. Look for an app on disk in common application folders
+        for baseDir in ["/Applications", "/System/Applications", "/System/Applications/Utilities", "/Applications/Utilities"] {
+            let candidate = "\(baseDir)/\(cleanName).app"
+            if FileManager.default.fileExists(atPath: candidate) {
+                let icon = NSWorkspace.shared.icon(forFile: candidate)
+                cache.setObject(icon, forKey: key)
+                return icon
+            }
+        }
+
+        // 6. Check if NSWorkspace knows an app URL for this name or bundle identifier
+        if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: cleanName) {
+            let icon = NSWorkspace.shared.icon(forFile: appURL.path)
+            cache.setObject(icon, forKey: key)
+            return icon
+        }
+
+        return nil
+    }
+}
+
+struct ProcessIconView: View {
+    let pid: pid_t
+    let name: String
+    var isCPU: Bool = false
+    var size: CGFloat = 18
+
+    var body: some View {
+        if let image = ProcessIconProvider.shared.icon(for: pid, name: name) {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        } else {
+            let knowledge = ProcessKnowledge.resolve(pid: pid, name: name)
+            ZStack {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(HousekeepingInk.surfaceRaised)
+                Image(systemName: knowledge.icon.isEmpty ? (isCPU ? "cpu" : "memorychip") : knowledge.icon)
+                    .font(.system(size: size * 0.58, weight: .semibold))
+                    .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.85))
+            }
+            .frame(width: size, height: size)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(HousekeepingInk.hairline, lineWidth: 0.5)
+            )
+        }
     }
 }
