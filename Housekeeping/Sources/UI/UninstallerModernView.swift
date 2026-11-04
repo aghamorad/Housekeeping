@@ -559,6 +559,40 @@ struct UninstallerModernView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? style.accent : style.border, lineWidth: isSelected ? 1.5 : 1)
         )
+        .contextMenu {
+            Button {
+                HousekeeperTopic.ask(.installedApp(app))
+            } label: {
+                Label("Ask the Housekeeper About \(app.name)", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            Button {
+                NSWorkspace.shared.selectFile(app.url.path, inFileViewerRootedAtPath: app.url.deletingLastPathComponent().path)
+            } label: {
+                Label("Reveal in Finder", systemImage: "folder")
+            }
+
+            if !app.leftovers.isEmpty {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        model.toggleExpand(app)
+                    }
+                } label: {
+                    Label(isExpanded ? "Hide Leftovers" : "Inspect Leftovers (\(app.leftovers.count))", systemImage: "folder.badge.gearshape")
+                }
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                model.selectedAppURLs = [app.url]
+                model.prepareUninstall()
+            } label: {
+                Label("Uninstall \(app.name)", systemImage: "trash")
+            }
+        }
     }
 
     private func leftoversDetail(_ app: InstalledApp) -> some View {
@@ -676,6 +710,21 @@ struct UninstallerModernView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 5)
                     .background(Color.primary.opacity(0.02), in: RoundedRectangle(cornerRadius: 8))
+                    .contextMenu {
+                        Button {
+                            HousekeeperTopic.ask(.candidate(leftover))
+                        } label: {
+                            Label("Ask the Housekeeper About This Item", systemImage: "sparkles")
+                        }
+
+                        Divider()
+
+                        Button {
+                            NSWorkspace.shared.activateFileViewerSelecting([leftover.url])
+                        } label: {
+                            Label("Reveal in Finder", systemImage: "folder")
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 8)

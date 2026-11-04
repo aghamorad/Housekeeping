@@ -384,6 +384,119 @@ extension HousekeeperTopic {
             opener: "What is \(k.displayName), what app is it connected to, and is it safe to quit it?"
         )
     }
+
+    @MainActor
+    static func ask(_ topic: HousekeeperTopic) {
+        WindowOpener.shared.withWindow {
+            NotificationCenter.default.post(name: .housekeepingAskAbout, object: topic)
+        }
+    }
+
+    static func installedApp(_ app: InstalledApp) -> HousekeeperTopic {
+        var facts: [String] = [
+            "This is an installed macOS application: \(app.name)\(app.version.map { ", version \($0)" } ?? "").",
+            "Path: \(app.url.path), Application bundle size: \(app.size.sizeDescription)."
+        ]
+        if let bundleID = app.bundleIdentifier {
+            facts.append("Bundle Identifier: \(bundleID).")
+        }
+        if !app.leftovers.isEmpty {
+            facts.append("Matched \(app.leftovers.count) related support files and caches totaling \(app.leftoverSize.sizeDescription).")
+        } else {
+            facts.append("Clean bundle with no detached leftover files.")
+        }
+        facts.append(app.isRunning ? "The application is currently running." : "The application is not running.")
+        facts.append("Uninstalling moves the application and selected support files into Quarantine where they can be restored safely.")
+        return HousekeeperTopic(
+            id: "app-\(app.id)",
+            title: app.name,
+            label: app.version.map { "v\($0)" } ?? "Application",
+            tone: .plain,
+            facts: facts,
+            opener: "What is \(app.name), what does it do on my Mac, and is it safe to keep or uninstall?"
+        )
+    }
+
+    static func candidate(_ candidate: CleanCandidate) -> HousekeeperTopic {
+        let facts: [String] = [
+            "This is one item on the \(candidate.category.title) shelf of Clean Up: \(candidate.name).",
+            "Path: \(candidate.url.path), Size: \(candidate.size.sizeDescription).",
+            "Housekeeping note: \(candidate.detail).",
+            "What this shelf is for: \(candidate.category.explanation)."
+        ]
+        return HousekeeperTopic(
+            id: "candidate-\(candidate.id)",
+            title: candidate.name,
+            label: candidate.category.title,
+            tone: .plain,
+            facts: facts,
+            opener: "What is this item (\(candidate.name)), and what would cleaning it do?"
+        )
+    }
+
+    static func diskItem(name: String, path: String, size: Int64, isDirectory: Bool) -> HousekeeperTopic {
+        let sizeStr = size.sizeDescription
+        let facts: [String] = [
+            "This is a \(isDirectory ? "folder" : "file") on the startup disk: \(name).",
+            "Full path: \(path).",
+            "Size on disk: \(sizeStr)."
+        ]
+        return HousekeeperTopic(
+            id: "disk-\(path)",
+            title: name,
+            label: sizeStr,
+            tone: size > 1_000_000_000 ? .caution : .plain,
+            facts: facts,
+            opener: "What is this \(isDirectory ? "folder" : "file"), why is it taking up \(sizeStr), and is it safe to remove?"
+        )
+    }
+
+    static func model(_ model: LocalModel) -> HousekeeperTopic {
+        var facts: [String] = [
+            "Local AI Model / Runtime: \(model.name).",
+            "Runtime Engine: \(model.runtime.title).",
+            "Size on Disk: \(model.sizeLabel ?? "Unknown size").",
+            "Necessity Status: \(model.necessity.rawValue)."
+        ]
+        if let path = model.path {
+            facts.append("File Path: \(path).")
+        }
+        if !model.intersections.isEmpty {
+            facts.append("Connected tools & intersections: \(model.intersections.joined(separator: ", ")).")
+        }
+        if let exp = model.intersectionExplanation {
+            facts.append("Assessment: \(exp)")
+        } else if let note = model.note {
+            facts.append("Assessment: \(note)")
+        }
+        return HousekeeperTopic(
+            id: "model-\(model.id)",
+            title: model.name,
+            label: model.necessity.rawValue,
+            tone: model.necessity == .extra ? .caution : .plain,
+            facts: facts,
+            opener: "What is \(model.name), what apps or skills use it on my Mac, and should I keep it or delete it?"
+        )
+    }
+
+    static func vpnTunnelService(_ tunnel: VPNTunnelService) -> HousekeeperTopic {
+        var facts: [String] = [
+            "VPN Service / Tunnel: \(tunnel.name) (\(tunnel.displayProtocol)).",
+            "Status: \(tunnel.status.rawValue).",
+            "Configured Interface: \(tunnel.interface ?? "Virtual")."
+        ]
+        if let ip = tunnel.assignedIP {
+            facts.append("Assigned IP Address: \(ip).")
+        }
+        return HousekeeperTopic(
+            id: "vpn-\(tunnel.id)",
+            title: tunnel.name,
+            label: tunnel.displayProtocol,
+            tone: tunnel.status == .connected ? .good : .plain,
+            facts: facts,
+            opener: "What is this VPN tunnel (\(tunnel.name)), who created it, and does it affect my network connections?"
+        )
+    }
 }
 
 /// The one button every screen in Housekeeping uses to reach the housekeeper.

@@ -310,6 +310,36 @@ struct DiskBrowserView: View {
         }
         .buttonStyle(.plain)
         .help("\(node.path)\n\(model.summary(for: node))")
+        .contextMenu {
+            Button {
+                HousekeeperTopic.ask(.diskItem(name: node.displayName, path: node.path, size: node.size, isDirectory: true))
+            } label: {
+                Label("Ask the Housekeeper About This Folder", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([node.url])
+            } label: {
+                Label("Reveal in Finder", systemImage: "folder")
+            }
+
+            Button {
+                model.open(node.path)
+            } label: {
+                Label("Open Folder", systemImage: "arrow.right.circle")
+            }
+
+            Divider()
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(node.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+        }
     }
 
     /// A folder's own contents, minus the subfolders big enough to have a row of

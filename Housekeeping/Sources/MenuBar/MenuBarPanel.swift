@@ -371,6 +371,19 @@ struct MenuBarPanel: View {
         // key — the first button would arrive wearing a blue ring nobody put there.
         .focusable(false)
         .help(help)
+        .contextMenu {
+            Button {
+                onClose()
+                onExplain(topic(for: room))
+            } label: {
+                Label("Ask the Housekeeper About \(room.title)", systemImage: "sparkles")
+            }
+            Button {
+                show(room)
+            } label: {
+                Label("Open \(room.title) Room", systemImage: "macwindow")
+            }
+        }
     }
 
     private var cpuCard: some View {
@@ -530,11 +543,36 @@ struct MenuBarPanel: View {
     // MARK: - Top Resource Consumers
 
     private var topResourceConsumers: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let processes = selectedConsumerTab == .cpu ? snapshot.processes : snapshot.memoryHogs
+
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center) {
                 sectionLabel(selectedConsumerTab == .cpu ? "APPS USING PROCESSOR" : "APPS USING MEMORY")
                 Spacer()
-                HStack(spacing: 5) {
+
+                if !processes.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            isTopConsumersExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(isTopConsumersExpanded ? "Compact" : "Expand (\(processes.count))")
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            Image(systemName: isTopConsumersExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 8, weight: .bold))
+                        }
+                        .foregroundStyle(HousekeepingInk.redLifted)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2.5)
+                        .background(HousekeepingInk.redLifted.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                    .help(isTopConsumersExpanded ? "Show compact list" : "Expand to view all active processes")
+                }
+
+                HStack(spacing: 4) {
                     ForEach(ConsumerTab.allCases, id: \.self) { tab in
                         Button {
                             selectedConsumerTab = tab
@@ -542,7 +580,7 @@ struct MenuBarPanel: View {
                             Text(tab.rawValue)
                                 .font(.system(size: 10, weight: selectedConsumerTab == tab ? .bold : .medium, design: .monospaced))
                                 .foregroundStyle(selectedConsumerTab == tab ? HousekeepingInk.text : HousekeepingInk.secondaryText.opacity(0.75))
-                                .padding(.horizontal, 8)
+                                .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
                                 .background(
                                     selectedConsumerTab == tab
@@ -556,69 +594,27 @@ struct MenuBarPanel: View {
                 }
             }
 
-            let processes = selectedConsumerTab == .cpu ? snapshot.processes : snapshot.memoryHogs
-
-            VStack(alignment: .leading, spacing: 6) {
-                if processes.isEmpty {
-                    Text("watching…")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.6))
-                        .padding(.vertical, 8)
-                } else {
-                    let displayedCount = isTopConsumersExpanded ? processes.count : min(processes.count, 4)
-                    let items = Array(processes.prefix(displayedCount))
-
-                    if isTopConsumersExpanded && processes.count > 5 {
-                        ScrollView(.vertical, showsIndicators: true) {
-                            VStack(spacing: 6) {
-                                ForEach(items) { process in
-                                    consumerRow(
-                                        process,
-                                        value: selectedConsumerTab == .cpu
-                                            ? VitalsFormat.share(process.cpu)
-                                            : VitalsFormat.megabytes(process.memory),
-                                        isCPU: selectedConsumerTab == .cpu
-                                    )
-                                }
-                            }
-                            .padding(.trailing, 2)
-                        }
-                        .frame(maxHeight: 260)
-                    } else {
-                        VStack(spacing: 6) {
-                            ForEach(items) { process in
-                                consumerRow(
-                                    process,
-                                    value: selectedConsumerTab == .cpu
-                                        ? VitalsFormat.share(process.cpu)
-                                        : VitalsFormat.megabytes(process.memory),
-                                    isCPU: selectedConsumerTab == .cpu
-                                )
-                            }
+            if processes.isEmpty {
+                Text("watching…")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(HousekeepingInk.secondaryText.opacity(0.6))
+                    .padding(.vertical, 8)
+            } else {
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 6) {
+                        ForEach(processes) { process in
+                            consumerRow(
+                                process,
+                                value: selectedConsumerTab == .cpu
+                                    ? VitalsFormat.share(process.cpu)
+                                    : VitalsFormat.megabytes(process.memory),
+                                isCPU: selectedConsumerTab == .cpu
+                            )
                         }
                     }
-
-                    if processes.count > 4 {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
-                                isTopConsumersExpanded.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: isTopConsumersExpanded ? "chevron.up" : "chevron.down")
-                                    .font(.system(size: 9, weight: .bold))
-                                Text(isTopConsumersExpanded
-                                     ? "Show fewer"
-                                     : "Show all apps using \(selectedConsumerTab == .cpu ? "processor" : "memory") (\(processes.count))")
-                                    .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                            }
-                            .foregroundStyle(HousekeepingInk.redLifted)
-                            .padding(.top, 4)
-                        }
-                        .buttonStyle(.plain)
-                        .focusable(false)
-                    }
+                    .padding(.trailing, 2)
                 }
+                .frame(height: isTopConsumersExpanded ? 280 : 138)
             }
         }
         .padding(.horizontal, 16)
@@ -688,6 +684,36 @@ struct MenuBarPanel: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(HousekeepingInk.surfaceRaised.opacity(0.65))
         )
+        .contextMenu {
+            Button {
+                onClose()
+                onExplain(.process(process, totalMemory: snapshot.memoryTotal, knowledge: knowledge))
+            } label: {
+                Label("Ask the Housekeeper", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            Button {
+                show(process)
+            } label: {
+                Label("Inspect Details", systemImage: "info.circle")
+            }
+
+            if isRunning(process) {
+                Divider()
+                Button {
+                    performStop(.quit, process)
+                } label: {
+                    Label("Quit \(knowledge.displayName)", systemImage: "xmark.circle")
+                }
+                Button {
+                    performStop(.force, process)
+                } label: {
+                    Label("Force Quit", systemImage: "bolt.circle")
+                }
+            }
+        }
     }
 
     // MARK: - Opening and closing a page
@@ -884,7 +910,7 @@ struct MenuBarPanel: View {
                                     }
                                 } label: {
                                     HStack(spacing: 4) {
-                                        Text(isProcessorExpanded ? "Top 4" : "Expand All (\(snapshot.processes.count))")
+                                        Text(isProcessorExpanded ? "Compact" : "Expand All (\(snapshot.processes.count))")
                                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                                         Image(systemName: isProcessorExpanded ? "chevron.up" : "chevron.down")
                                             .font(.system(size: 8.5, weight: .bold))
@@ -902,24 +928,17 @@ struct MenuBarPanel: View {
                             }
                         }
 
-                        let displayedProcesses = isProcessorExpanded ? snapshot.processes : Array(snapshot.processes.prefix(4))
-                        if isProcessorExpanded && snapshot.processes.count > 6 {
-                            ScrollView(.vertical, showsIndicators: true) {
-                                VStack(spacing: 5) {
-                                    ForEach(displayedProcesses) { process in
-                                        detailHand(process, value: VitalsFormat.share(process.cpu))
-                                    }
-                                }
-                                .padding(.trailing, 2)
-                            }
-                            .frame(maxHeight: 300)
-                        } else {
+                        let procHeight: CGFloat = isProcessorExpanded ? 280 : min(CGFloat(max(snapshot.processes.count, 1)) * 44, 140)
+                        ScrollView(.vertical, showsIndicators: true) {
                             VStack(spacing: 5) {
-                                ForEach(displayedProcesses) { process in
+                                ForEach(snapshot.processes) { process in
                                     detailHand(process, value: VitalsFormat.share(process.cpu))
                                 }
                             }
+                            .padding(.trailing, 2)
+                            .padding(.vertical, 2)
                         }
+                        .frame(height: procHeight)
                     }
                 }
                 detailButton("Cooling & Fan Controls", icon: "fan.fill") {
@@ -940,14 +959,14 @@ struct MenuBarPanel: View {
                         HStack {
                             sectionLabel("BIGGEST HOLDERS (\(snapshot.memoryHogs.count))")
                             Spacer()
-                            if snapshot.memoryHogs.count > 5 {
+                            if snapshot.memoryHogs.count > 4 {
                                 Button {
                                     withAnimation(.easeInOut(duration: 0.18)) {
                                         isMemoryExpanded.toggle()
                                     }
                                 } label: {
                                     HStack(spacing: 4) {
-                                        Text(isMemoryExpanded ? "Top 5" : "Expand All (\(snapshot.memoryHogs.count))")
+                                        Text(isMemoryExpanded ? "Compact" : "Expand All (\(snapshot.memoryHogs.count))")
                                             .font(.system(size: 10, weight: .bold, design: .monospaced))
                                         Image(systemName: isMemoryExpanded ? "chevron.up" : "chevron.down")
                                             .font(.system(size: 8.5, weight: .bold))
@@ -965,23 +984,17 @@ struct MenuBarPanel: View {
                             }
                         }
 
-                        if isMemoryExpanded && snapshot.memoryHogs.count > 6 {
-                            ScrollView(.vertical, showsIndicators: true) {
-                                VStack(spacing: 5) {
-                                    ForEach(snapshot.memoryHogs) { process in
-                                        detailHand(process, value: VitalsFormat.megabytes(process.memory))
-                                    }
-                                }
-                                .padding(.trailing, 2)
-                            }
-                            .frame(maxHeight: 320)
-                        } else {
+                        let memHeight: CGFloat = isMemoryExpanded ? 300 : min(CGFloat(max(snapshot.memoryHogs.count, 1)) * 44, 150)
+                        ScrollView(.vertical, showsIndicators: true) {
                             VStack(spacing: 5) {
-                                ForEach(snapshot.memoryHogs.prefix(5)) { process in
+                                ForEach(snapshot.memoryHogs) { process in
                                     detailHand(process, value: VitalsFormat.megabytes(process.memory))
                                 }
                             }
+                            .padding(.trailing, 2)
+                            .padding(.vertical, 2)
                         }
+                        .frame(height: memHeight)
                     }
                 }
             }
@@ -997,10 +1010,17 @@ struct MenuBarPanel: View {
                 }
                 if !snapshot.processes.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        sectionLabel("ENERGY CONSUMERS")
-                        ForEach(snapshot.processes.prefix(4)) { process in
-                            detailHand(process, value: VitalsFormat.share(process.cpu))
+                        sectionLabel("ENERGY CONSUMERS (\(snapshot.processes.count))")
+                        ScrollView(.vertical, showsIndicators: true) {
+                            VStack(spacing: 5) {
+                                ForEach(snapshot.processes) { process in
+                                    detailHand(process, value: VitalsFormat.share(process.cpu))
+                                }
+                            }
+                            .padding(.trailing, 2)
+                            .padding(.vertical, 2)
                         }
+                        .frame(maxHeight: 180)
                     }
                 }
             }
@@ -1086,6 +1106,36 @@ struct MenuBarPanel: View {
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(HousekeepingInk.surfaceRaised.opacity(0.65))
         )
+        .contextMenu {
+            Button {
+                onClose()
+                onExplain(.process(process, totalMemory: snapshot.memoryTotal, knowledge: knowledge))
+            } label: {
+                Label("Ask the Housekeeper", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            Button {
+                show(process)
+            } label: {
+                Label("Inspect Details", systemImage: "info.circle")
+            }
+
+            if isRunning(process) {
+                Divider()
+                Button {
+                    performStop(.quit, process)
+                } label: {
+                    Label("Quit \(knowledge.displayName)", systemImage: "xmark.circle")
+                }
+                Button {
+                    performStop(.force, process)
+                } label: {
+                    Label("Force Quit", systemImage: "bolt.circle")
+                }
+            }
+        }
     }
 
     private func topic(for room: Room) -> HousekeeperTopic {
@@ -1677,6 +1727,13 @@ public final class ProcessIconProvider {
             cache.setObject(icon, forKey: key)
             return icon
         }
+        if name.contains("WebKit") || name.contains("Safari") {
+            if let safariURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Safari") {
+                let icon = NSWorkspace.shared.icon(forFile: safariURL.path)
+                cache.setObject(icon, forKey: key)
+                return icon
+            }
+        }
 
         // 1. NSRunningApplication lookup by PID
         if pid > 0, let runningApp = NSRunningApplication(processIdentifier: pid), let icon = runningApp.icon {
@@ -1688,7 +1745,7 @@ public final class ProcessIconProvider {
         let execPath = ProcessKnowledge.path(for: pid)
         if !execPath.isEmpty {
             if let appRange = execPath.range(of: ".app") {
-                let bundlePath = String(execPath[...appRange.upperBound])
+                let bundlePath = String(execPath[..<appRange.upperBound])
                 let icon = NSWorkspace.shared.icon(forFile: bundlePath)
                 cache.setObject(icon, forKey: key)
                 return icon
@@ -1722,7 +1779,7 @@ public final class ProcessIconProvider {
         }
 
         // 5. Look for an app on disk in common application folders
-        for baseDir in ["/Applications", "/System/Applications", "/System/Applications/Utilities", "/Applications/Utilities"] {
+        for baseDir in ["/Applications", "/System/Applications", "/System/Applications/Utilities", "/Applications/Utilities", "/System/Library/CoreServices"] {
             let candidate = "\(baseDir)/\(cleanName).app"
             if FileManager.default.fileExists(atPath: candidate) {
                 let icon = NSWorkspace.shared.icon(forFile: candidate)
