@@ -455,6 +455,37 @@ struct VPNTunnelsView: View {
         .padding(14)
         .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(style.border, lineWidth: 1))
+        .contextMenu {
+            Button {
+                HousekeeperTopic.ask(.vpnTunnelService(service))
+            } label: {
+                Label("Ask the Housekeeper About \(service.name)", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            if service.status == .connected {
+                Button {
+                    model.disconnect(service)
+                } label: {
+                    Label("Disconnect", systemImage: "xmark.circle")
+                }
+            } else {
+                Button {
+                    model.connect(service)
+                } label: {
+                    Label("Connect", systemImage: "play.circle")
+                }
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                model.confirmDelete(service)
+            } label: {
+                Label("Delete VPN Profile", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Section 2: Virtual Interfaces (utun)
@@ -615,6 +646,22 @@ struct VPNTunnelsView: View {
         .padding(14)
         .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(style.border, lineWidth: 1))
+        .contextMenu {
+            Button {
+                let knowledge = ProcessKnowledge.resolve(pid: proc.pid, name: proc.name)
+                HousekeeperTopic.ask(.process(ProcessLoad(id: proc.pid, name: proc.name, cpu: proc.cpuPercent / 100.0, memory: UInt64(proc.memoryMB * 1024 * 1024)), totalMemory: ProcessInfo.processInfo.physicalMemory, knowledge: knowledge))
+            } label: {
+                Label("Ask the Housekeeper About \(proc.displayName)", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                model.stopProcess(proc)
+            } label: {
+                Label("Stop Engine", systemImage: "xmark.circle")
+            }
+        }
     }
 
     // MARK: - Badges & Helpers

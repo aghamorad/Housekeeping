@@ -518,6 +518,29 @@ struct SpaceLensView: View {
                 analyzer.navigateInto(item)
             }
         }
+        .contextMenu {
+            Button {
+                HousekeeperTopic.ask(.diskItem(name: item.name, path: item.url.path, size: item.size, isDirectory: item.isDirectory))
+            } label: {
+                Label("Ask the Housekeeper About This \(item.isDirectory ? "Folder" : "File")", systemImage: "sparkles")
+            }
+
+            Divider()
+
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([item.url])
+            } label: {
+                Label("Reveal in Finder", systemImage: "folder")
+            }
+
+            if item.isDirectory {
+                Button {
+                    analyzer.navigateInto(item)
+                } label: {
+                    Label("Open Folder in Space Lens", systemImage: "arrow.right.circle")
+                }
+            }
+        }
     }
 
     private func fileIcon(_ name: String) -> String {

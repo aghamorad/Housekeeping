@@ -2,6 +2,30 @@
 
 ## Objective
 
+**0.26.0 Universal Housekeeper Intelligence & Expandable Usage (2026-11-04).** Morad: "should be scrollable and expandable too - the usage part for all our stuff - right now, it is neither - right click should always allow you throughout the app to ask your housekeeper too - whenever you're done and debugged and leaned our code (also a rule and a skill for all our apps), then push over to github and package as a NEW RELEASE"
+Shipped:
+1. Universal Right-Click "Ask the Housekeeper" (`.contextMenu`):
+   - Added `HousekeeperTopic.ask(_ topic:)` backed by `WindowOpener.shared.withWindow` so right-clicking items anywhere in the app immediately brings up the main window and asks the AI Housekeeper with a tailored briefing.
+   - Menu Bar popover: Right-click room cards, `consumerRow`, and `detailHand` to ask about rooms or specific processes.
+   - App Uninstaller (`UninstallerModernView.swift`): Right-click any installed application or leftover component to ask about its purpose and deletion safety.
+   - Local AI Models (`ModelsView.swift`): Right-click any model to ask about its callers, runtime intersections, and necessity status.
+   - Space Lens & Disk Browser (`SpaceLensView.swift`, `DiskBrowserView.swift`): Right-click any file, folder, or heavy node to ask about its contents.
+   - VPN Profiles & Interfaces (`VPNTunnelsView.swift`): Right-click any VPN profile or daemon to ask about its configuration and routing impact.
+2. Smoothly Scrollable & Expandable Resource Consumers:
+   - Replaced fixed/clipped list with an always-scrollable `ScrollView(.vertical, showsIndicators: true)` with bounded heights.
+   - Added interactive `[Expand (X)]` / `[Compact]` toggle button: expands the view from 138pt to 280pt to view all active processes without clipping the bottom row.
+   - Updated Processor, Memory, and Battery room detail pages with always-scrollable views and expansion toggles.
+3. Enhanced Process Icon & Fallback Resolution:
+   - Added `/System/Library/CoreServices` to search paths, resolving native icons for Finder, Dock, etc.
+   - Added fast-path resolution for Safari / WebKit helper processes.
+   - Fixed slice indexing in `ProcessIconProvider` (`..<appRange.upperBound`).
+4. Quality & Verification:
+   - Strict 0-compiler-warning type check passed (`typecheck.sh`).
+   - All 282 safety assertions passed (`test_safety.sh`).
+   - Packaged universal fat binaries (`arm64` + `x86_64`) into `dist/`.
+   - Installed build into `/Applications/Housekeeping.app` and verified live operation.
+   - Created GitHub Release `v0.26.0` with assets and release notes.
+
 **0.25.0 Senior-Friendly Menu Bar Panel Ergonomics & Human Process Intelligence (2026-11-04).** Morad: "see - this doesnt quite work with our 72 year old rule right? it even intimidates me! even though I want it to be just as helpful. I want it still to be intuitive... everything - the spacing especially in the menu bar icon is really, really tight, like this... see, disk usage and stuff... further more, you see how little the fonts are, and how cramped everything is - i also should be able to expand and see all the stuff taking up my memory you know? to make it more pleasing to the eye, i dont mind for each process shown even in the menu bar drop-down - for ram and shit, all of them to have little icons next to them - not only would it make them pleasing on the eye, but also gives it more space. the fonts should also be bigger, not so cramped - it is hard on the eyes. we want something balanced... when you finish, just update the last release honestly; you don't need to go through the release page thing again."
 Shipped:
 1. Universal Senior Ergonomics (The 75-Year-Old Rule) & Calming Visual Hierarchy:

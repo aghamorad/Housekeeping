@@ -360,6 +360,22 @@ struct ModelsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contextMenu {
+            Button {
+                HousekeeperTopic.ask(.model(entry))
+            } label: {
+                Label("Ask the Housekeeper About \(entry.name)", systemImage: "sparkles")
+            }
+
+            if let path = entry.path {
+                Divider()
+                Button {
+                    NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: (path as NSString).deletingLastPathComponent)
+                } label: {
+                    Label("Reveal Model in Finder", systemImage: "folder")
+                }
+            }
+        }
     }
 
     private func entryIntersectionsView(_ intersections: [String]) -> some View {
