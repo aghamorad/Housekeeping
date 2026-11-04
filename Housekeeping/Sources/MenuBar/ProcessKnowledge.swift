@@ -352,20 +352,76 @@ public enum ProcessKnowledge {
             icon: "display"
         ),
         "Safari Web Content": Profile(
-            displayName: "Safari Web Content Engine",
-            category: "Web Browser Subprocess",
-            summary: "Sandboxed WebKit process rendering a specific website tab in Apple Safari.",
+            displayName: "Safari Web Pages",
+            category: "Open Browser Tabs",
+            summary: "Renders web pages and open browser tabs in Apple Safari.",
             safetyLevel: .safeToQuit,
-            safetyAdvice: "Safe to quit. Only that specific website tab will reload.",
-            icon: "globe"
+            safetyAdvice: "Safe to quit. Closes or reloads background website tabs.",
+            icon: "safari"
         ),
         "com.apple.WebKit.WebContent": Profile(
-            displayName: "WebKit Web Content Engine",
-            category: "Web Browser Subprocess",
-            summary: "Sandboxed WebKit renderer powering a browser tab or web view inside an application.",
+            displayName: "Safari Web Pages",
+            category: "Open Browser Tabs",
+            summary: "Renders web pages and open browser tabs in Safari or Mac web views.",
             safetyLevel: .safeToQuit,
-            safetyAdvice: "Safe to quit. The host application will reload the web view.",
-            icon: "globe"
+            safetyAdvice: "Safe to quit. Closes or reloads background website tabs.",
+            icon: "safari"
+        ),
+        "com.apple.WebKit.GPU": Profile(
+            displayName: "Safari Video & Graphics",
+            category: "Web Browser",
+            summary: "Accelerates video playback and graphics rendering in Safari.",
+            safetyLevel: .safeToQuit,
+            safetyAdvice: "Safe to quit. Safari restarts it automatically.",
+            icon: "safari"
+        ),
+        "com.apple.WebKit.Networking": Profile(
+            displayName: "Safari Network",
+            category: "Web Browser",
+            summary: "Handles web downloads and secure network connections for Safari.",
+            safetyLevel: .safeToQuit,
+            safetyAdvice: "Safe to quit. Active downloads will pause.",
+            icon: "safari"
+        ),
+        "cua-driver": Profile(
+            displayName: "AI Desktop Assistant",
+            category: "Desktop Automation",
+            summary: "Manages native UI controls and automation actions for your AI assistant.",
+            safetyLevel: .safeToQuit,
+            safetyAdvice: "Safe to quit. Stops active automated desktop tasks.",
+            icon: "sparkles"
+        ),
+        "Finder": Profile(
+            displayName: "Finder",
+            category: "Desktop & Files",
+            summary: "Manages desktop folders, open file windows, and connected drives.",
+            safetyLevel: .caution,
+            safetyAdvice: "Quitting restarts Finder to refresh desktop windows and drives.",
+            icon: "macwindow"
+        ),
+        "Codex (Renderer)": Profile(
+            displayName: "Codex",
+            category: "Code Editor",
+            summary: "The main editor window and project canvas in Codex.",
+            safetyLevel: .safeToQuit,
+            safetyAdvice: "Safe to quit. Codex will reload the editor window.",
+            icon: "curlybraces"
+        ),
+        "ChatGPT": Profile(
+            displayName: "ChatGPT",
+            category: "AI Chat",
+            summary: "Desktop application for ChatGPT conversations and voice.",
+            safetyLevel: .safeToQuit,
+            safetyAdvice: "Safe to quit. Closes the ChatGPT window.",
+            icon: "bubble.left.and.bubble.right.fill"
+        ),
+        "Telegram": Profile(
+            displayName: "Telegram",
+            category: "Messaging",
+            summary: "Telegram desktop messaging application.",
+            safetyLevel: .safeToQuit,
+            safetyAdvice: "Safe to quit. Closes Telegram cleanly.",
+            icon: "paperplane.fill"
         ),
         "Slack Helper": Profile(
             displayName: "Slack Workspace Renderer",
@@ -568,13 +624,24 @@ public enum ProcessKnowledge {
     // MARK: - Dynamic Fallback Profile
 
     private static func fallbackProfile(name: String, execPath: String, effectiveApp: String?) -> Profile {
+        if name.contains("WebKit") || name.contains("WebContent") || name.contains("Safari") {
+            return Profile(
+                displayName: "Safari Web Pages",
+                category: "Open Browser Tabs",
+                summary: "Renders web pages and open browser tabs in Safari.",
+                safetyLevel: .safeToQuit,
+                safetyAdvice: "Safe to quit. Closes or reloads background website tabs.",
+                icon: "safari"
+            )
+        }
+
         if let app = effectiveApp {
             return Profile(
-                displayName: "\(app) Helper",
-                category: "Desktop App Subprocess",
-                summary: "Background subprocess managed by \(app).",
+                displayName: "\(app)",
+                category: "App Background Task",
+                summary: "Background task helping \(app) run smoothly.",
                 safetyLevel: .safeToQuit,
-                safetyAdvice: "Safe to quit. \(app) will reload or restart the helper as needed.",
+                safetyAdvice: "Safe to quit. \(app) will reload or restart the task as needed.",
                 icon: "app.fill"
             )
         }
