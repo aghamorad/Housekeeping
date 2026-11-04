@@ -533,7 +533,7 @@ final class SystemVitals: NSObject, ObservableObject {
             .filter { $0.isZombieCandidate }
             .sorted { $0.cpu > $1.cpu }
 
-        return (Array(busy.prefix(4)), Array(holding.prefix(6)), zombies, sleepInhibitorCandidate)
+        return (Array(busy.prefix(20)), Array(holding.prefix(35)), zombies, sleepInhibitorCandidate)
     }
 
     /// Terminate any process with a clean signal (SIGTERM) or forced stop (SIGKILL).
