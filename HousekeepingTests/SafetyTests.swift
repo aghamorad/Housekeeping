@@ -1327,6 +1327,14 @@ struct SafetyTests {
         try expect(refusal(home.appendingPathComponent("Library/Application Support/SomeApp")) != nil, "Application Support is never swept.")
         try expect(refusal(home.appendingPathComponent("Documents/Chapter One")) != nil, "Documents are never swept.")
         try expect(
+            refusal(URL(fileURLWithPath: "/Applications/Some App.app")) != nil,
+            "An application is removed through Uninstall Apps, never swept."
+        )
+        try expect(
+            refusal(URL(fileURLWithPath: "/Library/Preferences/something")) != nil,
+            "The system's own folders are never swept."
+        )
+        try expect(
             refusal(home.appendingPathComponent("Library/Caches/com.example.app")) == nil,
             "A cache is exactly what a sweep is for."
         )

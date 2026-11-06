@@ -1,3 +1,34 @@
+## Current work — 2026-11-06 — 0.26.6 (46): a line a sweep cannot cross
+
+Objective: make Clean Up trustworthy enough that Select All is safe.
+
+`Housekeeping/Sources/Cleanup/ProtectedDataPolicy.swift` is the rule. On a sweep
+it refuses app group containers, sandboxed containers, Application Support,
+iCloud Drive, Mail, Messages, Calendars, Photos, Safari, Keychains, Accounts,
+Documents, Desktop, Music, Pictures, Movies, Spotlight's index, any AI model
+library, /Applications, /System, /Library and any `.app` — plus any folder that
+holds recordings, documents or a database, tested by extension outside cache
+locations. `CleanupIntent` separates a sweep from an explicit removal, which is
+the only path where a container may move.
+
+Enforced in two places: `CleanerScanner.scanAll` filters every shelf through the
+policy and reports what it withheld in the Clean Up notes, and
+`CleanupEngine.refusalToMove` refuses at the chokepoint, so a shelf written
+later cannot move these either. `OrphanScanner` no longer scans Containers or
+Group Containers at all.
+
+Bulk: app rows have checkboxes, each shelf has tick-all, the footer has Tick
+everything and Uninstall N selected. Open applications are excluded from a batch
+rather than blocking it.
+
+Verified: typecheck clean; 312 assertions pass, 16 of them new and specific to
+these rules. Replayed all 1103 paths from the 6 November sweep through the
+policy — 1002 refused, the remaining 101 are caches, logs, cookie jars and
+saved window state. Release built, installed, relaunched as 0.26.6.
+
+Next: watch a full Clean Up scan finish on the real disk and confirm the
+Orphaned Leftovers shelf is small and the "Left alone" note reads correctly.
+
 ## Current work — 2026-11-06 — 0.26.5 (45): Clean Up swept user data
 
 Objective: stop Clean Up offering things that are not junk. Trigger: a sweep on
