@@ -1,3 +1,29 @@
+## Current work — 2026-11-06 — 0.26.7 (47) released
+
+Shipped: v0.26.7 with three builds (arm64, universal, x86_64) at
+https://github.com/aghamorad/Housekeeping/releases/tag/v0.26.7
+
+- `RebuildCost` on every candidate: `.instant` or `.reDownload(why)`. A table in
+  `CleanerScanner.rebuildCost` names the package stores (npm, gradle, uv, pip,
+  npx, cargo, maven, brew, codex-runtimes, the updater cache). Rows carry a
+  Re-download tag, the confirmation sheet totals the GB and warns about throttled
+  connections, and the status line counts them.
+- New CLI verb `housekeeping clean [--json]` — Clean Up, read only, with the same
+  shelf grouping and the same warnings. The shim at `~/.local/bin/housekeeping`
+  is installed and points at the app.
+- `script/package_release.sh` did not list `ProtectedDataPolicy.swift`; it does
+  now. Its module cache also had to be cleared — a cache built through the
+  symlinked path (/Users/Morad/C3PO/Housekeeping) poisons a build run from the
+  physical path. Clear `.build/*/ModuleCache` when the compiler reports a module
+  "defined in both".
+
+Verified: 318 assertions pass; `housekeeping clean --json` on the real disk gives
+79 everyday-junk items, 6 orphans, 3 developer leftovers, and the note
+"Left alone: 204 items, 65.0 GB".
+
+Next: none outstanding. Housekeeping's scan is slow (minutes) because it measures
+every cache folder; a future pass could bound it.
+
 ## Current work — 2026-11-06 — 0.26.6 (46): a line a sweep cannot cross
 
 Objective: make Clean Up trustworthy enough that Select All is safe.
