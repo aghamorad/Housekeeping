@@ -1,3 +1,40 @@
+## Current work — 2026-11-06 — 0.26.5 (45): Clean Up swept user data
+
+Objective: stop Clean Up offering things that are not junk. Trigger: a sweep on
+2026-11-06 14:08 UTC moved 393 items out of the home folder, including the whole
+Hugging Face model cache (25.4 GB), the Draw Things container (7.3 GB, its image
+models), Voice Memos recordings back to 2019 (1.8 GB), the Notes database,
+Contacts, Office group containers, and /Applications/ChronoSync.app.
+
+Root causes fixed (commit 671aa9d, pushed to main):
+- OrphanScanner matched system prefixes against the raw container name, so
+  `group.com.apple.*` and TeamID-prefixed containers (`UBF8T346G9.Office`)
+  never matched and became "orphans". Containers are now unwrapped via
+  `matchName` before matching, and any name containing `com.apple.` is skipped.
+- New `Housekeeping/Sources/Cleaner/ModelStorageGuard.swift`: refuses known
+  model roots and any tree holding weight files > 8 MB. Wired into
+  OrphanScanner and into every shelf in `CleanerScanner.scanAll`, which counts
+  what it withheld and says so in the Clean Up notes.
+- `sizeToRecord` measured a directory's own entry, not its contents (96 B for a
+  3 GB library). Now walks the tree and sums allocated bytes.
+- `quarantineRepairs` takes a per-path `categories` map; CleanerModel fills it
+  so the manifest records the shelf each item came from.
+
+Verified: typecheck clean; `script/test_safety.sh` — 299 assertions pass
+(3 new: model-library detection, group-container name unwrapping, recursive
+recorded size). Release built and installed to /Applications/Housekeeping.app,
+relaunched.
+
+Recovery state: 207 items restored by hand (HF cache, Draw Things,
+ChronoSync.app, app support), 73 more by the app CLI. 167 items remain held in
+batch EF09EFD2 — all inside ~/Library/Group Containers, which macOS TCC refuses
+to any process without Full Disk Access, including Finder and the app's own CLI
+launched from a shell (TCC attributes it to the terminal). Only the GUI can
+finish: Quarantine → Past Cleanups → the 372-item batch → "Put All of It Back".
+
+Next: confirm that button was pressed and Voice Memos/Notes are live again, then
+verify a fresh Clean Up scan no longer lists any model folder.
+
 # Housekeeping — handoff
 
 ## Current work — 2026-11-06 — Release 0.26.4 (44)
