@@ -1,6 +1,6 @@
 # Housekeeping — handoff
 
-## Current work — 2026-11-06 — Release 0.26.3 (43)
+## Current work — 2026-11-06 — Release 0.26.4 (44)
 
 Publication authorized by Morad. Preparing a new release from main with all changes since 0.26.0.
 
@@ -12,7 +12,7 @@ Publication authorized by Morad. Preparing a new release from main with all chan
 - Validation: 291 safety/conversation assertions and 85 background/recommendation/MCP assertions passed. Both optimized architectures and GUI typecheck passed with warnings treated as errors. Fake-server tests did not change a live VPN. Native visual interaction remains unverified.
 - Tested local universal bundle preserves embedded Bookbind, media tools and llama-server. Release packaging must preserve these resources, record the release commit, verify signatures and publish checksums for all three architecture downloads.
 
-Release status: in progress. Next: commit/push, build on the release runner, inspect assets, publish the release. Machine-specific audit evidence and rollback paths remain in the local workspace checkpoint rather than this repository.
+Release status: in progress. First 0.26.3 runner exposed older-compiler errors in existing code: private stored property restricted the synthesized DiskScanner.Context initializer; AppUpdateEngine shadowed its download method with a local binding. Added explicit initializer and renamed the local. Shipping as 0.26.4 (44), keeping the earlier unpublished tag immutable. Next: validation, runner build, verify assets and publish. Machine-specific audit evidence and rollback paths remain in the local workspace checkpoint rather than this repository.
 
 ## Objective
 

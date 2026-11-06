@@ -293,6 +293,11 @@ final class DiskScanner {
 
         private var lastReport = Date.distantPast
 
+        init(options: Options, fileManager: FileManager) {
+            self.options = options
+            self.fileManager = fileManager
+        }
+
         /// Mutating because the first lookup is what records the stop: the clock
         /// and the cancel button are both checked here, and once either has fired
         /// every later lookup has to give the same answer without re-asking.
