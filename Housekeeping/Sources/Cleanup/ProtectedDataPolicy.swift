@@ -94,8 +94,20 @@ enum ProtectedDataPolicy {
             return .refused("it holds downloaded AI models, which cost hours to fetch again")
         }
 
+        // Outside the home folder: an application bundle is Uninstall Apps'
+        // business, and the system's own folders are nobody's.
+        for root in ["/Applications/", "/System/", "/Library/", "/usr/", "/bin/", "/sbin/"] where path.hasPrefix(root) {
+            return .refused("it is part of the system or an installed application — Uninstall Apps is where an application is removed")
+        }
         guard path.hasPrefix(homePath + "/") else { return .allowed }
         let relative = String(path.dropFirst(homePath.count + 1))
+
+        // An application bundle is Uninstall Apps' business. Tested after the
+        // cache check below, because a cache folder may legitimately be called
+        // something.app and is still a cache.
+        if path.hasSuffix(".app"), !isCacheLocation(relative) {
+            return .refused("it is an application — Uninstall Apps is where an application is removed")
+        }
 
         for entry in sweepProtected where relative == entry.path || relative.hasPrefix(entry.path + "/") {
             // Application Support holds one thing this app is allowed to sweep:
@@ -124,7 +136,7 @@ enum ProtectedDataPolicy {
     /// is still a download cache.
     static func isCacheLocation(_ relative: String) -> Bool {
         let cacheMarkers = [
-            "Library/Caches/", ".cache/", "Library/Logs/", "__pycache__/",
+            "Library/Caches/", "Caches/", ".cache/", "Library/Logs/", "__pycache__/",
             "node_modules/", "/tmp/", "Library/Saved Application State/"
         ]
         let padded = relative + "/"
