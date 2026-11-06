@@ -5,6 +5,7 @@
 
 import Foundation
 import Combine
+import AppKit
 
 @MainActor
 final class Housekeeper: ObservableObject {
@@ -259,6 +260,20 @@ final class Housekeeper: ObservableObject {
             }
         }
 
+        if HousekeeperConversation.wantsBackgroundReview(question) {
+            let open = Set(NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }.compactMap { $0.bundleURL?.path })
+            let snapshot = await BackgroundActivity.shared.scan(openApps: open)
+            guard contextID == answeringContext, !Task.isCancelled else { return }
+            let data = UserDefaults.standard.data(forKey: "backgroundUseChoices.v1") ?? Data()
+            let choices = (try? JSONDecoder().decode([String: BackgroundUse].self, from: data)) ?? [:]
+            let answer = BackgroundReview.summary(snapshot: snapshot, choices: choices)
+            subject = nil; subjectDecision = nil; subjectReason = nil; topic = nil
+            briefing = "LATEST READ-ONLY BACKGROUND REVIEW:\n" + answer
+            history.append(contentsOf: [["role": "user", "content": question], ["role": "assistant", "content": answer]])
+            if history.count > 8 { history.removeFirst(history.count - 8) }
+            turns.append(Turn(speaker: .housekeeper, text: answer))
+            return
+        }
         let selectedModel = weights.selection
         guard canChat else {
             problem = selectedModel == .apple ? AppleHousekeeper.status.message : "Choose an optional model and download it before chatting. Housekeeping works without the chatbot."

@@ -1,5 +1,19 @@
 # Housekeeping — handoff
 
+## Current work — 2026-11-06 — Release 0.26.3 (43)
+
+Publication authorized by Morad. Preparing a new release from main with all changes since 0.26.0.
+
+- Background Activity now provides Recommendations, Running Now, Startup Files and Background Permissions. Scans are manual, asynchronous and bounded; no new persistent service is installed.
+- Housekeeper's “What can I do without?” review works without an AI model. It combines measured evidence with remembered use choices, explains consequences, and distinguishes Keep, Optional, Unneeded, Likely leftover and Unknown. High resource use alone never establishes dispensability.
+- Verified optional widgets support confirmed pause/restore with saved elections and exact identity/path checks. Unknown widgets cannot become whole-app uninstall targets. App removal remains in the existing uninstaller; startup removal revalidates the exact candidate.
+- RouteSweep remains within Housekeeping. ExpressVPN supports local MCP with Keychain storage, loopback-only transport, bounded JSON/SSE handling, explicit readiness checks and no CLI retry after a failed MCP mutation. Existing CLI support also recognizes the bundled executable.
+- Registered all app Swift sources in the Xcode project, including previously omitted files. VPN process presence alone no longer proves a routing conflict.
+- Validation: 291 safety/conversation assertions and 85 background/recommendation/MCP assertions passed. Both optimized architectures and GUI typecheck passed with warnings treated as errors. Fake-server tests did not change a live VPN. Native visual interaction remains unverified.
+- Tested local universal bundle preserves embedded Bookbind, media tools and llama-server. Release packaging must preserve these resources, record the release commit, verify signatures and publish checksums for all three architecture downloads.
+
+Release status: in progress. Next: commit/push, build on the release runner, inspect assets, publish the release. Machine-specific audit evidence and rollback paths remain in the local workspace checkpoint rather than this repository.
+
 ## Objective
 
 **0.26.0 Universal Housekeeper Intelligence & Expandable Usage (2026-11-04).** Morad: "should be scrollable and expandable too - the usage part for all our stuff - right now, it is neither - right click should always allow you throughout the app to ask your housekeeper too - whenever you're done and debugged and leaned our code (also a rule and a skill for all our apps), then push over to github and package as a NEW RELEASE"

@@ -45,6 +45,7 @@ struct ContentView: View {
             case .appRepair: AppRepairView()
             case .batteryHealth: BatteryHealthView()
             case .vpnTunnels: VPNTunnelsView()
+            case .backgroundActivity: BackgroundActivityView()
             case .dnsSwitcher: DNSConfigView()
             }
         }
@@ -492,6 +493,9 @@ private struct JobBar: View {
                         if let job = allJobs.first(where: { $0.id == "clean" }) {
                             sidebarJob(job, customTitle: "Clean Up", customIcon: "sparkles")
                         }
+                        if let job = allJobs.first(where: { $0.id == "background-activity" }) {
+                            sidebarJob(job, customTitle: "Background Activity", customIcon: "list.bullet.rectangle")
+                        }
                         if let job = allJobs.first(where: { $0.id == "update-apps" }) {
                             sidebarJob(job, customTitle: "Update Apps", customIcon: "arrow.triangle.2.circlepath")
                         }
@@ -669,6 +673,7 @@ private struct JobBar: View {
         case .appRepair: return "repair-damaged-app"
         case .batteryHealth: return "battery-health"
         case .vpnTunnels: return "vpn-tunnels"
+        case .backgroundActivity: return "background-activity"
         case .dnsSwitcher: return "dns-switcher"
         default: return nil
         }
@@ -683,6 +688,14 @@ private struct JobBar: View {
     /// and nothing else.
     private var readingJobs: [Job] {
         [
+            Job(
+                id: "background-activity",
+                title: "Background Activity",
+                systemImage: "list.bullet.rectangle",
+                zone: .reading,
+                help: "See apps and helpers using memory and processor time, their disk footprint, and what starts at login. Review the purpose and owning app before changing anything.",
+                action: { appState.showBackgroundActivity = true }
+            ),
             Job(
                 id: "look-everywhere",
                 title: "Look Everywhere",

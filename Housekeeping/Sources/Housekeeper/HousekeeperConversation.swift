@@ -10,8 +10,18 @@ enum HousekeeperConversation {
     """
 
     static let toolHelp = """
-    Housekeeping tools are separate screens. Open a tool is the chat panel's navigation menu. Clean Up reviews caches, build files, installers, large files and apps; choose items, use Review selection, and confirm exact paths. Disk Browser measures folders and sorts them with Largest; Show in Finder opens a folder in Finder. It does not list individual files or remove anything. Update Apps lists available updates. Terminal Health diagnoses command installations. Two Folders compares a folder with its backup. Quarantine stores moved originals on the same disk: Put It Back restores them, Delete Permanently removes them after confirmation. MediaDock downloads media; Bookbind combines audiobook tracks. Chat only advises and cannot perform those operations.
+    Housekeeping tools are separate screens. Open a tool is the chat panel's navigation menu. Clean Up reviews caches, build files, installers, large files and apps; choose items, use Review selection, and confirm exact paths. Disk Browser measures folders and sorts them with Largest; Show in Finder opens a folder in Finder. It does not list individual files or remove anything. Update Apps lists available updates. Terminal Health diagnoses command installations. Two Folders compares a folder with its backup. Quarantine stores moved originals on the same disk: Put It Back restores them, Delete Permanently removes them after confirmation. MediaDock downloads media; Bookbind combines audiobook tracks. Background Activity > Recommendations assesses optional widgets, app helpers and startup leftovers using measurements and recorded usage answers. What can I do without? in chat runs a fresh read-only review without requiring an AI model. Recommendations has I use this / I don't use this choices, confirmed Pause Widget / Restore Widget controls, and links to startup removal or a targeted app uninstall review. Protected services and unknown items are preserved. Chat cannot perform cleanup operations.
     """
+
+    static func wantsBackgroundReview(_ question: String) -> Bool {
+        let query = question.lowercased()
+        let exact = query.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        if ["what can i do without", "what don't i need"].contains(exact) { return true }
+        let domain = ["background activity", "background tasks", "background items", "background helpers", "startup items", "login items", "widgets", "processes"].contains(where: query.contains)
+        let request = ["review", "scan", "check", "unnecessary", "unneeded", "unused", "don't need", "wasting", "running", "can i remove", "should i remove", "my mac", "this mac", "my computer"].contains(where: query.contains)
+        if domain && request { return true }
+        return (query.contains("unnecessary") || query.contains("unneeded") || query.contains("unused")) && ["mac", "process", "running", "app", "ram", "memory", "computer"].contains(where: query.contains)
+    }
 
     static let contextLimit = 8_000
     static let historyLimit = 6_000
@@ -70,6 +80,7 @@ enum HousekeeperConversation {
     static func reference(for question: String) -> String? {
         let query = question.lowercased()
         var facts: [String] = []
+        if wantsBackgroundReview(question) { facts.append("Use Background Activity > Recommendations for the measured review, recorded usage choices and confirmed widget/startup/app cleanup controls. Registered permissions and high resource use alone are not proof an item is unnecessary.") }
         if ["biggest", "largest", "large file", "disk", "space", "size"].contains(where: query.contains) {
             facts.append("Disk Browser measures FOLDERS ONLY. Its Largest sort ranks folders; individual files are NOT listed there. To review individual large files, use Open a tool > Clean Up, run its scan and choose Large Files. If there is no measured inventory, the biggest file is UNKNOWN. A requested storage target is not a measured file size.")
         }
