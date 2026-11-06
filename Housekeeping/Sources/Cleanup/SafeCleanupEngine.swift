@@ -401,7 +401,12 @@ final class CleanupEngine {
     func quarantineRepairs(
         paths: [String],
         category: String,
-        reason: String
+        reason: String,
+        /// Per-path category, when the caller knows a more specific one than the
+        /// shelf the move was made from. A single sweep can carry a log, a build
+        /// folder and a stale installer at once, and the manifest is the only
+        /// record left once the screen is closed.
+        categories: [String: String] = [:]
     ) async throws -> RepairMoveResult {
         let recordID = UUID()
         let date = Date()
@@ -456,7 +461,7 @@ final class CleanupEngine {
                     originalPath: entry.path,
                     quarantinePath: entry.destination.path,
                     size: entry.size,
-                    category: category,
+                    category: categories[entry.path] ?? category,
                     appName: reason,
                     state: .planned,
                     errorMessage: nil
@@ -522,11 +527,35 @@ final class CleanupEngine {
         return nil
     }
 
-    /// The size to record for a path. Only ever shown, never acted on, so a
-    /// symlink or something that disappears between being read and being
-    /// measured records nothing rather than failing over a number.
+    /// The size to record for a path, and the size the Quarantine screen shows
+    /// back. Only ever shown, never acted on, so a symlink or something that
+    /// disappears between being read and being measured records nothing rather
+    /// than failing over a number.
+    ///
+    /// A folder's own `.size` is the size of its directory entry — a few hundred
+    /// bytes — not the size of what is inside it. Measuring that way recorded
+    /// 96 bytes for a 3 GB model library and 25,792 bytes for a 36 GB sweep, so
+    /// the only honest question for a directory is what its files occupy.
     private func sizeToRecord(atPath path: String) -> Int64 {
-        (try? fileManager.attributesOfItem(atPath: path))?[.size] as? Int64 ?? 0
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory) else { return 0 }
+        if !isDirectory.boolValue {
+            return (try? fileManager.attributesOfItem(atPath: path))?[.size] as? Int64 ?? 0
+        }
+        var total: Int64 = 0
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileSizeKey]
+        guard let walk = fileManager.enumerator(
+            at: URL(fileURLWithPath: path),
+            includingPropertiesForKeys: Array(keys),
+            options: [.skipsPackageDescendants],
+            errorHandler: { _, _ in true }
+        ) else { return 0 }
+        while let entry = walk.nextObject() as? URL {
+            guard let values = try? entry.resourceValues(forKeys: keys),
+                  values.isRegularFile == true else { continue }
+            total += Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+        }
+        return total
     }
 
     /// Whether an item is at this path *as itself* — a symlink counts even when

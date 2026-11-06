@@ -136,6 +136,7 @@
 		F1000000 /* AppRepairEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000; };
 		F1000001 /* AppRepairModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000001; };
 		F1000002 /* OrphanScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000002; };
+		F1000FF1 /* ModelStorageGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000FF1; };
 		F1000003 /* SpaceAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000003; };
 		F1000004 /* DaemonAndSecurityAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000004; };
 		F1000005 /* BatteryHealthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000005; };
@@ -295,6 +296,7 @@
 		F2000000 /* AppRepairEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/AppRepair/AppRepairEngine.swift; sourceTree = "<group>"; };
 		F2000001 /* AppRepairModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/AppRepair/AppRepairModels.swift; sourceTree = "<group>"; };
 		F2000002 /* OrphanScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/OrphanScanner.swift; sourceTree = "<group>"; };
+		F2000FF1 /* ModelStorageGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/ModelStorageGuard.swift; sourceTree = "<group>"; };
 		F2000003 /* SpaceAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/SpaceAnalyzer.swift; sourceTree = "<group>"; };
 		F2000004 /* DaemonAndSecurityAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/DaemonAndSecurityAudit.swift; sourceTree = "<group>"; };
 		F2000005 /* BatteryHealthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Hardware/BatteryHealthEngine.swift; sourceTree = "<group>"; };
@@ -365,6 +367,7 @@
 				F2000004,
 				F2000003,
 				F2000002,
+				F2000FF1,
 				F2000001,
 				F2100000,
 				F2100001,
@@ -578,6 +581,7 @@
 				F1000004,
 				F1000003,
 				F1000002,
+				F1000FF1,
 				F1000001,
 				F1100000,
 				F1100001,

@@ -1228,6 +1228,86 @@ struct SafetyTests {
             "A moved file must leave its original path."
         )
 
+        // MARK: - What a moved folder is recorded as weighing
+
+        // A folder's own `.size` is the size of its directory entry — a few
+        // hundred bytes — not of what is inside it. The Quarantine screen shows
+        // the recorded number, so measuring the entry made a 3 GB model library
+        // read as 96 bytes and a 36 GB sweep as 25 KB.
+        let sizedFolder = home.appendingPathComponent("Downloads/sized-folder", isDirectory: true)
+        try fileManager.createDirectory(at: sizedFolder, withIntermediateDirectories: true)
+        var expectedBytes: Int64 = 0
+        for index in 0..<5 {
+            let part = sizedFolder.appendingPathComponent("part-\(index).bin")
+            try Data(repeating: 7, count: 200_000).write(to: part)
+            let values = try part.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .fileSizeKey])
+            expectedBytes += Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+        }
+        _ = try await cleanerEngine.quarantineRepairs(
+            paths: [sizedFolder.path],
+            category: "Clean Up",
+            reason: "Size test"
+        )
+        let manifests = (try? fileManager.contentsOfDirectory(atPath: quarantine.path)) ?? []
+        var recordedSize: Int64?
+        for name in manifests where !name.hasPrefix(".") {
+            let manifestURL = quarantine.appendingPathComponent(name).appendingPathComponent("manifest.json")
+            // Read as plain JSON: the manifest's own type is private to the
+            // engine, and the test is about the number it wrote.
+            guard let data = try? Data(contentsOf: manifestURL),
+                  let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let items = root["items"] as? [[String: Any]] else { continue }
+            for item in items where item["originalPath"] as? String == sizedFolder.path {
+                recordedSize = item["size"] as? Int64 ?? (item["size"] as? Int).map(Int64.init)
+            }
+        }
+        try expect(recordedSize != nil, "A moved folder must appear in a manifest.")
+        try expect(
+            (recordedSize ?? 0) >= expectedBytes,
+            "A moved folder must be recorded at the size of its contents, not the size of its directory entry. Recorded \(recordedSize ?? 0) of \(expectedBytes) bytes."
+        )
+
+        // MARK: - Models are never offered for cleaning
+
+        try expect(
+            ModelStorageGuard.isModelLibrary(home.appendingPathComponent(".cache/huggingface/hub", isDirectory: true), home: home),
+            "The Hugging Face cache is model storage even though the files inside it have no telling extension."
+        )
+        let drawThings = home.appendingPathComponent("Library/Containers/com.liuliu.draw-things", isDirectory: true)
+        try fileManager.createDirectory(at: drawThings.appendingPathComponent("Data/Documents/Models", isDirectory: true), withIntermediateDirectories: true)
+        try Data(repeating: 1, count: 9_000_000)
+            .write(to: drawThings.appendingPathComponent("Data/Documents/Models/flux.ckpt-tensordata"))
+        try expect(
+            ModelStorageGuard.isModelLibrary(drawThings, home: home),
+            "A container holding a multi-megabyte weight file is model storage, whether or not the app is still installed."
+        )
+        let ordinaryFolder = home.appendingPathComponent("Documents/ordinary", isDirectory: true)
+        try writeFile("a note", at: "Documents/ordinary/note.txt", in: home, modified: Date(), fileManager: fileManager)
+        try expect(
+            !ModelStorageGuard.isModelLibrary(ordinaryFolder, home: home),
+            "An ordinary folder of documents is not model storage."
+        )
+
+        // MARK: - Apple's group containers are never orphans
+
+        // macOS wraps its own group containers: `group.com.apple.VoiceMemos.shared`,
+        // `UBF8T346G9.Office`, `3L68KQB4HG.group.com.readdle.smartemail`. Testing
+        // the raw name for a leading `com.apple.` missed every one of them, which
+        // is how Voice Memos recordings and the Notes database were offered as
+        // orphans of an app that was never uninstalled.
+        try expect(
+            OrphanScanner.matchName("group.com.apple.VoiceMemos.shared") == "com.apple.voicememos.shared",
+            "A `group.` wrapper must not hide an Apple identifier."
+        )
+        try expect(
+            OrphanScanner.matchName("3L68KQB4HG.group.com.readdle.smartemail") == "com.readdle.smartemail",
+            "A team-id wrapper must not hide an app identifier."
+        )
+        try expect(
+            OrphanScanner.matchName("com.apple.notes") == "com.apple.notes",
+            "An unwrapped identifier must come back unchanged."
+        )
+
         // The Trash is the only irreversible action, so it is built so it can
         // only ever reach `home/.Trash`. A fixture home proves both halves: it
         // reads what is there, and emptying it removes the contents rather than

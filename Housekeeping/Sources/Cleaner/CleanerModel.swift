@@ -334,12 +334,20 @@ final class CleanerModel: ObservableObject {
 
     private func perform(paths: [String], title: String, noun: String) {
         let engine = CleanupEngine()
+        // The shelf each item came from, so the Quarantine record says "Cache"
+        // or "Orphaned Leftovers" rather than calling every move a "Clean Up".
+        let moved = Set(paths)
+        var categories: [String: String] = [:]
+        for candidate in candidates where moved.contains(candidate.id) {
+            categories[candidate.id] = candidate.category.title
+        }
         Task { @MainActor [weak self] in
             do {
                 let result = try await engine.quarantineRepairs(
                     paths: paths,
                     category: "Clean Up",
-                    reason: title
+                    reason: title,
+                    categories: categories
                 )
                 self?.absorb(result, title: title, noun: noun)
             } catch {
