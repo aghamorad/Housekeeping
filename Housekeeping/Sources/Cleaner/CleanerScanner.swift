@@ -63,6 +63,11 @@ struct CleanerScanner {
             CleanCandidate.nonOverlapping(candidates)
                 .filter { withheldReason($0) == nil }
                 .filter { !protection.isProtected($0.url) }
+                .map { candidate in
+                    var copy = candidate
+                    copy.rebuild = CleanerScanner.rebuildCost(for: candidate.url, home: scanner.home)
+                    return copy
+                }
         }
         func publish(_ candidates: [CleanCandidate], category: CleanCategory) {
             completed.insert(category)
@@ -536,6 +541,44 @@ struct CleanerScanner {
     private func measure(_ url: URL) -> Int64 {
         progress("Measuring " + url.homeAbbreviatedPath)
         return Self.size(of: url, progress: progress)
+    }
+
+    /// What has to come back over the network, and who fetches it.
+    ///
+    /// The list is deliberately explicit rather than a guess about a folder's
+    /// name: telling someone a cache is "free to remove" when it is a 1.7 GB
+    /// package store is the sort of thing that quietly costs a day on a
+    /// throttled line. Anything not named here is treated as rebuilt locally,
+    /// which is what `Library/Caches` almost always is.
+    static func rebuildCost(for url: URL, home: URL) -> RebuildCost {
+        let homePath = home.standardizedFileURL.path
+        let path = url.standardizedFileURL.path
+        guard path.hasPrefix(homePath + "/") else { return .instant }
+        let relative = String(path.dropFirst(homePath.count + 1))
+
+        let downloads: [(String, String)] = [
+            (".npm/_cacache", "npm fetches these packages again on your next install"),
+            (".npm/_npx", "npx downloads the package again the next time you run it"),
+            (".gradle/caches", "Gradle re-downloads these on your next build"),
+            (".cache/uv", "uv re-downloads these on your next sync"),
+            (".cache/pip", "pip re-downloads these on your next install"),
+            (".cache/codex-runtimes", "Codex downloads its runtime again before it next runs"),
+            (".cache/huggingface", "the models would have to be downloaded again"),
+            (".cache/torch", "PyTorch re-downloads these weights"),
+            (".yarn/cache", "Yarn re-downloads these on your next install"),
+            ("Library/pnpm/store", "pnpm re-downloads these on your next install"),
+            (".bun/install/cache", "Bun re-downloads these on your next install"),
+            (".cargo/registry", "Cargo re-downloads these crates on your next build"),
+            (".cargo/git", "Cargo re-fetches these repositories on your next build"),
+            (".m2/repository", "Maven re-downloads these on your next build"),
+            ("Library/Caches/Homebrew", "Homebrew re-downloads the bottles"),
+            ("Library/Caches/@deepseek-aidsh-desktop-updater", "the update payload is downloaded again when the app next updates")
+        ]
+
+        for (prefix, why) in downloads where relative == prefix || relative.hasPrefix(prefix + "/") {
+            return .reDownload(why)
+        }
+        return .instant
     }
 
     static func size(of url: URL, progress: (@Sendable (String) -> Void)? = nil) -> Int64 {

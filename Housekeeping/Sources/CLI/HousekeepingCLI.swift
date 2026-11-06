@@ -76,6 +76,7 @@ enum HousekeepingCLI {
 
         switch verb {
         case "scan":       return try await scan(rest)
+        case "clean":      return try await cleanUp(rest)
         case "explain":    return try explain(rest)
         case "where":      return whereIs(rest)
         case "version":    return version(rest)
@@ -104,6 +105,11 @@ enum HousekeepingCLI {
           housekeeping scan [--quick] [--json]
               Look through this Mac and list what it found, with Housekeeping's
               own verdict on each thing.
+
+          housekeeping clean [--json]
+              What Clean Up would offer, shelf by shelf — read only. Each item
+              says whether removing it frees space for good or only moves the
+              download to later, which on a throttled line is the whole question.
 
           housekeeping explain <path> [--json]
               Everything Housekeeping knows about one file or folder — what it is,
@@ -134,6 +140,84 @@ enum HousekeepingCLI {
           1  something went wrong
           2  the command was not one Housekeeping knows
         """)
+        return 0
+    }
+
+    /// Clean Up, from the command line, and read only.
+    ///
+    /// It answers the same question the screen does — what would be swept, what
+    /// would be left alone — without the power to move anything. The app keeps
+    /// that power because it is the place where the exact paths are read back
+    /// before a move; a pipe has nobody to read them.
+    private static func cleanUp(_ arguments: [String]) async throws -> Int32 {
+        let json = arguments.contains("--json")
+        if !json {
+            complain("Reading the disk. Every cache folder is measured, so this takes a while.")
+        }
+        // Written straight to stderr rather than through `complain`: the scan
+        // reports from its own context, and progress is not a result.
+        let snapshot = CleanerScanner.scanAll(progress: { message in
+            guard !json else { return }
+            FileHandle.standardError.write(Data(("housekeeping: " + message + "\n").utf8))
+        })
+
+        let byShelf = Dictionary(grouping: snapshot.candidates, by: \.category)
+
+        if json {
+            var shelves: [[String: Any]] = []
+            for shelf in CleanCategory.allCases where shelf != .uninstall && shelf != .trash {
+                let rows = byShelf[shelf] ?? []
+                let items: [[String: Any]] = rows.map { candidate in
+                    var entry: [String: Any] = [
+                        "path": candidate.url.path,
+                        "name": candidate.name,
+                        "bytes": candidate.size,
+                        "reDownload": candidate.rebuild.isDownload
+                    ]
+                    if let why = candidate.rebuild.explanation { entry["reDownloadNote"] = why }
+                    return entry
+                }
+                shelves.append([
+                    "shelf": shelf.title,
+                    "items": rows.count,
+                    "bytes": rows.reduce(Int64(0)) { $0 + $1.size },
+                    "reDownloadItems": rows.filter { $0.rebuild.isDownload }.count,
+                    "candidates": items
+                ])
+            }
+            printJSON([
+                "readOnly": true,
+                "shelves": shelves,
+                "apps": snapshot.apps.map { ["name": $0.name, "path": $0.url.path, "bytes": $0.size] },
+                "notes": snapshot.notes
+            ])
+            return 0
+        }
+
+        say("Housekeeping — Clean Up, read only. Nothing has been moved.")
+        say("")
+        for shelf in CleanCategory.allCases where shelf != .uninstall && shelf != .trash {
+            let rows = byShelf[shelf] ?? []
+            guard !rows.isEmpty else { continue }
+            let bytes = rows.reduce(Int64(0)) { $0 + $1.size }
+            let downloads = rows.filter { $0.rebuild.isDownload }
+            var heading = "\(shelf.title) — \(rows.count) item\(rows.count == 1 ? "" : "s"), \(bytes.sizeDescription)"
+            if !downloads.isEmpty {
+                heading += " · \(downloads.count) would have to be downloaded again"
+            }
+            say(heading)
+            for candidate in rows.sorted(by: { $0.size > $1.size }).prefix(12) {
+                let marker = candidate.rebuild.isDownload ? "↓" : " "
+                say("  \(marker) \(pad(candidate.size.sizeDescription, 9)) \(candidate.url.homeAbbreviatedPath)")
+                if let why = candidate.rebuild.explanation {
+                    say("      \(why)")
+                }
+            }
+            if rows.count > 12 { say("  …and \(rows.count - 12) more") }
+            say("")
+        }
+        for note in snapshot.notes { say(note) }
+        say("To move any of it, use the app — it shows the exact paths and asks first.")
         return 0
     }
 
