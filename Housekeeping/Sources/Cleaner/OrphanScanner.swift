@@ -41,9 +41,13 @@ struct OrphanScanner: Sendable {
         ]
 
         let searchRoots: [(URL, String)] = [
-            (home.appendingPathComponent("Library/Application Support", isDirectory: true), "Orphaned Application Support data from deleted app"),
-            (home.appendingPathComponent("Library/Containers", isDirectory: true), "Orphaned app container sandbox from deleted app"),
-            (home.appendingPathComponent("Library/Group Containers", isDirectory: true), "Orphaned app group container from deleted app"),
+            // Containers and Group Containers are deliberately absent. They are
+            // where Voice Memos, Notes, Mail and every sandboxed app keep data a
+            // person cannot get back, and "the app is not in /Applications" is
+            // not proof enough to sweep them in one click. Removing them belongs
+            // to Uninstall Apps, which names one app and asks about its
+            // leftovers one at a time.
+            (home.appendingPathComponent("Library/Application Support/Caches", isDirectory: true), "Orphaned cache folder from deleted app"),
             (home.appendingPathComponent("Library/HTTPStorages", isDirectory: true), "Orphaned network storage and cookies from deleted app"),
             (home.appendingPathComponent("Library/WebKit", isDirectory: true), "Orphaned WebKit website data from deleted app")
         ]

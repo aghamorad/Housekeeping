@@ -234,6 +234,75 @@ final class CleanerModel: ObservableObject {
         apps[index].isSelected.toggle()
     }
 
+    /// Tick or untick every app the current search shows, so a list of forty is
+    /// one decision rather than forty. Nothing moves until the button at the
+    /// bottom is pressed and the exact paths are confirmed.
+    func setAllApps(selected: Bool) {
+        guard phase != .working, phase != .scanning else { return }
+        let ids = Set(visibleApps.map(\.id))
+        for index in apps.indices where ids.contains(apps[index].id) {
+            apps[index].isSelected = selected
+        }
+    }
+
+    var allAppsSelected: Bool {
+        let rows = visibleApps
+        return !rows.isEmpty && rows.allSatisfy(\.isSelected)
+    }
+
+    var anyAppsSelected: Bool {
+        let rows = visibleApps
+        return rows.contains { $0.isSelected }
+    }
+
+    /// Uninstalls everything ticked in one transaction. Open applications are
+    /// left out rather than refused, because one open app should not stop the
+    /// other thirty-nine from going. Related files are only included for apps
+    /// whose row was opened and the files ticked — a bulk pass takes the
+    /// applications themselves and nothing else.
+    func requestUninstallSelected() {
+        guard phase == .ready else { return }
+        let protection = ProtectionList()
+        let chosen = selectedApps.filter { !protection.isProtected($0.url) }
+        guard !chosen.isEmpty else { return }
+
+        let running = chosen.filter(\.isRunning)
+        let ready = chosen.filter { !$0.isRunning }
+        guard !ready.isEmpty else {
+            failures = ["Every application you ticked is open. Quit them first — macOS will not let an application be moved while it is running."]
+            return
+        }
+
+        var paths: [String] = []
+        for app in ready {
+            paths.append(app.url.path)
+            paths += app.leftovers
+                .filter { includedRelatedPaths.contains($0.id) && !protection.isProtected($0.url) }
+                .map(\.url.path)
+        }
+
+        pendingAction = .uninstall
+        pendingTitle = "Move \(ready.count) application\(ready.count == 1 ? "" : "s") to Quarantine?"
+        pendingDetail = "\(ready.reduce(Int64(0)) { $0 + $1.size }.sizeDescription) of applications. Related support files are included only where you ticked them by opening the row. Everything moved can be put back from Quarantine."
+        pendingPaths = paths
+        pendingSize = ready.reduce(Int64(0)) { $0 + $1.size }
+        pendingAppName = ready.count == 1 ? ready[0].name : nil
+        confirmationText = ""
+        confirmationHint = running.isEmpty
+            ? nil
+            : "\(running.count) open application\(running.count == 1 ? " is" : "s are") left out: \(running.map(\.name).joined(separator: ", "))."
+        failures = []
+    }
+
+    /// Everything on every shelf, not just the one in view. It exists so a big
+    /// cleanup is one decision — and it is safe to offer because a shelf can no
+    /// longer contain an app container, a model library, or anything holding a
+    /// person's files.
+    func selectEverything() {
+        guard phase != .working, phase != .scanning else { return }
+        for index in candidates.indices { candidates[index].isSelected = true }
+    }
+
     var allInCategorySelected: Bool {
         let rows = candidates(in: category)
         return !rows.isEmpty && rows.allSatisfy(\.isSelected)
@@ -322,9 +391,11 @@ final class CleanerModel: ObservableObject {
 
         switch action {
         case .clean:
-            perform(paths: pendingPaths, title: "Cleaned up", noun: "item")
+            perform(paths: pendingPaths, title: "Cleaned up", noun: "item", intent: .sweep)
         case .uninstall:
-            perform(paths: pendingPaths, title: pendingAppName.map { "Uninstalled \($0)" } ?? "Uninstalled", noun: "item")
+            // Uninstalling names an application, so its containers are fair
+            // game — that is the one path where they are.
+            perform(paths: pendingPaths, title: pendingAppName.map { "Uninstalled \($0)" } ?? "Uninstalled", noun: "item", intent: .explicitRemoval)
         case .emptyTrash:
             emptyTrash()
         }
@@ -332,7 +403,7 @@ final class CleanerModel: ObservableObject {
 
     // MARK: - Doing
 
-    private func perform(paths: [String], title: String, noun: String) {
+    private func perform(paths: [String], title: String, noun: String, intent: CleanupIntent) {
         let engine = CleanupEngine()
         // The shelf each item came from, so the Quarantine record says "Cache"
         // or "Orphaned Leftovers" rather than calling every move a "Clean Up".
@@ -347,7 +418,8 @@ final class CleanerModel: ObservableObject {
                     paths: paths,
                     category: "Clean Up",
                     reason: title,
-                    categories: categories
+                    categories: categories,
+                    intent: intent
                 )
                 self?.absorb(result, title: title, noun: noun)
             } catch {

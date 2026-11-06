@@ -40,9 +40,28 @@ struct CleanerScanner {
             modelLibraryCache[candidate.id] = answer
             return answer
         }
+        // Asked once per path. nil means "safe to sweep"; a string is the reason
+        // it is not, and those reasons become one sentence on screen rather than
+        // a silent disappearance.
+        var withheldCache: [String: String?] = [:]
+        func withheldReason(_ candidate: CleanCandidate) -> String? {
+            if let known = withheldCache[candidate.id] { return known }
+            if isModelLibrary(candidate) {
+                withheldCache[candidate.id] = "model"
+                return "model"
+            }
+            let verdict = ProtectedDataPolicy.verdict(for: candidate.url, home: scanner.home)
+            let reason: String?
+            switch verdict {
+            case .allowed: reason = nil
+            case .refused(let why): reason = why
+            }
+            withheldCache[candidate.id] = reason
+            return reason
+        }
         func publishable(_ candidates: [CleanCandidate]) -> [CleanCandidate] {
             CleanCandidate.nonOverlapping(candidates)
-                .filter { !isModelLibrary($0) }
+                .filter { withheldReason($0) == nil }
                 .filter { !protection.isProtected($0.url) }
         }
         func publish(_ candidates: [CleanCandidate], category: CleanCategory) {
@@ -99,13 +118,19 @@ struct CleanerScanner {
         // What was held back, so the screen can say so rather than silently
         // looking smaller than the disk. Model libraries are never offered here;
         // they are read by Local Models, which knows what each one is for.
-        let withheldModels = candidates.filter(isModelLibrary)
-        let withheldBytes = withheldModels.reduce(Int64(0)) { $0 + $1.size }
-        candidates.removeAll { isModelLibrary($0) }
+        let withheld = candidates.filter { withheldReason($0) != nil }
+        let userDataCount = withheld.filter { withheldReason($0) != "model" }.count
+        let withheldBytes = withheld.reduce(Int64(0)) { $0 + $1.size }
+        candidates.removeAll { withheldReason($0) != nil }
 
         var notes: [String] = []
-        if !withheldModels.isEmpty {
-            notes.append("Left alone: \(withheldModels.count) AI model \(withheldModels.count == 1 ? "library" : "libraries"), \(withheldBytes.sizeDescription). Models are never offered for cleaning — see Local Models to review them one by one.")
+        if !withheld.isEmpty {
+            var sentence = "Left alone: \(withheld.count) \(withheld.count == 1 ? "item" : "items"), \(withheldBytes.sizeDescription). "
+            if userDataCount > 0 {
+                sentence += "\(userDataCount) of them hold something a person would have to make again — recordings, documents, a database, or an app's own containers — and Clean Up never offers those. "
+            }
+            sentence += "Downloaded AI models are never offered either; see Local Models to review them one by one."
+            notes.append(sentence)
         }
         // macOS guards the Trash behind Full Disk Access. That is a
         // setting to change, not a passing condition, so say what it

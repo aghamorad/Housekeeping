@@ -1308,6 +1308,68 @@ struct SafetyTests {
             "An unwrapped identifier must come back unchanged."
         )
 
+        // MARK: - The line between junk and something you cannot get back
+
+        // A sweep is answered with one button, so nothing it carries may be
+        // something a person would have to make again. These are the folders
+        // that cost Morad his Voice Memos and his Notes database on 2026-11-06.
+        let groupContainers = home.appendingPathComponent("Library/Group Containers/group.com.apple.notes", isDirectory: true)
+        try fileManager.createDirectory(at: groupContainers, withIntermediateDirectories: true)
+        try writeFile("not a real database", at: "Library/Group Containers/group.com.apple.notes/NoteStore.sqlite", in: home, modified: Date(), fileManager: fileManager)
+
+        func refusal(_ path: URL, _ intent: CleanupIntent = .sweep) -> String? {
+            if case .refused(let why) = ProtectedDataPolicy.verdict(for: path, home: home, intent: intent) { return why }
+            return nil
+        }
+
+        try expect(refusal(groupContainers) != nil, "An app group container is never swept.")
+        try expect(refusal(home.appendingPathComponent("Library/Containers/com.example.app")) != nil, "A sandboxed container is never swept.")
+        try expect(refusal(home.appendingPathComponent("Library/Application Support/SomeApp")) != nil, "Application Support is never swept.")
+        try expect(refusal(home.appendingPathComponent("Documents/Chapter One")) != nil, "Documents are never swept.")
+        try expect(
+            refusal(home.appendingPathComponent("Library/Caches/com.example.app")) == nil,
+            "A cache is exactly what a sweep is for."
+        )
+        try expect(
+            refusal(home.appendingPathComponent("Library/Application Support/Caches/com.example.app")) == nil,
+            "The Caches folder inside Application Support is a cache in all but name."
+        )
+
+        // A folder of recordings outside a cache is not junk, whatever it is called.
+        let recordings = home.appendingPathComponent("Downloads/recordings", isDirectory: true)
+        try fileManager.createDirectory(at: recordings, withIntermediateDirectories: true)
+        try Data(repeating: 0, count: 1024).write(to: recordings.appendingPathComponent("memo.m4a"))
+        try expect(refusal(recordings) != nil, "A folder holding recordings is refused even outside a protected location.")
+        try expect(
+            refusal(home.appendingPathComponent("Library/Application Support/Caches/com.example.app/downloads")) == nil,
+            "The same extension inside a cache location is still a cache."
+        )
+
+        // And the engine is the last word: a caller written tomorrow cannot move
+        // a container on a sweep, whatever shelf offers it.
+        let sweepRefusal = try await cleanerEngine.quarantineRepairs(
+            paths: [groupContainers.path],
+            category: "Clean Up",
+            reason: "Policy test",
+            intent: .sweep
+        )
+        try expect(sweepRefusal.movedPaths.isEmpty, "A sweep may not move an app group container even when asked directly.")
+        try expect(
+            fileManager.fileExists(atPath: groupContainers.path),
+            "A refused sweep must leave the container exactly where it was."
+        )
+
+        let explicit = try await cleanerEngine.quarantineRepairs(
+            paths: [groupContainers.path],
+            category: "Uninstall Apps",
+            reason: "Policy test",
+            intent: .explicitRemoval
+        )
+        try expect(
+            explicit.movedPaths == [groupContainers.path],
+            "Naming an application for uninstall is the one path where its container may move."
+        )
+
         // The Trash is the only irreversible action, so it is built so it can
         // only ever reach `home/.Trash`. A fixture home proves both halves: it
         // reads what is there, and emptying it removes the contents rather than
