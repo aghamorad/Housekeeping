@@ -355,8 +355,8 @@ final class AppUpdateEngine {
             // form the vendor expects to be mounted.
             let installed = release.assets.first { $0.name.lowercased().hasSuffix(".dmg") }
                 ?? release.assets.first { $0.name.lowercased().hasSuffix(".zip") }
-            let download = installed.flatMap { download(from: $0.browserDownloadURL, version: version) }
-            return .found(version: version, download: download)
+            let installerDownload = installed.flatMap { download(from: $0.browserDownloadURL, version: version) }
+            return .found(version: version, download: installerDownload)
         } catch {
             return .failed(reason: "GitHub could not be reached: \(error.localizedDescription)")
         }

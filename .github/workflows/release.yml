@@ -42,6 +42,10 @@ jobs:
           for tool in BookbindServer ffmpeg ffprobe; do
             test -x "$RUNNER_TEMP/Bookbind/bin/$tool"
           done
+      - name: Run safety and local fake-MCP tests
+        run: |
+          bash script/test_safety.sh
+          python3 script/test_background_mcp.py
       - name: Compile and package all architectures
         env:
           HOUSEKEEPING_BOOKBIND_SRC: ${{ runner.temp }}/Bookbind
