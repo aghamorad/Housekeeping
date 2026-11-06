@@ -30,8 +30,16 @@ Recovery state: complete. 207 items restored by hand, the rest through the app:
 works where a shell cannot, because macOS attributes the Full Disk Access
 grant to the app when LaunchServices starts it, and to the terminal when a
 shell does. Verified live — Voice Memos (140 recordings), Notes, Contacts,
-Office, HF cache (24 GB), Draw Things (7.3 GB), ChronoSync.app. 59 cache
-folders remain held, which is correct.
+Office, HF cache (24 GB), Draw Things (7.3 GB), ChronoSync.app.
+
+Two containers macOS had already recreated could not be restored as whole
+items, because the app refuses to overwrite an existing path. Notes was put
+back file by file instead: a manifest was written pointing at the surviving
+files inside the quarantine with their live destinations, and the app's own
+restore moved them in (`NoteStore.sqlite`, 25 MB, original mtime intact).
+
+16 items (7.48 GB) remain held and all are download caches — npm, gradle, uv,
+npx, codex-runtimes, the DeepSeek updater, Apple Music artwork.
 
 Next: verify a fresh Clean Up scan no longer lists any model folder, and that
 the note 'Left alone: N AI model libraries' appears.
