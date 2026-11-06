@@ -25,9 +25,29 @@ struct CleanerScanner {
         let scanner = CleanerScanner(progress: progress)
         let protection = ProtectionList()
         var completed: Set<CleanCategory> = []
+        // Asked once per path, not once per shelf: the same folder can be reached
+        // by two readers, and walking a tree twice is a slow way to agree.
+        var modelLibraryCache: [String: Bool] = [:]
+        func isModelLibrary(_ candidate: CleanCandidate) -> Bool {
+            if let known = modelLibraryCache[candidate.id] { return known }
+            // The path check is free; the walk is not, and only large things are
+            // worth walking, so small candidates are settled by their location.
+            let answer = ModelStorageGuard.isModelLibrary(
+                candidate.url,
+                home: scanner.home,
+                deep: candidate.size >= 32_000_000
+            )
+            modelLibraryCache[candidate.id] = answer
+            return answer
+        }
+        func publishable(_ candidates: [CleanCandidate]) -> [CleanCandidate] {
+            CleanCandidate.nonOverlapping(candidates)
+                .filter { !isModelLibrary($0) }
+                .filter { !protection.isProtected($0.url) }
+        }
         func publish(_ candidates: [CleanCandidate], category: CleanCategory) {
             completed.insert(category)
-            partial(CleanerSnapshot(candidates: CleanCandidate.nonOverlapping(candidates).filter { !protection.isProtected($0.url) }, apps: [], trash: TrashSummary(), notes: []), completed)
+            partial(CleanerSnapshot(candidates: publishable(candidates), apps: [], trash: TrashSummary(), notes: []), completed)
         }
         progress("Looking through caches and logs…")
         var candidates = scanner.everydayJunk()
@@ -64,7 +84,7 @@ struct CleanerScanner {
             return copy
         }
         completed.insert(.uninstall)
-        partial(CleanerSnapshot(candidates: CleanCandidate.nonOverlapping(candidates).filter { !protection.isProtected($0.url) }, apps: apps, trash: TrashSummary(), notes: []), completed)
+        partial(CleanerSnapshot(candidates: publishable(candidates), apps: apps, trash: TrashSummary(), notes: []), completed)
 
         progress("Counting the Trash…")
         let trash = TrashService.summary()
@@ -76,14 +96,29 @@ struct CleanerScanner {
             candidates.removeAll { protection.isProtected($0.url) }
         }
 
+        // What was held back, so the screen can say so rather than silently
+        // looking smaller than the disk. Model libraries are never offered here;
+        // they are read by Local Models, which knows what each one is for.
+        let withheldModels = candidates.filter(isModelLibrary)
+        let withheldBytes = withheldModels.reduce(Int64(0)) { $0 + $1.size }
+        candidates.removeAll { isModelLibrary($0) }
+
+        var notes: [String] = []
+        if !withheldModels.isEmpty {
+            notes.append("Left alone: \(withheldModels.count) AI model \(withheldModels.count == 1 ? "library" : "libraries"), \(withheldBytes.sizeDescription). Models are never offered for cleaning — see Local Models to review them one by one.")
+        }
+        // macOS guards the Trash behind Full Disk Access. That is a
+        // setting to change, not a passing condition, so say what it
+        // actually is rather than guessing at a locked file.
+        if trash.unreadable {
+            notes.append("The Trash could not be read. macOS only lets an app see the Trash once you allow it under Full Disk Access in System Settings.")
+        }
+
         return CleanerSnapshot(
             candidates: CleanCandidate.nonOverlapping(candidates).sorted { $0.size > $1.size },
             apps: apps,
             trash: trash,
-            // macOS guards the Trash behind Full Disk Access. That is a
-            // setting to change, not a passing condition, so say what it
-            // actually is rather than guessing at a locked file.
-            notes: trash.unreadable ? ["The Trash could not be read. macOS only lets an app see the Trash once you allow it under Full Disk Access in System Settings."] : []
+            notes: notes
         )
     }
 

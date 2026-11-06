@@ -46,6 +46,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerScanner.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/Uninstaller.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/OrphanScanner.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/Cleaner/ModelStorageGuard.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/TrashService.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Reconcile/ReconcileModels.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Reconcile/ContentIdentity.swift" \
