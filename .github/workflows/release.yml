@@ -1,0 +1,68 @@
+name: Package release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and attach assets to
+        required: true
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: macos-14
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release target
+        run: |
+          set -euo pipefail
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Housekeeping/Info.plist)
+          test "$RELEASE_TAG" = "v$version"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{commit}")"
+          gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' | /usr/bin/grep -qx true
+      - name: Restore verified embedded runtimes
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/base"
+          gh release download v0.26.0 --pattern Housekeeping-macOS-universal.zip --dir "$RUNNER_TEMP/base"
+          cd "$RUNNER_TEMP/base"
+          echo 'b014c9503aa576152e14095f9ec53de95caa73d0df1c913d364f71064552e53d  Housekeeping-macOS-universal.zip' | shasum -a 256 -c -
+          ditto -x -k Housekeeping-macOS-universal.zip .
+          codesign --verify --deep --strict Housekeeping.app
+          cp Housekeeping.app/Contents/Resources/llama-server "$GITHUB_WORKSPACE/Housekeeping/Resources/llama-server"
+          ditto Housekeeping.app/Contents/Resources/Bookbind "$RUNNER_TEMP/Bookbind"
+          mkdir -p "$RUNNER_TEMP/Bookbind/Bookbind.app/Contents/Resources"
+          ditto "$RUNNER_TEMP/Bookbind/bin" "$RUNNER_TEMP/Bookbind/Bookbind.app/Contents/Resources/bin"
+          for tool in BookbindServer ffmpeg ffprobe; do
+            test -x "$RUNNER_TEMP/Bookbind/bin/$tool"
+          done
+      - name: Compile and package all architectures
+        env:
+          HOUSEKEEPING_BOOKBIND_SRC: ${{ runner.temp }}/Bookbind
+        run: bash script/package_release.sh "$RUNNER_TEMP/dist"
+      - name: Verify packages and create checksums
+        run: |
+          set -euo pipefail
+          for arch in universal arm64 x86_64; do
+            mkdir -p "$RUNNER_TEMP/check-$arch"
+            ditto -x -k "$RUNNER_TEMP/dist/Housekeeping-macOS-$arch.zip" "$RUNNER_TEMP/check-$arch"
+            app="$RUNNER_TEMP/check-$arch/Housekeeping.app"
+            codesign --verify --deep --strict "$app"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :HousekeepingSourceCommit' "$app/Contents/Info.plist")" = "$(git rev-parse HEAD)"
+            for tool in BookbindServer ffmpeg ffprobe; do
+              cmp "$RUNNER_TEMP/Bookbind/bin/$tool" "$app/Contents/Resources/Bookbind/bin/$tool"
+            done
+            cmp "$RUNNER_TEMP/Bookbind/app.py" "$app/Contents/Resources/Bookbind/app.py"
+            cmp "$RUNNER_TEMP/Bookbind/bookbind_cli.py" "$app/Contents/Resources/Bookbind/bookbind_cli.py"
+            lipo -info "$app/Contents/MacOS/Housekeeping"
+          done
+          cd "$RUNNER_TEMP/dist"
+          shasum -a 256 Housekeeping-macOS-*.zip > SHA256SUMS.txt
+      - name: Attach verified downloads to draft release
+        run: |
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/dist/Housekeeping-macOS-universal.zip" "$RUNNER_TEMP/dist/Housekeeping-macOS-arm64.zip" "$RUNNER_TEMP/dist/Housekeeping-macOS-x86_64.zip" "$RUNNER_TEMP/dist/SHA256SUMS.txt"

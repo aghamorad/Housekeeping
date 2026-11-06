@@ -1334,6 +1334,15 @@ struct SafetyTests {
         try fileManager.createDirectory(at: other, withIntermediateDirectories: true)
         let otherReport = HousekeeperFolderEvidence.inspect(question: "What is \(other.path)?", request: .init(focusedPath: nil, locations: [.init(path: other.path, purpose: "Downloaded speech-recognition weights", owner: "ExampleSpeech")], home: evidenceHome.path))!
         try expect(otherReport.context.contains("Downloaded speech-recognition weights"), "Known-path description retrieval must work for tools other than uv.")
+        try expect(HousekeeperConversation.wantsBackgroundReview("What apps are unnecessary on my Mac?"), "A whole-Mac necessity question requests measured background evidence.")
+        try expect(HousekeeperConversation.wantsBackgroundReview("What can I do without?"), "The built-in review question works without a model.")
+        try expect(HousekeeperConversation.wantsBackgroundReview("Review background activity"), "Background review is routed to the actual scanner.")
+        try expect(!HousekeeperConversation.wantsBackgroundReview("Remove unnecessary words from this paragraph"), "Editing advice must not trigger a Mac scan.")
+        try expect(!HousekeeperConversation.wantsBackgroundReview("How do I change the background color in CSS?"), "Unrelated background vocabulary stays ordinary conversation.")
+        try expect(HousekeeperConversation.reference(for: "Review unused widgets")?.contains("Recommendations") == true, "Verified help names the actual recommendations and actions.")
+        try expect(!HousekeeperConversation.wantsBackgroundReview("What are background tasks?"), "A conceptual question does not trigger a Mac scan.")
+        try expect(!HousekeeperConversation.wantsBackgroundReview("Check apps for updates"), "App update requests must not be redirected to background review.")
+        try expect(!HousekeeperConversation.wantsBackgroundReview("What can I do without eggs for dinner?"), "An unrelated use of do without remains ordinary conversation.")
         let narrow = HousekeeperConversation.messages(context: explained.context + String(repeating: "status", count: 2000), history: [], question: "What does this folder do?", contextBudget: 2_000)
         try expect(narrow[0]["content"]?.contains("Astral's Python") == true, "The selected folder's identity must survive a narrow provider's context budget.")
 

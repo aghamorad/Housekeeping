@@ -17,6 +17,9 @@ struct RoutesView: View {
     @Environment(\.uiStyle) private var style
     @ObservedObject var model: RoutesModel
 
+    @State private var mcpAddress = ""
+    @State private var mcpNotice: String?
+    @State private var checkingMCP = false
     @State private var sort: ResultSort = .best
     @State private var selectedResultID: String?
 
@@ -164,6 +167,7 @@ struct RoutesView: View {
     private var settingsColumn: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if model.providerKind == .expressvpn { expressMCPSettings }
                 if model.uiMode == .simple {
                     simpleSettings
                 } else {
@@ -173,6 +177,53 @@ struct RoutesView: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var expressMCPSettings: some View {
+        GroupBox("ExpressVPN connection") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(ExpressVPNMCPSettings.endpoint() == nil ? "Using ExpressVPN’s CLI" : "Using ExpressVPN’s local MCP")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Copy the MCP address from ExpressVPN’s Add-ons or Settings, then paste it here. It is saved privately in macOS Keychain.")
+                    .font(.system(size: 14)).foregroundStyle(.secondary)
+                SecureField("Local MCP address", text: $mcpAddress)
+                    .textFieldStyle(.roundedBorder)
+                HStack {
+                    Button("Paste") { mcpAddress = NSPasteboard.general.string(forType: .string) ?? "" }
+                    Button("Save") {
+                        do {
+                            try ExpressVPNMCPSettings.save(mcpAddress)
+                            mcpAddress = ""
+                            mcpNotice = "Saved. RouteSweep will use MCP."
+                            Task { await model.refreshAll() }
+                        } catch { mcpNotice = error.localizedDescription }
+                    }.disabled(mcpAddress.isEmpty)
+                }.buttonStyle(.bordered).controlSize(.large)
+                HStack {
+                    Button(checkingMCP ? "Checking…" : "Check connection") {
+                        guard let url = ExpressVPNMCPSettings.endpoint() else { mcpNotice = "Save the address first."; return }
+                        checkingMCP = true
+                        Task {
+                            do {
+                                let reply = try await ExpressVPNMCP(endpoint: url).call("expressvpn_ping")
+                                mcpNotice = reply.lowercased().contains("pong") ? "Connected. Your VPN was left as it was." : "ExpressVPN answered, but did not confirm readiness."
+                            } catch { mcpNotice = error.localizedDescription }
+                            checkingMCP = false
+                        }
+                    }.disabled(checkingMCP)
+                    Button("Use CLI") {
+                        do {
+                            try ExpressVPNMCPSettings.clear()
+                            mcpNotice = "Using the ExpressVPN CLI."
+                            Task { await model.refreshAll() }
+                        } catch { mcpNotice = error.localizedDescription }
+                    }
+                }.buttonStyle(.bordered).controlSize(.large)
+                if let mcpNotice { Text(mcpNotice).font(.system(size: 14)).textSelection(.enabled) }
+                Text("Checking only reads readiness. Starting a route test will switch VPN connections, as explained before each run.")
+                    .font(.system(size: 13)).foregroundStyle(.secondary)
+            }.padding(6)
+        }.disabled(model.engine.isRunning || checkingMCP)
     }
 
     // MARK: Simple settings

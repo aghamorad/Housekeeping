@@ -95,6 +95,7 @@ compile() {
   "$SWIFTC" \
     -O \
     -whole-module-optimization \
+    -warnings-as-errors \
     -sdk "$SDK" \
     -target "$arch-apple-macosx$MIN_MACOS" \
     -module-cache-path "$ROOT_DIR/.build/package/ModuleCache" \

@@ -24,6 +24,7 @@ final class VPNTunnelsModel: ObservableObject {
         case services = "Configured VPN Services"
         case interfaces = "Virtual Tunnels (utun)"
         case processes = "Running VPN Engines"
+        case startup = "Startup & Background Items"
 
         public var id: String { rawValue }
 
@@ -32,6 +33,7 @@ final class VPNTunnelsModel: ObservableObject {
             case .services: return "lock.shield.fill"
             case .interfaces: return "network"
             case .processes: return "gearshape.2.fill"
+            case .startup: return "power.circle"
             }
         }
     }
@@ -112,6 +114,7 @@ final class VPNTunnelsModel: ObservableObject {
 // MARK: - View
 
 struct VPNTunnelsView: View {
+    @EnvironmentObject private var appState: AppState
     @ObservedObject var model: VPNTunnelsModel = .shared
     @Environment(\.uiStyle) private var style
 
@@ -138,6 +141,13 @@ struct VPNTunnelsView: View {
                     interfacesSection
                 case .processes:
                     processesSection
+                case .startup:
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Startup files and all other background activity now have their own Housekeeping page.")
+                            .font(.system(size: 16))
+                        Button("Open Background Activity") { appState.showBackgroundActivity = true }
+                            .buttonStyle(.borderedProminent).controlSize(.large)
+                    }
                 }
             }
             .padding(32)
@@ -322,13 +332,15 @@ struct VPNTunnelsView: View {
                         Image(systemName: tab.icon)
                             .font(.system(size: 11))
                         Text(tab.rawValue)
-                            .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                        Text("(\(count(for: tab)))")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+                        if tab != .startup {
+                            Text("(\(count(for: tab)))")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
+                    .frame(minHeight: 44)
                     .background(isSelected ? style.accent.opacity(0.18) : style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? style.accent : style.border, lineWidth: 1))
                     .foregroundStyle(isSelected ? style.accent : .secondary)
@@ -344,6 +356,7 @@ struct VPNTunnelsView: View {
         case .services: return model.services.count
         case .interfaces: return model.interfaces.count
         case .processes: return model.processes.count
+        case .startup: return 0
         }
     }
 

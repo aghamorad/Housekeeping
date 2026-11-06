@@ -133,6 +133,34 @@
 		D1000005 /* HousekeeperFolderEvidence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000005; };
 		D1000004 /* AppleHousekeeper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000004; };
 		D1000002 /* HousekeeperConversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000002; };
+		F1000000 /* AppRepairEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000; };
+		F1000001 /* AppRepairModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000001; };
+		F1000002 /* OrphanScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000002; };
+		F1000003 /* SpaceAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000003; };
+		F1000004 /* DaemonAndSecurityAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000004; };
+		F1000005 /* BatteryHealthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000005; };
+		F1000006 /* BatteryHealthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000006; };
+		F1000007 /* FanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000007; };
+		F1000008 /* HousekeeperMascot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000008; };
+		F1000009 /* ProcessKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000009; };
+		F100000A /* BackgroundItemAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200000A; };
+		F100000B /* DNSEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200000B; };
+		F100000C /* DNSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200000C; };
+		F100000D /* VPNTunnelEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200000D; };
+		F100000E /* ExpressVPNMCP.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200000E; };
+		F100000F /* AppRepairView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200000F; };
+		F1000010 /* BackgroundItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000010; };
+		F1000011 /* BatteryHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000011; };
+		F1000012 /* DNSConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000012; };
+		F1000013 /* FanControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000013; };
+		F1000014 /* SpaceLensView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000014; };
+		F1000015 /* UninstallerModernView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000015; };
+		F1000016 /* VPNTunnelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000016; };
+		F1100000 /* BackgroundActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2100000; };
+		F1100001 /* BackgroundActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2100001; };
+		F1200000 /* BackgroundReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2200000; };
+		F1200001 /* BackgroundWidgetControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2200001; };
+		F1200002 /* BackgroundReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2200002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -264,6 +292,34 @@
 		D2000005 /* HousekeeperFolderEvidence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperFolderEvidence.swift; sourceTree = "<group>"; };
 		D2000004 /* AppleHousekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/AppleHousekeeper.swift; sourceTree = "<group>"; };
 		D2000002 /* HousekeeperConversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Housekeeper/HousekeeperConversation.swift; sourceTree = "<group>"; };
+		F2000000 /* AppRepairEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/AppRepair/AppRepairEngine.swift; sourceTree = "<group>"; };
+		F2000001 /* AppRepairModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/AppRepair/AppRepairModels.swift; sourceTree = "<group>"; };
+		F2000002 /* OrphanScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Cleaner/OrphanScanner.swift; sourceTree = "<group>"; };
+		F2000003 /* SpaceAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Disk/SpaceAnalyzer.swift; sourceTree = "<group>"; };
+		F2000004 /* DaemonAndSecurityAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Environment/DaemonAndSecurityAudit.swift; sourceTree = "<group>"; };
+		F2000005 /* BatteryHealthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Hardware/BatteryHealthEngine.swift; sourceTree = "<group>"; };
+		F2000006 /* BatteryHealthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Hardware/BatteryHealthModels.swift; sourceTree = "<group>"; };
+		F2000007 /* FanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Hardware/FanController.swift; sourceTree = "<group>"; };
+		F2000008 /* HousekeeperMascot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/HousekeeperMascot.swift; sourceTree = "<group>"; };
+		F2000009 /* ProcessKnowledge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MenuBar/ProcessKnowledge.swift; sourceTree = "<group>"; };
+		F200000A /* BackgroundItemAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Network/BackgroundItemAudit.swift; sourceTree = "<group>"; };
+		F200000B /* DNSEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Network/DNSEngine.swift; sourceTree = "<group>"; };
+		F200000C /* DNSModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Network/DNSModels.swift; sourceTree = "<group>"; };
+		F200000D /* VPNTunnelEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Network/VPNTunnelEngine.swift; sourceTree = "<group>"; };
+		F200000E /* ExpressVPNMCP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/Routes/ExpressVPNMCP.swift; sourceTree = "<group>"; };
+		F200000F /* AppRepairView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/AppRepairView.swift; sourceTree = "<group>"; };
+		F2000010 /* BackgroundItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/BackgroundItemsView.swift; sourceTree = "<group>"; };
+		F2000011 /* BatteryHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/BatteryHealthView.swift; sourceTree = "<group>"; };
+		F2000012 /* DNSConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/DNSConfigView.swift; sourceTree = "<group>"; };
+		F2000013 /* FanControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/FanControlView.swift; sourceTree = "<group>"; };
+		F2000014 /* SpaceLensView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/SpaceLensView.swift; sourceTree = "<group>"; };
+		F2000015 /* UninstallerModernView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/UninstallerModernView.swift; sourceTree = "<group>"; };
+		F2000016 /* VPNTunnelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/VPNTunnelsView.swift; sourceTree = "<group>"; };
+		F2100000 /* BackgroundActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/Network/BackgroundActivity.swift"; sourceTree = "<group>"; };
+		F2100001 /* BackgroundActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/UI/BackgroundActivityView.swift"; sourceTree = "<group>"; };
+		F2200000 /* BackgroundReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/Network/BackgroundReview.swift"; sourceTree = "<group>"; };
+		F2200001 /* BackgroundWidgetControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/Network/BackgroundWidgetControl.swift"; sourceTree = "<group>"; };
+		F2200002 /* BackgroundReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/UI/BackgroundReviewView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -288,6 +344,34 @@
 		A7000002 /* Housekeeping */ = {
 			isa = PBXGroup;
 			children = (
+				F2000016,
+				F2000015,
+				F2000014,
+				F2000013,
+				F2000012,
+				F2000011,
+				F2000010,
+				F200000F,
+				F200000E,
+				F200000D,
+				F200000C,
+				F200000B,
+				F200000A,
+				F2000009,
+				F2000008,
+				F2000007,
+				F2000006,
+				F2000005,
+				F2000004,
+				F2000003,
+				F2000002,
+				F2000001,
+				F2100000,
+				F2100001,
+				F2200000,
+				F2200001,
+				F2200002,
+				F2000000,
 				A2000001,
 				A2000002,
 				A2000003,
@@ -473,6 +557,34 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1000016,
+				F1000015,
+				F1000014,
+				F1000013,
+				F1000012,
+				F1000011,
+				F1000010,
+				F100000F,
+				F100000E,
+				F100000D,
+				F100000C,
+				F100000B,
+				F100000A,
+				F1000009,
+				F1000008,
+				F1000007,
+				F1000006,
+				F1000005,
+				F1000004,
+				F1000003,
+				F1000002,
+				F1000001,
+				F1100000,
+				F1100001,
+				F1200000,
+				F1200001,
+				F1200002,
+				F1000000,
 				A1000001,
 				A1000002,
 				A1000003,

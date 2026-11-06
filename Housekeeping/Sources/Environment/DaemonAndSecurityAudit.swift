@@ -10,65 +10,28 @@ struct DaemonAndSecurityAudit: Sendable {
         var findings: [EnvironmentFinding] = []
         let fm = FileManager.default
 
-        // 1. Audit LaunchDaemons and LaunchAgents for missing executables or deleted apps
-        let daemonDirs: [URL] = [
-            URL(fileURLWithPath: "/Library/LaunchDaemons", isDirectory: true),
-            URL(fileURLWithPath: "/Library/LaunchAgents", isDirectory: true),
-            fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents", isDirectory: true)
-        ]
-
-        for dir in daemonDirs {
-            guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { continue }
-            for file in files where file.pathExtension.lowercased() == "plist" {
-                guard let data = try? Data(contentsOf: file),
-                      let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any] else {
-                    continue
-                }
-
-                var programPath: String? = plist["Program"] as? String
-                if programPath == nil, let args = plist["ProgramArguments"] as? [String], let first = args.first {
-                    programPath = first
-                }
-
-                guard let program = programPath else { continue }
-
-                // Check if executable exists
-                if !fm.fileExists(atPath: program) {
-                    findings.append(EnvironmentFinding(
-                        id: "daemon-missing-\(file.path)",
-                        category: .securityAndDaemons,
-                        severity: .broken,
-                        title: "Daemon points to missing executable: \(file.lastPathComponent)",
-                        summary: "The background service at \(file.path) references a missing executable at \(program).",
-                        evidence: ["Daemon plist: \(file.path)", "Missing binary: \(program)"],
-                        steps: ["Move the orphaned plist aside or run the clean-orphaned-mac-permissions script."],
-                        fix: nil,
-                        isSelected: false
-                    ))
-                    continue
-                }
-
-                // Check if program belongs to an application bundle (contains .app/)
-                if program.contains(".app/") {
-                    let parts = program.components(separatedBy: ".app/")
-                    if let appRoot = parts.first {
-                        let fullAppPath = appRoot + ".app"
-                        if !fm.fileExists(atPath: fullAppPath) {
-                            findings.append(EnvironmentFinding(
-                                id: "daemon-orphan-\(file.path)",
-                                category: .securityAndDaemons,
-                                severity: .broken,
-                                title: "Orphaned daemon from deleted application: \(file.lastPathComponent)",
-                                summary: "The service runs a helper for an application that is no longer installed (\(fullAppPath)).",
-                                evidence: ["Daemon plist: \(file.path)", "Uninstalled app: \(fullAppPath)"],
-                                steps: ["Remove the leftover plist from \(file.path)."],
-                                fix: nil,
-                                isSelected: false
-                            ))
-                        }
-                    }
-                }
-            }
+        // Share evidence and protection rules with the startup review screen.
+        let startup = await BackgroundItemAudit.shared.scan()
+        for item in startup.items where item.canTrash {
+            findings.append(EnvironmentFinding(
+                id: "startup-review-" + item.id,
+                category: .securityAndDaemons,
+                severity: item.finding.contains("missing") || item.finding.contains("Broken link") ? .broken : .untidy,
+                title: "Review background item: " + item.label,
+                summary: item.finding,
+                evidence: ["Configuration: " + item.url.path, "Target: " + item.target],
+                steps: ["Open VPN Tunnels & Interfaces > Startup & Background Items to inspect this item and review removal. Keep it if its feature is still needed."],
+                fix: nil, isSelected: false
+            ))
+        }
+        for notice in startup.notices {
+            findings.append(EnvironmentFinding(
+                id: "startup-incomplete-" + notice,
+                category: .securityAndDaemons, severity: .untidy,
+                title: "Startup audit is incomplete", summary: notice,
+                evidence: [notice], steps: ["Review Login Items in System Settings and check access to the reported folder."],
+                fix: nil, isSelected: false
+            ))
         }
 
         // 2. Audit TCC.db for zombie grants and excessive permissions

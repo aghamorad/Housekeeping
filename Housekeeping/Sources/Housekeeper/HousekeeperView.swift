@@ -276,8 +276,11 @@ struct HousekeeperView: View {
             HStack {
                 Button("New conversation") { housekeeper.clear() }
                     .disabled(housekeeper.isAnswering)
+                Button("What can I do without?") { housekeeper.ask("Review unnecessary background activity on this Mac.") }
+                    .disabled(housekeeper.isAnswering).frame(minHeight: 44)
                 Spacer()
                 Menu("Open a tool") {
+                    Button("Background Activity") { appState.screen = .backgroundActivity }
                     Button("Disk Browser") { appState.screen = .diskBrowser }
                     Button("Clean Up") { appState.screen = .clean }
                     Button("Update Apps") { appState.screen = .updateList }

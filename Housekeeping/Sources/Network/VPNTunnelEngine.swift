@@ -216,10 +216,8 @@ public actor VPNTunnelEngine {
         } else if vpnNetif != nil && defaultNetif != nil && procs.isEmpty && connectedServices == 0 {
             hasConflict = true
             conflictWarning = "A tunnel interface (\(vpnNetif!)) is holding the default route, but no active VPN client process was found. Stale routes may be blackholing network requests."
-        } else if procs.count >= 2 {
-            let names = procs.map(\.displayName).joined(separator: ", ")
-            hasConflict = true
-            conflictWarning = "Multiple VPN background engines (\(names)) are running simultaneously. Having multiple VPNs active can confuse routing tables."
+        // A client, its daemon and its MCP server are parts of one VPN.
+        // Process count alone is not evidence of a routing conflict.
         }
 
         let summary = VPNDiagnosticSummary(
@@ -441,6 +439,12 @@ public actor VPNTunnelEngine {
 
         let vpnSignatures: [String: String] = [
             "expressvpn-lightway-rs": "ExpressVPN Lightway",
+            "expressvpn-mcp": "ExpressVPN MCP",
+            "shecan-updater": "Shecan Updater",
+            "shecan-nextdns": "Shecan DNS Helper",
+            "shecan-game": "Shecan Game Helper",
+            "com.windscribe.helper.macos": "Windscribe Helper",
+            "Windscribe": "Windscribe Client",
             "expressvpn-daemon": "ExpressVPN Daemon",
             "ExpressVPN": "ExpressVPN GUI",
             "AmneziaVPN-service": "AmneziaVPN Service",
@@ -478,8 +482,8 @@ public actor VPNTunnelEngine {
             let path = parts.dropFirst(4).joined(separator: " ")
             let lower = path.lowercased()
 
-            for (sig, friendly) in vpnSignatures {
-                if lower.contains(sig.lowercased()) {
+            for (sig, friendly) in vpnSignatures.sorted(by: { $0.key.count > $1.key.count }) {
+                if URL(fileURLWithPath: lower).lastPathComponent.contains(sig.lowercased()) {
                     let name = URL(fileURLWithPath: path).lastPathComponent
                     found.append(RunningVPNProcess(
                         id: Int(pid),

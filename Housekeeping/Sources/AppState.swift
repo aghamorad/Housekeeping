@@ -62,7 +62,7 @@ final class AppState: ObservableObject {
         case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
         case protectionList, diskBrowser, reconcile, updateList, setupCheck
         case housekeeper, routes, phone, mediaDock, bookbind, selfUpdate
-        case clean, localModels, fanControl, uninstaller, appRepair, batteryHealth, vpnTunnels, dnsSwitcher
+        case clean, localModels, fanControl, uninstaller, appRepair, batteryHealth, vpnTunnels, dnsSwitcher, backgroundActivity
 
         var id: String { rawValue }
 
@@ -70,7 +70,7 @@ final class AppState: ObservableObject {
             switch self {
             case .clean, .diskBrowser, .reconcile, .updateList, .setupCheck, .routes,
                  .phone, .mediaDock, .bookbind, .quarantine, .protectionList,
-                 .localModels, .fanControl, .uninstaller, .appRepair, .batteryHealth, .vpnTunnels, .dnsSwitcher: return true
+                 .localModels, .fanControl, .uninstaller, .appRepair, .batteryHealth, .vpnTunnels, .dnsSwitcher, .backgroundActivity: return true
             default: return false
             }
         }
@@ -193,6 +193,10 @@ final class AppState: ObservableObject {
     var showBatteryHealth: Bool {
         get { screen == .batteryHealth }
         set { show(.batteryHealth, newValue) }
+    }
+    var showBackgroundActivity: Bool {
+        get { screen == .backgroundActivity }
+        set { show(.backgroundActivity, newValue) }
     }
     var showVPNTunnels: Bool {
         get { screen == .vpnTunnels }

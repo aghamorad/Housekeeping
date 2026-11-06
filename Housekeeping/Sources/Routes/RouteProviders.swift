@@ -370,6 +370,9 @@ struct ExpressVPNProvider: VPNProvider {
     // MARK: - Locating the client
 
     static func cliPath() -> String? {
+        if FileManager.default.isExecutableFile(atPath: "/Applications/ExpressVPN.app/Contents/MacOS/expressvpnctl") {
+            return "/Applications/ExpressVPN.app/Contents/MacOS/expressvpnctl"
+        }
         if let found = RouteProcess.which("expressvpnctl") { return found }
         for path in ["/usr/local/bin/expressvpnctl", "/opt/homebrew/bin/expressvpnctl"]
         where FileManager.default.isExecutableFile(atPath: path) {
@@ -390,12 +393,36 @@ struct ExpressVPNProvider: VPNProvider {
     /// The CLI refuses to do anything unless the GUI client is running or
     /// background mode has been switched on, so it gets a longer leash.
     private func run(_ args: [String], timeout: Double = 30) async throws -> String {
+        if let endpoint = ExpressVPNMCPSettings.endpoint() {
+            let tool: String
+            let value: String?
+            switch args.first {
+            case "status": tool = "expressvpn_status"; value = nil
+            case "get":
+                guard args.count == 2, ["connectionstate", "protocol", "vpnip", "regions"].contains(args[1]) else {
+                    throw MCPError.message("Unsupported ExpressVPN read action.")
+                }
+                tool = "expressvpn_get_" + args[1]; value = nil
+            case "set":
+                guard args.count == 3, args[1] == "protocol" else { throw MCPError.message("Unsupported ExpressVPN setting.") }
+                tool = "expressvpn_set_protocol"; value = args[2]
+            case "connect": tool = "expressvpn_connect"; value = args.count > 1 ? args[1] : nil
+            case "disconnect": tool = "expressvpn_disconnect"; value = nil
+            default: throw MCPError.message("Unsupported ExpressVPN action.")
+            }
+            // Once MCP is selected, a rejected mutation must never be repeated
+            // through another transport: it may already have reached the daemon.
+            return try await ExpressVPNMCP(endpoint: endpoint).call(tool, value: value)
+        }
         let output = try await RouteProcess.run(requireCLI(), args, timeout: timeout)
         if output.timedOut {
             throw RouteProcessError.timedOut(timeout)
         }
         let text = (output.stdout + "\n" + output.stderr)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard output.exitCode == 0 else {
+            throw RouteProcessError.launchFailed("ExpressVPN could not complete the command. Open its app and check the connection.")
+        }
         let lowered = text.lowercased()
         if lowered.contains("gui client must be running")
             || lowered.contains("daemon is inactive")
@@ -412,7 +439,7 @@ struct ExpressVPNProvider: VPNProvider {
     // MARK: - Status
 
     func probeStatus() async -> ProviderStatus {
-        guard let path = Self.cliPath() else { return .unavailable }
+        guard let path = Self.cliPath() ?? (ExpressVPNMCPSettings.endpoint() != nil ? "ExpressVPN MCP" : nil) else { return .unavailable }
 
         let text: String
         do {
@@ -421,7 +448,9 @@ struct ExpressVPNProvider: VPNProvider {
             return ProviderStatus(
                 cliPath: path, installed: true, loggedIn: false,
                 detail: "Installed, but the background service is not answering.",
-                advisory: Self.daemonAdvisory
+                advisory: ExpressVPNMCPSettings.endpoint() != nil
+                    ? "MCP is configured but not answering. Check ExpressVPN’s MCP settings or choose Use CLI in Housekeeping."
+                    : Self.daemonAdvisory
             )
         }
 
@@ -438,7 +467,7 @@ struct ExpressVPNProvider: VPNProvider {
             // `status` does not report login, but a daemon that answers is a
             // daemon with an activated account behind it.
             loggedIn: true,
-            detail: [state, location, protocolName.isEmpty ? nil : protocolName.lowercased()]
+            detail: [ExpressVPNMCPSettings.endpoint() != nil ? "MCP" : "CLI", state, location, protocolName.isEmpty ? nil : protocolName.lowercased()]
                 .compactMap { $0 }
                 .joined(separator: " · "),
             tunnel: TunnelState.parse(state),
