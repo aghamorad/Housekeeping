@@ -89,8 +89,12 @@ enum ProtectedDataPolicy {
         let homePath = home.standardizedFileURL.path
         let path = url.standardizedFileURL.path
 
-        // Model storage is refused wherever it lives, before anything is read.
-        if ModelStorageGuard.isModelLibrary(url, home: home) {
+        // Model storage is refused wherever it lives. The prefix list is
+        // checked here rather than the content walk: this runs for every
+        // candidate on every shelf, and a tree walk per candidate turns a scan
+        // into a crawl. The scanners do the content check, once, where they
+        // already know how big a candidate is.
+        if ModelStorageGuard.isModelLibrary(url, home: home, deep: false) {
             return .refused("it holds downloaded AI models, which cost hours to fetch again")
         }
 

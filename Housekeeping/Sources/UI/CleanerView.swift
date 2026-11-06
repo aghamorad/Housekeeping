@@ -320,6 +320,12 @@ struct CleanerView: View {
                         .foregroundColor(style.text)
                         .lineLimit(1)
                     Spacer(minLength: 8)
+                    if candidate.rebuild.isDownload {
+                        Label("Re-download", systemImage: "arrow.down.circle")
+                            .font(style.smallFont)
+                            .foregroundColor(style.caution)
+                            .help(candidate.rebuild.explanation ?? "This comes back over the network rather than being rebuilt on this Mac.")
+                    }
                     Text(candidate.size.sizeDescription)
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
@@ -721,7 +727,11 @@ struct CleanerView: View {
             return Text("Select items to review. Nothing moves until you confirm the exact paths.")
         }
         let hidden = model.selectedCandidates.filter { $0.category != model.category || !model.matches($0.name, path: $0.url.path, detail: $0.detail) }.count
-        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription)\(hidden > 0 ? " · \(hidden) outside this view" : "").")
+        let downloads = model.selectedDownloadItems
+        let downloadNote = downloads.isEmpty
+            ? ""
+            : " · \(downloads.count) must be downloaded again (\(downloads.reduce(Int64(0)) { $0 + $1.size }.sizeDescription))"
+        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription)\(hidden > 0 ? " · \(hidden) outside this view" : "")\(downloadNote).")
     }
 
     // MARK: - Confirmation
@@ -740,6 +750,27 @@ struct CleanerView: View {
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if !model.pendingDownloadItems.isEmpty {
+                        let redownload = model.pendingDownloadItems
+                        let bytes = redownload.reduce(Int64(0)) { $0 + $1.size }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("This has to be downloaded again", systemImage: "arrow.down.circle")
+                                .font(style.smallFont)
+                                .foregroundColor(style.caution)
+                            Text("\(redownload.count) of these \(redownload.count == 1 ? "is a download cache" : "are download caches") (\(bytes.sizeDescription)). Removing them frees the space now and takes it back over the network later — \(Set(redownload.compactMap { $0.rebuild.explanation }).sorted().joined(separator: "; ")).")
+                                .font(style.smallFont)
+                                .foregroundColor(style.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("On a throttled or metered connection it can be quicker and cheaper to leave these where they are and clear only what you are not still using.")
+                                .font(style.smallFont)
+                                .foregroundColor(style.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(style.caution.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                    }
 
                     if !model.pendingPaths.isEmpty {
                         Text("Exact paths to move (\(model.pendingPaths.count))").font(style.labelFont)

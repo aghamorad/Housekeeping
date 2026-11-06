@@ -1323,6 +1323,18 @@ struct SafetyTests {
         }
 
         try expect(refusal(groupContainers) != nil, "An app group container is never swept.")
+
+        // A download cache is not free to remove; the reader is told which ones
+        // cost bandwidth before anything moves.
+        func cost(_ relative: String) -> RebuildCost {
+            CleanerScanner.rebuildCost(for: home.appendingPathComponent(relative), home: home)
+        }
+        try expect(cost(".npm/_cacache").isDownload, "npm's cache has to come back over the network.")
+        try expect(cost(".gradle/caches").isDownload, "Gradle's cache has to come back over the network.")
+        try expect(cost(".cache/uv").isDownload, "uv's cache has to come back over the network.")
+        try expect(cost(".cache/codex-runtimes").isDownload, "Codex's runtime is downloaded again.")
+        try expect(!cost("Library/Caches/com.example.app").isDownload, "An ordinary app cache is rebuilt on this Mac.")
+        try expect(!cost("Library/Developer/Xcode/DerivedData").isDownload, "DerivedData is built again locally.")
         try expect(refusal(home.appendingPathComponent("Library/Containers/com.example.app")) != nil, "A sandboxed container is never swept.")
         try expect(refusal(home.appendingPathComponent("Library/Application Support/SomeApp")) != nil, "Application Support is never swept.")
         try expect(refusal(home.appendingPathComponent("Documents/Chapter One")) != nil, "Documents are never swept.")

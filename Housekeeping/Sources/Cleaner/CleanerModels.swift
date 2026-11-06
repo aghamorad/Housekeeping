@@ -86,6 +86,29 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
 
 /// One thing the cleaner can move. Values only, so the whole scan can cross
 /// back from the background thread it ran on.
+/// What it costs to get something back after it is moved.
+///
+/// "Safe to delete" and "free to delete" are different promises. A cache the app
+/// rebuilds from local data is both. A download cache is only the first: it comes
+/// back over the network, which on a throttled line can be hours or nothing at
+/// all. The reader is told which is which before anything moves.
+enum RebuildCost: Equatable, Sendable {
+    /// Made again from what is already on this Mac.
+    case instant
+    /// Has to be fetched again. The string says by whom and when.
+    case reDownload(String)
+
+    var isDownload: Bool {
+        if case .reDownload = self { return true }
+        return false
+    }
+
+    var explanation: String? {
+        if case .reDownload(let why) = self { return why }
+        return nil
+    }
+}
+
 struct CleanCandidate: Identifiable, Equatable, Sendable {
     /// The path is the identity: two scans of the same disk name the same things.
     var id: String { url.path }
@@ -98,6 +121,8 @@ struct CleanCandidate: Identifiable, Equatable, Sendable {
     let name: String
     /// One sentence saying why this is safe, or what to check first.
     let detail: String
+    /// Whether removing this costs bandwidth to undo.
+    var rebuild: RebuildCost = .instant
     var isSelected: Bool = false
 }
 

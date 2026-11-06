@@ -194,6 +194,17 @@ final class CleanerModel: ObservableObject {
         candidates.filter { $0.category == category && $0.isSelected }
     }
 
+    /// The part of the current selection that would have to come back over the
+    /// network. Kept separate so the confirmation sheet can say so before
+    /// anything moves, which is the only moment the warning is any use.
+    var selectedDownloadItems: [CleanCandidate] { selectedCandidates.filter { $0.rebuild.isDownload } }
+
+    /// The same, for the exact paths on the confirmation sheet.
+    var pendingDownloadItems: [CleanCandidate] {
+        let moved = Set(pendingPaths)
+        return candidates.filter { moved.contains($0.id) && $0.rebuild.isDownload }
+    }
+
     var selectedCandidates: [CleanCandidate] { candidates.filter(\.isSelected) }
     var selectedApps: [InstalledApp] { apps.filter(\.isSelected) }
     var selectedSize: Int64 { selectedCandidates.reduce(0) { $0 + $1.size } }
