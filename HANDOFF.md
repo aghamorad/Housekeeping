@@ -25,15 +25,16 @@ Verified: typecheck clean; `script/test_safety.sh` — 299 assertions pass
 recorded size). Release built and installed to /Applications/Housekeeping.app,
 relaunched.
 
-Recovery state: 207 items restored by hand (HF cache, Draw Things,
-ChronoSync.app, app support), 73 more by the app CLI. 167 items remain held in
-batch EF09EFD2 — all inside ~/Library/Group Containers, which macOS TCC refuses
-to any process without Full Disk Access, including Finder and the app's own CLI
-launched from a shell (TCC attributes it to the terminal). Only the GUI can
-finish: Quarantine → Past Cleanups → the 372-item batch → "Put All of It Back".
+Recovery state: complete. 207 items restored by hand, the rest through the app:
+`open -n -a /Applications/Housekeeping.app --args quarantine restore --yes`
+works where a shell cannot, because macOS attributes the Full Disk Access
+grant to the app when LaunchServices starts it, and to the terminal when a
+shell does. Verified live — Voice Memos (140 recordings), Notes, Contacts,
+Office, HF cache (24 GB), Draw Things (7.3 GB), ChronoSync.app. 59 cache
+folders remain held, which is correct.
 
-Next: confirm that button was pressed and Voice Memos/Notes are live again, then
-verify a fresh Clean Up scan no longer lists any model folder.
+Next: verify a fresh Clean Up scan no longer lists any model folder, and that
+the note 'Left alone: N AI model libraries' appears.
 
 # Housekeeping — handoff
 
