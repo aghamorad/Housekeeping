@@ -376,8 +376,23 @@ struct CleanerView: View {
         VStack(spacing: 10) {
             ThemePanel(padding: 10) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Uninstall Apps")
-                        .font(style.labelFont)
+                    HStack {
+                        Text("Uninstall Apps")
+                            .font(style.labelFont)
+                        Spacer()
+                        let allApps = model.allAppsSelected
+                        HStack(spacing: 6) {
+                            ThemeCheckbox(
+                                isChecked: allApps,
+                                isMixed: model.anyAppsSelected && !allApps,
+                                help: "Ticks or unticks every application shown. Nothing is moved until you confirm the exact paths."
+                            ) { model.setAllApps(selected: !allApps) }
+                            Text(allApps ? "Untick all apps" : "Tick all apps")
+                                .font(style.smallFont)
+                                .foregroundColor(style.secondaryText)
+                                .onTapGesture { model.setAllApps(selected: !allApps) }
+                        }
+                    }
                     Text(CleanCategory.uninstall.explanation)
                         .font(style.smallFont)
                         .foregroundColor(style.secondaryText)
@@ -407,6 +422,10 @@ struct CleanerView: View {
     private func appRow(_ app: InstalledApp) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
+                ThemeCheckbox(
+                    isChecked: app.isSelected,
+                    help: "Ticks this application for removal. Nothing moves until you press the button at the bottom and confirm the exact paths."
+                ) { model.toggleApp(app) }
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
                     .resizable().frame(width: 28, height: 28)
                 VStack(alignment: .leading, spacing: 3) {
@@ -653,13 +672,32 @@ struct CleanerView: View {
                     appState.screen = .quarantine
                 }
                 if model.category != .uninstall && model.category != .trash {
+                    if model.selectedCandidates.isEmpty && model.phase == .ready {
+                        ThemeButton(title: "Tick everything", systemImage: "checkmark.circle",
+                                    help: "Ticks every item on every shelf, not just this one. Nothing moves until you confirm the exact paths — and a shelf can never contain an app container, a model library, or anything holding your own files.") {
+                            model.selectEverything()
+                        }
+                    }
                     ThemeButton(title: cleanButtonTitle, systemImage: "checklist", isPrimary: true,
                                 isEnabled: !model.selectedCandidates.isEmpty && model.phase == .ready,
                                 help: "Review the selected paths before anything moves.") { model.requestClean() }
                 }
+                if model.category == .uninstall && model.anyAppsSelected {
+                    ThemeButton(title: bulkUninstallTitle, systemImage: "trash.fill", isPrimary: true,
+                                isEnabled: model.phase == .ready,
+                                help: "Review the exact paths before any application moves.") {
+                        model.requestUninstallSelected()
+                    }
+                }
             }
         }
         .padding(.top, 4)
+    }
+
+    private var bulkUninstallTitle: String {
+        let count = model.selectedApps.count
+        guard count > 0 else { return "Uninstall selected…" }
+        return "Uninstall \(count) selected…"
     }
 
     private var cleanButtonTitle: String {

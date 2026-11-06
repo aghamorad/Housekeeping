@@ -406,7 +406,11 @@ final class CleanupEngine {
         /// shelf the move was made from. A single sweep can carry a log, a build
         /// folder and a stale installer at once, and the manifest is the only
         /// record left once the screen is closed.
-        categories: [String: String] = [:]
+        categories: [String: String] = [:],
+        /// Who is asking. A sweep is answered with one button, so it may not
+        /// carry anything a person would have to make again; an explicit
+        /// removal names one app and its chosen leftovers, and may.
+        intent: CleanupIntent = .sweep
     ) async throws -> RepairMoveResult {
         let recordID = UUID()
         let date = Date()
@@ -425,7 +429,7 @@ final class CleanupEngine {
 
         for path in paths {
             let standard = URL(fileURLWithPath: path).standardizedFileURL.path
-            if let refusal = refusalToMove(standard, home: home, quarantine: quarantine) {
+            if let refusal = refusalToMove(standard, home: home, quarantine: quarantine, intent: intent) {
                 moves.append(RepairMoveResult.RepairMove(
                     path: standard, quarantinePath: nil, succeeded: false, message: refusal
                 ))
@@ -509,7 +513,12 @@ final class CleanupEngine {
 
     /// Why this path will not be moved, or nil when it may be. The rules are
     /// set out in `quarantineRepairs` above; this is only their wording.
-    private func refusalToMove(_ path: String, home: String, quarantine: String) -> String? {
+    private func refusalToMove(
+        _ path: String,
+        home: String,
+        quarantine: String,
+        intent: CleanupIntent = .sweep
+    ) -> String? {
         // `fileExists` follows links, so it answers "is there something at the
         // far end of this" — false for exactly the dead links this method exists
         // to move. The link itself is checked for on its own.
@@ -519,6 +528,16 @@ final class CleanupEngine {
         }
         guard path != "/", path != home, path != quarantine else {
             return "Housekeeping will not move this folder."
+        }
+        // The last gate. Every caller comes through here, including ones
+        // written after this line, so a shelf that offers the wrong thing
+        // still cannot move it.
+        if case .refused(let why) = ProtectedDataPolicy.verdict(
+            for: URL(fileURLWithPath: path),
+            home: URL(fileURLWithPath: home),
+            intent: intent
+        ) {
+            return "Housekeeping will not move this: \(why)."
         }
         for protected in [home, quarantine] where protected.hasPrefix(path + "/") {
             let what = protected == quarantine ? "the Quarantine folder" : "your home folder"
