@@ -6,7 +6,11 @@ struct QuarantineView: View {
     @Environment(\.uiStyle) private var style
     @State private var entries: [QuarantineEntry] = []
     @State private var transactions: [CleanupTransaction] = []
-    @State private var pendingPermanentDeletion: QuarantineEntry?
+    @State private var pendingPermanentDeletion: [QuarantineEntry] = []
+    @State private var selectedIDs: Set<UUID> = []
+    @State private var search = ""
+    @State private var isWorking = false
+    @State private var operationSummary: String?
     /// Which half of the same question the sheet is answering: where is my stuff
     /// now, or what has Housekeeping already done to this Mac.
     @State private var showingHistory = false
@@ -51,6 +55,14 @@ struct QuarantineView: View {
             }
 
             switcher
+            if !showingHistory && !entries.isEmpty { selectionBar }
+            if isWorking {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("Working on your selection… macOS may ask for permission.").font(style.bodyFont)
+                }
+            }
+            if let operationSummary { Text(operationSummary).font(style.bodyFont) }
 
             if showingHistory {
                 historyList
@@ -67,18 +79,28 @@ struct QuarantineView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(entries) { entry in
-                            quarantineRow(entry)
+                        ForEach(visibleBatches) { batch in
+                            HStack {
+                                Text(batch.entries.first?.appName ?? "Cleanup batch").font(style.labelFont).lineLimit(2)
+                                Spacer()
+                                ThemeButton(title: search.isEmpty ? "Select Batch" : "Select Shown", systemImage: "checkmark.circle") {
+                                    selectedIDs.formUnion(batch.entries.map(\.id))
+                                }
+                            }.padding(.top, 8)
+                            ForEach(batch.entries) { entry in quarantineRow(entry) }
+                        }
+                        if visibleEntries.isEmpty {
+                            Text("No items match your search.").font(style.bodyFont).padding()
                         }
                     }
                 }
             }
 
             if let error = appState.lastErrorMessage {
-                Text(error)
-                    .font(style.smallFont)
-                    .foregroundColor(style.negative)
-                    .textSelection(.enabled)
+                ScrollView {
+                    Text(error).font(style.smallFont).foregroundColor(style.negative).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(maxHeight: 80)
             }
 
             HStack {
@@ -90,24 +112,22 @@ struct QuarantineView: View {
             }
         }
         .padding(16)
-        .frame(minWidth: 760, maxWidth: 760, minHeight: 540)
+        .frame(width: 840, height: 700)
         .preferredColorScheme(style.isRetro ? .light : nil)
+        .disabled(isWorking)
+        .interactiveDismissDisabled(isWorking)
         .onAppear { reload() }
-        .alert("Delete permanently?", isPresented: Binding(
-            get: { pendingPermanentDeletion != nil },
-            set: { if !$0 { pendingPermanentDeletion = nil } }
-        )) {
+        .alert("Delete \(pendingPermanentDeletion.count) item\(pendingPermanentDeletion.count == 1 ? "" : "s") permanently?", isPresented: Binding(
+            get: { !pendingPermanentDeletion.isEmpty },
+            set: { if !$0 { pendingPermanentDeletion = [] } }
+        ), presenting: pendingPermanentDeletion) { targets in
             Button("Delete Permanently", role: .destructive) {
-                guard let entry = pendingPermanentDeletion else { return }
-                appState.permanentlyDeleteQuarantineEntries([entry])
-                pendingPermanentDeletion = nil
-                reload()
+                pendingPermanentDeletion = []
+                perform(targets, deleting: true)
             }
-            Button("Cancel", role: .cancel) { pendingPermanentDeletion = nil }
-        } message: {
-            if let entry = pendingPermanentDeletion {
-                Text("Until now this was reversible. This is the one action that is not.\n\nIt deletes \(entry.size.humanReadable), originally from:\n\(entry.originalPath)\n\nAfter this there is no copy left for Housekeeping to put back.")
-            }
+            Button("Cancel", role: .cancel) { pendingPermanentDeletion = [] }
+        } message: { targets in
+            Text("This deletes \(targets.reduce(Int64(0)) { $0 + $1.size }.humanReadable) from Quarantine. It cannot be undone.\n\n" + targets.prefix(5).map(\.originalPath).joined(separator: "\n") + (targets.count > 5 ? "\n…and \(targets.count - 5) more items." : ""))
         }
     }
 
@@ -422,9 +442,12 @@ struct QuarantineView: View {
     }
 
     private func putBack(_ transaction: CleanupTransaction) {
+        guard !isWorking else { return }
+        isWorking = true
         Task {
             await appState.restoreTransaction(transaction)
             reload()
+            isWorking = false
         }
     }
 
@@ -466,6 +489,12 @@ struct QuarantineView: View {
         ThemePanel(padding: 10) {
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline) {
+                    Toggle("Select \(entry.originalPath)", isOn: Binding(
+                        get: { selectedIDs.contains(entry.id) },
+                        set: { selected in
+                            if selected { selectedIDs.insert(entry.id) } else { selectedIDs.remove(entry.id) }
+                        }
+                    )).labelsHidden().toggleStyle(.checkbox).frame(minWidth: 44, minHeight: 44)
                     Text(entry.originalPath)
                         .font(style.labelFont)
                         .textSelection(.enabled)
@@ -503,15 +532,14 @@ struct QuarantineView: View {
                         isPrimary: true,
                         help: "Moves this item back to \(entry.originalPath), where it came from."
                     ) {
-                        appState.restoreQuarantineEntry(entry)
-                        reload()
+                        perform([entry], deleting: false)
                     }
                     Spacer()
                     ThemeButton(
                         title: "Delete Permanently",
                         systemImage: "trash",
                         help: "The only action here that cannot be undone."
-                    ) { pendingPermanentDeletion = entry }
+                    ) { pendingPermanentDeletion = [entry] }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -521,5 +549,69 @@ struct QuarantineView: View {
     private func reload() {
         entries = appState.quarantineEntries()
         transactions = appState.transactionHistory()
+        selectedIDs.formIntersection(Set(entries.map(\.id)))
+    }
+
+    private struct Batch: Identifiable {
+        let id: URL
+        let entries: [QuarantineEntry]
+    }
+
+    private var visibleEntries: [QuarantineEntry] {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return entries.filter { query.isEmpty || [$0.originalPath, $0.appName ?? "", $0.category].contains { $0.localizedCaseInsensitiveContains(query) } }
+    }
+
+    private var visibleBatches: [Batch] {
+        let grouped = Dictionary(grouping: visibleEntries, by: \.manifestURL)
+        return grouped.map { Batch(id: $0.key, entries: $0.value) }.sorted {
+            let lhs = $0.entries.first?.date ?? .distantPast
+            let rhs = $1.entries.first?.date ?? .distantPast
+            return lhs == rhs ? $0.id.path < $1.id.path : lhs > rhs
+        }
+    }
+
+    private var selectedEntries: [QuarantineEntry] { entries.filter { selectedIDs.contains($0.id) } }
+
+    private var selectionBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("Search by app, original path, or category…", text: $search).textFieldStyle(.roundedBorder)
+            HStack {
+                ThemeButton(title: "Select All Shown", systemImage: "checkmark.circle", isEnabled: !visibleEntries.isEmpty) {
+                    selectedIDs.formUnion(visibleEntries.map(\.id))
+                }
+                ThemeButton(title: "Clear Selection", isEnabled: !selectedIDs.isEmpty) { selectedIDs = [] }
+                Spacer()
+                Text("\(selectedEntries.count) selected · \(selectedEntries.reduce(Int64(0)) { $0 + $1.size }.humanReadable)")
+                    .font(style.smallFont)
+            }
+            HStack {
+                ThemeButton(title: "Put Selected Back", systemImage: "arrow.uturn.backward", isEnabled: !selectedEntries.isEmpty) {
+                    perform(selectedEntries, deleting: false)
+                }
+                ThemeButton(title: "Delete Selected…", systemImage: "trash", isEnabled: !selectedEntries.isEmpty) {
+                    pendingPermanentDeletion = selectedEntries
+                }
+                Spacer()
+                ThemeButton(title: "Empty Quarantine…", systemImage: "trash.fill") { pendingPermanentDeletion = entries }
+            }
+            Text("Selections include items hidden by your search. Empty Quarantine includes everything waiting here.")
+                .font(style.smallFont).foregroundColor(style.secondaryText)
+        }
+    }
+
+    private func perform(_ targets: [QuarantineEntry], deleting: Bool) {
+        guard !isWorking, !targets.isEmpty else { return }
+        isWorking = true
+        operationSummary = nil
+        Task {
+            let completed: Int
+            if deleting { completed = await appState.permanentlyDeleteQuarantineEntries(targets) }
+            else { completed = await appState.restoreQuarantineEntries(targets) }
+            operationSummary = "\(completed) of \(targets.count) items \(deleting ? "deleted permanently" : "put back")." +
+                (completed < targets.count ? " The remaining items are still in Quarantine; review the details below." : "")
+            reload()
+            isWorking = false
+        }
     }
 }

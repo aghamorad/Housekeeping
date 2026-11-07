@@ -157,6 +157,7 @@
 		F1000013 /* FanControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000013; };
 		F1000014 /* SpaceLensView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000014; };
 		F1000015 /* UninstallerModernView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000015; };
+		F10000A1 /* UninstallActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000A1; };
 		F1000016 /* VPNTunnelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000016; };
 		F1100000 /* BackgroundActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2100000; };
 		F1100001 /* BackgroundActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2100001; };
@@ -318,6 +319,7 @@
 		F2000013 /* FanControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/FanControlView.swift; sourceTree = "<group>"; };
 		F2000014 /* SpaceLensView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/SpaceLensView.swift; sourceTree = "<group>"; };
 		F2000015 /* UninstallerModernView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/UninstallerModernView.swift; sourceTree = "<group>"; };
+		F20000A1 /* UninstallActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/UninstallActivityView.swift; sourceTree = "<group>"; };
 		F2000016 /* VPNTunnelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/UI/VPNTunnelsView.swift; sourceTree = "<group>"; };
 		F2100000 /* BackgroundActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/Network/BackgroundActivity.swift"; sourceTree = "<group>"; };
 		F2100001 /* BackgroundActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/UI/BackgroundActivityView.swift"; sourceTree = "<group>"; };
@@ -350,6 +352,7 @@
 			children = (
 				F2000016,
 				F2000015,
+				F20000A1,
 				F2000014,
 				F2000013,
 				F2000012,
@@ -565,6 +568,7 @@
 			files = (
 				F1000016,
 				F1000015,
+				F10000A1,
 				F1000014,
 				F1000013,
 				F1000012,

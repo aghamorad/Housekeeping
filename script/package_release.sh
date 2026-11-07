@@ -62,7 +62,10 @@ SOURCES=(
 
 WORK_ROOT="$(mktemp -d /private/tmp/housekeeping-package.XXXXXX)"
 cleanup() {
-  rm -rf "$WORK_ROOT"
+  # Preserve generated work for recovery rather than recursively deleting it.
+  if [[ -d "$WORK_ROOT" ]]; then
+    mv "$WORK_ROOT" "$HOME/.Trash/$(basename "$WORK_ROOT")"
+  fi
 }
 trap cleanup EXIT
 
@@ -99,7 +102,7 @@ compile() {
     -warnings-as-errors \
     -sdk "$SDK" \
     -target "$arch-apple-macosx$MIN_MACOS" \
-    -module-cache-path "$ROOT_DIR/.build/package/ModuleCache" \
+    -module-cache-path "$WORK_ROOT/ModuleCache" \
     -o "$output" \
     "${SOURCES[@]}"
 }
@@ -108,7 +111,7 @@ stage() {
   local binary="$1"
   local runtime="$2"
   local app="$3"
-  rm -rf "$app"
+  [[ ! -e "$app" ]] || { echo "Safety stop: staging bundle already exists: $app" >&2; exit 1; }
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/Rules"
   cp "$binary" "$app/Contents/MacOS/$APP_NAME"
   cp "$ROOT_DIR/Housekeeping/Info.plist" "$app/Contents/Info.plist"
@@ -119,11 +122,19 @@ stage() {
   # that rewrote it would leave every source folder permanently dirty — which is
   # precisely the condition the self-update refuses to run in.
   local plist="$app/Contents/Info.plist"
-  local commit branch built
+  local commit branch built base_commit source_digest
   commit="$(/usr/bin/git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || true)"
+  base_commit="$commit"
+  # A local edit is not the recorded commit. Preserve the base and fingerprint
+  # the actual inputs, while leaving SourceCommit absent so the updater cannot
+  # claim that this modified app is identical to the published revision.
+  if [[ -n "$(/usr/bin/git -C "$ROOT_DIR" status --porcelain -- Housekeeping script/package_release.sh)" ]]; then
+    commit=""
+  fi
+  source_digest="$(shasum -a 256 "${SOURCES[@]}" "$ROOT_DIR/Housekeeping/Info.plist" | shasum -a 256 | awk '{print $1}')"
   branch="$(/usr/bin/git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   built="$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
-  for pair in "HousekeepingSourceCommit:$commit" "HousekeepingSourceBranch:$branch" "HousekeepingBuildDate:$built"; do
+  for pair in "HousekeepingSourceCommit:$commit" "HousekeepingSourceBaseCommit:$base_commit" "HousekeepingSourceDigest:$source_digest" "HousekeepingSourceBranch:$branch" "HousekeepingBuildDate:$built"; do
     key="${pair%%:*}"
     value="${pair#*:}"
     [[ -n "$value" ]] || continue

@@ -14,6 +14,20 @@ struct CleanerView: View {
     @State private var showScanDetails = false
 
     var body: some View {
+        Group {
+            if let session = model.uninstallSession {
+                UninstallActivityView(session: session, done: model.dismissUninstallSession) {
+                    appState.refreshQuarantineAvailability()
+                    appState.showQuarantineManagement = true
+                }
+            } else {
+                cleanerBrowser
+            }
+        }
+        .onAppear { model.scanIfNeeded() }
+    }
+
+    private var cleanerBrowser: some View {
         ZStack {
             VStack(spacing: 12) {
                 header
@@ -468,7 +482,7 @@ struct CleanerView: View {
                         .font(style.smallFont).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(.plain)
                 if expandedApps.contains(app.id) {
-                    Text("These belong to an installed app. Some can hold personal or shared data. Only checked items join the uninstall.")
+                    Text("Related files are included with the app. They can hold settings and personal data. Uncheck anything you want to keep; shared matches are excluded from the scan.")
                         .font(style.smallFont).foregroundColor(style.caution)
                     ForEach(app.leftovers) { related in
                         HStack(alignment: .top, spacing: 8) {

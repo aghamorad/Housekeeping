@@ -1,6 +1,7 @@
 // Housekeeping — Clean Up: the things the cleaner offers, and how they are grouped
 
 import Foundation
+import AppKit
 
 /// The six shelves the cleaner puts its findings on. Every one of them is a
 /// thing a person can recognise without knowing where macOS keeps it: junk the
@@ -75,7 +76,7 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
         case .largeFiles:
             return "These are simply the biggest files on your Mac. Size says nothing about importance, so nothing here is ticked for you — open one before deciding. Everything moved can be put back from Quarantine."
         case .uninstall:
-            return "Inspect an app and expand its related files. These may include settings, documents, accounts, or shared vendor data. Choose any related files you want to include, then review the exact paths before uninstalling. Quarantine can restore moved items."
+            return "Inspect an app and expand its related files. These may include settings, documents, accounts, or shared vendor data. Matched related files are included with the app. Uncheck anything you want to keep, then review the exact paths before uninstalling. Quarantine can restore moved items."
         case .trash:
             return "The Trash is the one place in Housekeeping where something can be lost for good. Emptying it permanently deletes what is in it, and there is no Quarantine copy afterwards."
         }
@@ -267,5 +268,75 @@ enum FileOrder: String, CaseIterable, Identifiable {
         }
         let comparison = lhs.localizedStandardCompare(rhs)
         return comparison == .orderedSame ? leftPath < rightPath : comparison == .orderedAscending
+    }
+}
+
+/// Retains the reviewed plan and icons even after their bundles leave Applications.
+/// The activity screen survives navigation, and only engine events advance its rows.
+struct UninstallSession {
+    let apps: [InstalledApp]
+    let icons: [String: NSImage]
+    var event = UninstallProgress(phase: .checking)
+    var outcomes: [String: Bool] = [:]
+    var messages: [String: String] = [:]
+    var isFinished = false
+    var interruption: String?
+
+    init(apps: [InstalledApp]) {
+        self.apps = apps
+        icons = Dictionary(uniqueKeysWithValues: apps.map {
+            ($0.id, NSWorkspace.shared.icon(forFile: $0.id))
+        })
+    }
+
+    var total: Int { event.total > 0 ? event.total : apps.reduce(0) { $0 + 1 + $1.leftovers.count } }
+    var removedCount: Int { outcomes.values.filter { $0 }.count }
+    var failedCount: Int { outcomes.values.filter { !$0 }.count }
+    var removedApps: Int { apps.filter { outcomes[$0.id] == true }.count }
+    var removedRelated: Int { removedCount - removedApps }
+    var movedSize: Int64 {
+        apps.reduce(0) { total, app in
+            total + (outcomes[app.id] == true ? app.size : 0)
+                + app.leftovers.filter { outcomes[$0.id] == true }.reduce(0) { $0 + $1.size }
+        }
+    }
+    var needsAttention: Bool { failedCount > 0 || interruption != nil }
+    var activeApp: InstalledApp? {
+        apps.first { app in app.id == event.path || app.leftovers.contains { $0.id == event.path } }
+            ?? apps.first
+    }
+    var headline: String {
+        if isFinished {
+            if interruption != nil { return "Removal stopped" }
+            return needsAttention ? "Some items need attention" : "Uninstall complete"
+        }
+        switch event.phase {
+        case .checking: return "Checking your selection…"
+        case .preparing: return "Preparing a recovery record…"
+        case .permission: return "Waiting for macOS permission"
+        case .moving: return "Uninstalling \(activeApp?.name ?? "apps")…"
+        case .recording, .finished: return "Saving removal results…"
+        }
+    }
+
+    mutating func receive(_ event: UninstallProgress) {
+        self.event = event
+        if let path = event.path, let succeeded = event.succeeded {
+            outcomes[path] = succeeded
+            messages[path] = event.message
+        }
+    }
+
+    mutating func finish(result: RepairMoveResult) {
+        for move in result.moves {
+            outcomes[move.path] = move.succeeded
+            messages[move.path] = move.message
+        }
+        isFinished = true
+    }
+
+    mutating func finish(error: String) {
+        interruption = error
+        isFinished = true
     }
 }

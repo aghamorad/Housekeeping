@@ -92,15 +92,19 @@ final class CleanupEngine {
     private let safetyPolicy: CleanupSafetyPolicy
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private let authorizeFileOperation: (URL, URL?) throws -> Void
+    private var authorizationFailed = false
 
     init(
         homeDirectory: URL = URL(fileURLWithPath: NSHomeDirectory()),
         quarantineRoot: URL? = nil,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        authorizeFileOperation: @escaping (URL, URL?) throws -> Void = { try AppFileAuthorization.run(source: $0, destination: $1) }
     ) {
         self.homeDirectory = homeDirectory
         self.quarantineURL = quarantineRoot ?? CleanupEngine.quarantineURL(homeDirectory: homeDirectory)
         self.fileManager = fileManager
+        self.authorizeFileOperation = authorizeFileOperation
         self.safetyPolicy = CleanupSafetyPolicy(
             homeDirectory: homeDirectory,
             quarantineRoot: self.quarantineURL
@@ -369,6 +373,35 @@ final class CleanupEngine {
         )
     }
 
+    /// Both uninstall screens use this path. Each app moves before its data;
+    /// a blocked or running app never loses its preferences or containers.
+    func uninstall(_ apps: [InstalledApp],
+                   progress: @Sendable (UninstallProgress) async -> Void = { _ in }) async throws -> RepairMoveResult {
+        await progress(.init(phase: .checking))
+        let protection = ProtectionList(homeDirectory: homeDirectory)
+        var paths: [String] = []
+        var prerequisites: [String: String] = [:]
+        var blocked: [String: String] = [:]
+        for app in Uninstaller.unambiguousLeftovers(in: apps) {
+            paths.append(app.id)
+            if !Uninstaller.isRemovableApp(app.url, home: homeDirectory) {
+                blocked[app.id] = "This is not a removable third-party application in an Applications folder."
+            } else if protection.isProtected(app.url) {
+                blocked[app.id] = "This application is on the Leave Alone list."
+            } else if app.isRunning {
+                blocked[app.id] = "\(app.name) is open. Quit it, then try again. Its related files were left in place."
+            }
+            for related in CleanCandidate.nonOverlapping(app.leftovers) where !protection.isProtected(related.url) {
+                guard prerequisites[related.id] == nil else { continue }
+                paths.append(related.id)
+                prerequisites[related.id] = app.id
+            }
+        }
+        return try await quarantineRepairs(paths: paths, category: "App Uninstaller",
+            reason: "Uninstall: " + apps.map(\.name).joined(separator: ", "), intent: .explicitRemoval,
+            prerequisites: prerequisites, blockedPaths: blocked, progress: progress)
+    }
+
     /// Moves paths that a setup repair has decided to take off the disk into the
     /// same quarantine folder, recorded in the same manifest an ordinary cleanup
     /// writes — so the same Manage Quarantine screen lists them and the same
@@ -410,7 +443,10 @@ final class CleanupEngine {
         /// Who is asking. A sweep is answered with one button, so it may not
         /// carry anything a person would have to make again; an explicit
         /// removal names one app and its chosen leftovers, and may.
-        intent: CleanupIntent = .sweep
+        intent: CleanupIntent = .sweep,
+        prerequisites: [String: String] = [:],
+        blockedPaths: [String: String] = [:],
+        progress: @Sendable (UninstallProgress) async -> Void = { _ in }
     ) async throws -> RepairMoveResult {
         let recordID = UUID()
         let date = Date()
@@ -426,13 +462,19 @@ final class CleanupEngine {
         // whatever it fails to reach.
         var accepted: [(path: String, id: UUID, size: Int64, destination: URL)] = []
         var moves: [RepairMoveResult.RepairMove] = []
+        let total = Set(paths.map { URL(fileURLWithPath: $0).standardizedFileURL.path }).count
+        await progress(.init(phase: .preparing, total: total))
 
+        var seen = Set<String>()
         for path in paths {
             let standard = URL(fileURLWithPath: path).standardizedFileURL.path
-            if let refusal = refusalToMove(standard, home: home, quarantine: quarantine, intent: intent) {
+            guard seen.insert(standard).inserted else { continue }
+            if let refusal = blockedPaths[standard] ?? refusalToMove(standard, home: home, quarantine: quarantine, intent: intent) {
                 moves.append(RepairMoveResult.RepairMove(
                     path: standard, quarantinePath: nil, succeeded: false, message: refusal
                 ))
+                await progress(.init(phase: .preparing, path: standard, completed: moves.count,
+                                     total: total, succeeded: false, message: refusal))
                 continue
             }
             let id = UUID()
@@ -443,6 +485,7 @@ final class CleanupEngine {
         }
 
         guard !accepted.isEmpty else {
+            await progress(.init(phase: .finished, completed: moves.count, total: total))
             return RepairMoveResult(
                 transactionID: recordID, date: date, manifestURL: manifestURL, moves: moves
             )
@@ -481,8 +524,13 @@ final class CleanupEngine {
             try Task.checkCancellation()
             let entry = accepted[index]
             let destination = entry.destination
+            await progress(.init(phase: .moving, path: entry.path, completed: moves.count, total: total))
 
             do {
+                if let prerequisite = prerequisites[entry.path],
+                   !moves.contains(where: { $0.path == prerequisite && $0.succeeded }) {
+                    throw CleanupError.restoreError("The application could not be moved, so this related item was left in place. Retry the app after resolving the problem.")
+                }
                 try fileManager.createDirectory(
                     at: destination.deletingLastPathComponent(),
                     withIntermediateDirectories: true
@@ -490,7 +538,13 @@ final class CleanupEngine {
                 guard !itemExists(atPath: destination.path) else {
                     throw CleanupError.restoreError("Quarantine destination already exists: \(destination.path)")
                 }
-                try fileManager.moveItem(at: URL(fileURLWithPath: entry.path), to: destination)
+                if try moveNeedsAuthorization(from: URL(fileURLWithPath: entry.path), to: destination,
+                                               allowAuthorization: intent == .explicitRemoval) {
+                    if !authorizationFailed {
+                        await progress(.init(phase: .permission, path: entry.path, completed: moves.count, total: total))
+                    }
+                    try authorizedMove(from: URL(fileURLWithPath: entry.path), to: destination)
+                }
                 manifest.items[index].state = .moved
                 manifest.items[index].errorMessage = nil
                 moves.append(RepairMoveResult.RepairMove(
@@ -504,11 +558,60 @@ final class CleanupEngine {
                 ))
             }
             try save(manifest, to: manifestURL)
+            let result = moves[moves.count - 1]
+            await progress(.init(phase: .recording, path: entry.path, completed: moves.count, total: total,
+                                 succeeded: result.succeeded, message: result.message))
         }
 
+        await progress(.init(phase: .finished, completed: moves.count, total: total))
         return RepairMoveResult(
             transactionID: recordID, date: date, manifestURL: manifestURL, moves: moves
         )
+    }
+
+    private func moveAppIfNeeded(from source: URL, to destination: URL, allowAuthorization: Bool = true) throws {
+        if try moveNeedsAuthorization(from: source, to: destination, allowAuthorization: allowAuthorization) {
+            try authorizedMove(from: source, to: destination)
+        }
+    }
+
+    /// Attempts the ordinary move first. Only a validated app permission error
+    /// returns true, letting an async caller display the request before it starts.
+    private func moveNeedsAuthorization(from source: URL, to destination: URL, allowAuthorization: Bool) throws -> Bool {
+        do {
+            try fileManager.moveItem(at: source, to: destination)
+            return false
+        } catch {
+            let restoringApp = source.standardizedFileURL.path.hasPrefix(quarantineURL.standardizedFileURL.path + "/")
+                && Uninstaller.isRemovableAppDestination(destination, home: homeDirectory)
+                && Uninstaller.isThirdPartyAppBundle(source)
+            let removingApp = Uninstaller.isRemovableApp(source, home: homeDirectory)
+                && destination.standardizedFileURL.path.hasPrefix(quarantineURL.standardizedFileURL.path + "/")
+            guard allowAuthorization, AppFileAuthorization.isPermissionError(error), restoringApp || removingApp,
+                  itemExists(atPath: source.path), !itemExists(atPath: destination.path) else { throw error }
+            return true
+        }
+    }
+
+    private func authorizedMove(from source: URL, to destination: URL) throws {
+        try authorizeAppOperation(source: source, destination: destination)
+        guard !itemExists(atPath: source.path), itemExists(atPath: destination.path) else {
+            throw CleanupError.restoreError("macOS could not finish moving the app. Reveal it in Finder, then try again.")
+        }
+    }
+
+    private func authorizeAppOperation(source: URL, destination: URL?) throws {
+        guard !authorizationFailed else {
+            throw CleanupError.restoreError("The earlier permission request was not approved. This app was left in place. Retry when you are ready to approve the macOS prompt.")
+        }
+        do {
+            try authorizeFileOperation(source, destination)
+        } catch {
+            // One canceled request must not produce a password dialog for every
+            // remaining app in a batch. Ordinary unprivileged work can continue.
+            authorizationFailed = true
+            throw error
+        }
     }
 
     /// Why this path will not be moved, or nil when it may be. The rules are
@@ -641,7 +744,7 @@ final class CleanupEngine {
                     at: destination.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
-                try fileManager.moveItem(at: source, to: destination)
+                try moveAppIfNeeded(from: source, to: destination)
                 manifest.items[index].state = .restored
                 manifest.items[index].errorMessage = nil
                 restoredItems.append(.success(publicRecord))
@@ -676,7 +779,7 @@ final class CleanupEngine {
             at: destination.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try fileManager.moveItem(at: source, to: destination)
+        try moveAppIfNeeded(from: source, to: destination)
     }
 
     func quarantineEntries() -> [QuarantineEntry] {
@@ -766,10 +869,24 @@ final class CleanupEngine {
             throw CleanupError.restoreError("Restore refused because the original path exists. Nothing was overwritten.")
         }
         try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try fileManager.moveItem(at: source, to: destination)
+        try moveAppIfNeeded(from: source, to: destination)
         manifest.items[index].state = .restored
         manifest.items[index].errorMessage = nil
         try save(manifest, to: manifestURL)
+    }
+
+    func restore(_ entries: [QuarantineEntry]) -> QuarantineRestoreResult {
+        var restored: [QuarantineEntry] = []
+        var failed: [(QuarantineEntry, String)] = []
+        for entry in entries {
+            do {
+                try restore(entry)
+                restored.append(entry)
+            } catch {
+                failed.append((entry, error.localizedDescription))
+            }
+        }
+        return QuarantineRestoreResult(restored: restored, failed: failed)
     }
 
     func permanentlyDelete(_ entries: [QuarantineEntry]) throws -> PermanentDeletionResult {
@@ -793,7 +910,18 @@ final class CleanupEngine {
                       itemExists(atPath: source.path) else {
                     throw CleanupError.restoreError("The quarantined item is missing or outside Housekeeping Quarantine.")
                 }
-                try fileManager.removeItem(at: source)
+                do {
+                    try fileManager.removeItem(at: source)
+                } catch {
+                    guard AppFileAuthorization.isPermissionError(error),
+                          Uninstaller.isRemovableAppDestination(URL(fileURLWithPath: manifest.items[index].originalPath), home: homeDirectory),
+                          Uninstaller.isThirdPartyAppBundle(source),
+                          source.resolvingSymlinksInPath().path.hasPrefix(quarantineURL.resolvingSymlinksInPath().path + "/") else { throw error }
+                    try authorizeAppOperation(source: source, destination: nil)
+                    guard !itemExists(atPath: source.path) else {
+                        throw CleanupError.restoreError("macOS could not finish deleting this app. It is still in Quarantine.")
+                    }
+                }
                 manifest.items[index].state = .purged
                 manifest.items[index].errorMessage = nil
                 try save(manifest, to: manifestURL)

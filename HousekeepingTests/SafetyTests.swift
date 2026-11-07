@@ -1541,6 +1541,7 @@ struct SafetyTests {
         try expect(!HousekeeperConversation.repeats("Caches hold reusable data so applications can avoid downloading the same resources on each launch.", history: exchange), "A substantive new answer must pass the repetition check.")
 
         try cleanerInteractionTests(home: home)
+        try await uninstallAndBulkQuarantineTests(home: home.resolvingSymlinksInPath())
 
         print("Housekeeping safety, scanner, classification, explanation, last-used age, running-application, quarantine, quarantine-migration, cleanup-history, left-alone-list, working-copy-guard, path-display, office-add-in-audit, two-folder-reconcile, cleaner-scope, and trash-scope tests passed: \(assertionCount) assertions")
     }
@@ -1585,11 +1586,16 @@ struct SafetyTests {
         model.clearSelection()
         try expect(model.selectedCandidates.isEmpty, "Clear selection must clear every category.")
         model.requestUninstall(app)
-        try expect(model.pendingPaths == [app.id] && model.pendingSize == app.size, "Related data must be opt-in, never implicitly included in uninstall.")
+        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Uninstall must include matched related data by default and disclose its size.")
         model.cancelPending()
         model.toggleRelated(related)
         model.requestUninstall(app)
-        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Only explicitly chosen related data must join the uninstall plan.")
+        try expect(model.pendingPaths == [app.id] && model.pendingSize == app.size, "Unchecking related data must preserve it when uninstalling the app.")
+        model.cancelPending()
+        model.toggleRelated(related)
+        model.toggleApp(app)
+        model.requestUninstallSelected()
+        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Bulk uninstall review must also include matched related files and their size by default.")
         model.cancelPending()
         model.query = "ORG.HOUSEKEEPING"
         try expect(model.visibleApps.count == 1, "App search must include bundle identifiers.")
@@ -1605,6 +1611,201 @@ struct SafetyTests {
             .init(url: unrelated, name: "unrelated-com.vendor.example-copy", base: "Caches")
         ])
         try expect(index.leftovers(for: "Example", identifier: "com.vendor.example").map(\.id) == [legitimate.path], "An embedded bundle-ID substring is insufficient ownership evidence.")
+    }
+
+    private static func uninstallAndBulkQuarantineTests(home: URL) async throws {
+        let fm = FileManager.default
+        let fixtureHome = home.appendingPathComponent("UninstallFixture")
+        try fm.createDirectory(at: fixtureHome, withIntermediateDirectories: true)
+        func makeApp(_ name: String, identifier: String) throws -> InstalledApp {
+            let url = fixtureHome.appendingPathComponent("Applications/" + name + ".app")
+            try fm.createDirectory(at: url.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+            let plist: [String: String] = ["CFBundleIdentifier": identifier, "CFBundleName": name, "CFBundlePackageType": "APPL"]
+            try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                .write(to: url.appendingPathComponent("Contents/Info.plist"))
+            let relatedURL = fixtureHome.appendingPathComponent("Library/Preferences/" + identifier + ".plist")
+            try fm.createDirectory(at: relatedURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data("personal settings".utf8).write(to: relatedURL)
+            let related = CleanCandidate(url: relatedURL, size: 17, modified: nil, category: .uninstall,
+                name: relatedURL.lastPathComponent, detail: "Bundle identifier match")
+            return InstalledApp(url: url, name: name, bundleIdentifier: identifier, version: "1", size: 100, leftovers: [related])
+        }
+        let engine = CleanupEngine(homeDirectory: fixtureHome, authorizeFileOperation: { _, _ in
+            throw TestFailure.assertion("Ordinary fixture operations must not request administrator privileges.")
+        })
+        let app = try makeApp("Fixture", identifier: "org.housekeeping.fixture")
+        try expect(Uninstaller.isRemovableApp(app.url, home: fixtureHome), "An ordinary third-party bundle in Applications must pass uninstall preflight.")
+        let removalProgress = UninstallProgressRecorder()
+        let removal = try await engine.uninstall([app]) { event in
+            // A callback may suspend for UI work. The engine must await it so
+            // that the permission/current-item screen precedes the operation.
+            await Task.yield()
+            let durable: Bool? = event.succeeded == true ? engine.quarantineEntries().contains {
+                $0.originalPath == event.path && FileManager.default.fileExists(atPath: $0.quarantinePath)
+            } : nil
+            removalProgress.append(event, durable: durable)
+        }
+        let events = removalProgress.events
+        try expect(events.first?.phase == .checking && events.last?.phase == .finished,
+                   "Uninstall progress must begin with preflight and finish after all outcomes.")
+        try expect(events.filter { $0.phase == .moving }.map(\.path) == [app.id, app.leftovers[0].id],
+                   "The activity screen must report the app before its included related data.")
+        try expect(events.map(\.completed) == events.map(\.completed).sorted() && events.last?.completed == 2,
+                   "Real progress must be monotonic and count every reviewed item exactly once.")
+        try expect(events.filter { $0.succeeded != nil }.allSatisfy { $0.phase == .recording && $0.succeeded == true },
+                   "A successful UI row must be emitted only after its outcome is saved.")
+        try expect(removalProgress.durabilityChecks == [true, true],
+                   "Every successful progress callback must already have a readable recovery entry and a real quarantined file.")
+        var presentation = UninstallSession(apps: [app])
+        for event in events { presentation.receive(event) }
+        try expect(!presentation.isFinished && presentation.removedApps == 1 && presentation.removedRelated == 1,
+                   "File completion must update real app/data counts without prematurely closing the session.")
+        presentation.finish(result: removal)
+        try expect(presentation.isFinished && !presentation.needsAttention && presentation.movedSize == 117,
+                   "The final report must total only successfully moved reviewed items.")
+        try expect(Set(removal.movedPaths) == Set([app.id, app.leftovers[0].id]), "The app and its related settings must move together through explicit removal, without sweep refusals.")
+        let entries = engine.quarantineEntries()
+        try expect(entries.count == 2 && Set(entries.map(\.manifestURL)).count == 1, "App and related files must share one restorable transaction.")
+        try Data("new settings".utf8).write(to: app.leftovers[0].url)
+        let partial = engine.restore(entries)
+        try expect(partial.restored.count == 1 && partial.failed.count == 1, "Bulk restore must continue after a collision and report partial success.")
+        let currentSettings = try String(contentsOf: app.leftovers[0].url)
+        try expect(currentSettings == "new settings", "Bulk restore must never overwrite newly created settings.")
+        try expect(engine.quarantineEntries().count == 1, "Only the failed restoration should remain waiting.")
+        let purge = try engine.permanentlyDelete(engine.quarantineEntries())
+        try expect(purge.deleted.count == 1 && purge.failed.isEmpty, "Bulk deletion must remove only the confirmed remaining item.")
+        try expect(fm.fileExists(atPath: app.url.path) && fm.fileExists(atPath: app.leftovers[0].id), "Deleting quarantined settings must preserve the restored app and its new settings.")
+
+        let absent = try makeApp("Missing", identifier: "org.housekeeping.missing")
+        try fm.moveItem(at: absent.url, to: fixtureHome.appendingPathComponent("Manually removed.app"))
+        let blockedProgress = UninstallProgressRecorder()
+        let blocked = try await engine.uninstall([absent]) { blockedProgress.append($0) }
+        try expect(blockedProgress.events.last?.completed == 2 && blockedProgress.events.filter { $0.succeeded == false }.count == 2,
+                   "A missing app and its withheld data must both finish with visible failure outcomes.")
+        try expect(blocked.succeededCount == 0 && fm.fileExists(atPath: absent.leftovers[0].id), "When an app was removed since scanning, its related files must stay untouched.")
+
+        let protected = try makeApp("Kept", identifier: "org.housekeeping.kept")
+        _ = ProtectionList(homeDirectory: fixtureHome).protect(path: protected.id, kind: "App")
+        let kept = try await engine.uninstall([protected])
+        try expect(kept.succeededCount == 0 && fm.fileExists(atPath: protected.leftovers[0].id), "The shared uninstaller must honor Leave Alone for an app and all its related files.")
+        let apple = try makeApp("System", identifier: "com.apple.fixture")
+        let refusedApple = try await engine.uninstall([apple])
+        try expect(refusedApple.succeededCount == 0 && fm.fileExists(atPath: apple.id), "An Apple app must be refused at the engine, regardless of UI selection.")
+
+        let denied = try makeApp("Denied", identifier: "org.housekeeping.denied")
+        let failingFM = PermissionFailureFileManager()
+        failingFM.deniedSources = [denied.id]
+        var authorizedPaths: [String] = []
+        let permissionProgress = UninstallProgressRecorder()
+        let authorizedEngine = CleanupEngine(homeDirectory: fixtureHome, fileManager: failingFM, authorizeFileOperation: { source, destination in
+            if source.path == denied.id {
+                guard permissionProgress.events.last?.phase == .permission,
+                      permissionProgress.events.last?.path == source.path else {
+                    throw TestFailure.assertion("The permission screen must be updated before authorization starts.")
+                }
+            }
+            authorizedPaths.append(source.path)
+            if let destination { try fm.moveItem(at: source, to: destination) }
+            else { try fm.removeItem(at: source) }
+        })
+        let recovered = try await authorizedEngine.uninstall([denied]) { permissionProgress.append($0) }
+        try expect(permissionProgress.events.filter { $0.phase == .permission }.count == 1,
+                   "Permission recovery must be visible once for the app requiring approval.")
+        try expect(recovered.succeededCount == 2 && authorizedPaths == [denied.id], "A permission failure must retry only the named app through macOS authorization, then move its related files.")
+        let recoveredEntries = authorizedEngine.quarantineEntries().filter { $0.originalPath == denied.id || $0.originalPath == denied.leftovers[0].id }
+        let quarantinedApp = recoveredEntries.first { $0.originalPath == denied.id }!
+        failingFM.deniedSources = [quarantinedApp.quarantinePath]
+        let restored = authorizedEngine.restore(recoveredEntries)
+        try expect(restored.restored.count == 2 && restored.failed.isEmpty, "A permission-protected app must also be restorable with authorization.")
+        try expect(authorizedPaths.last == quarantinedApp.quarantinePath, "Restore authorization must operate on the exact recorded quarantined app.")
+
+        let canceled = try makeApp("Canceled", identifier: "org.housekeeping.canceled")
+        failingFM.deniedSources = [canceled.id]
+        let canceledSecond = try makeApp("CanceledSecond", identifier: "org.housekeeping.canceledsecond")
+        failingFM.deniedSources.insert(canceledSecond.id)
+        var canceledRequests = 0
+        let canceledEngine = CleanupEngine(homeDirectory: fixtureHome, fileManager: failingFM, authorizeFileOperation: { _, _ in
+            canceledRequests += 1
+            throw CleanupError.restoreError("Permission request canceled.")
+        })
+        let cancellation = try await canceledEngine.uninstall([canceled, canceledSecond])
+        try expect(cancellation.succeededCount == 0 && fm.fileExists(atPath: canceled.id) && fm.fileExists(atPath: canceled.leftovers[0].id), "Canceled authorization must leave both the app and its personal data in place.")
+        try expect(canceledRequests == 1 && fm.fileExists(atPath: canceledSecond.id) && fm.fileExists(atPath: canceledSecond.leftovers[0].id), "Canceling authorization once must not cause another prompt for every remaining app in the batch.")
+
+        failingFM.deniedSources = [denied.id]
+        _ = try await authorizedEngine.uninstall([denied]) { permissionProgress.append($0) }
+        let purgeEntries = authorizedEngine.quarantineEntries().filter { $0.originalPath == denied.id || $0.originalPath == denied.leftovers[0].id }
+        let purgeApp = purgeEntries.first { $0.originalPath == denied.id }!
+        failingFM.deniedRemovals = [purgeApp.quarantinePath]
+        let authorizedPurge = try authorizedEngine.permanentlyDelete(purgeEntries)
+        try expect(authorizedPurge.deleted.count == 2 && authorizedPaths.last == purgeApp.quarantinePath, "Permanent deletion must recover from a root-owned app's permission failure using only its exact quarantine path.")
+
+        let noBroadAuth = try makeApp("NoBroadAuth", identifier: "org.housekeeping.nobroadauth")
+        failingFM.deniedSources = [noBroadAuth.leftovers[0].id]
+        var broadRequests = 0
+        let narrowEngine = CleanupEngine(homeDirectory: fixtureHome, fileManager: failingFM, authorizeFileOperation: { _, _ in broadRequests += 1 })
+        let narrowResult = try await narrowEngine.uninstall([noBroadAuth])
+        var partialPresentation = UninstallSession(apps: [noBroadAuth])
+        partialPresentation.finish(result: narrowResult)
+        try expect(partialPresentation.needsAttention && partialPresentation.removedApps == 1
+                   && partialPresentation.removedRelated == 0 && partialPresentation.movedSize == 100,
+                   "A partial failure must not show full success or count files left behind as moved.")
+        partialPresentation.finish(error: "Recovery record could not be saved")
+        try expect(partialPresentation.interruption != nil && partialPresentation.removedApps == 1,
+                   "An interrupted session must retain already recorded successes for recovery.")
+        try expect(narrowResult.succeededCount == 1 && broadRequests == 0 && fm.fileExists(atPath: noBroadAuth.leftovers[0].id), "Related-data permission failures must never turn into broad administrator operations.")
+
+        let vendor = CleanCandidate(url: fixtureHome.appendingPathComponent("Library/Application Support/Vendor"), size: 20, modified: nil, category: .uninstall, name: "Vendor", detail: "Name match")
+        let vendorChild = CleanCandidate(url: vendor.url.appendingPathComponent("OtherApp"), size: 10, modified: nil, category: .uninstall, name: "OtherApp", detail: "Name match")
+        var parentOwner = app
+        parentOwner.leftovers = [vendor]
+        var childOwner = denied
+        childOwner.leftovers = [vendorChild]
+        let nestedOwners = Uninstaller.unambiguousLeftovers(in: [parentOwner, childOwner])
+        try expect(nestedOwners[0].leftovers.isEmpty && nestedOwners[1].leftovers == [vendorChild], "A parent support folder containing another app's related data must be excluded, while the child can still belong to its specific app.")
+        childOwner.leftovers = [vendor]
+        let sharedOwners = Uninstaller.unambiguousLeftovers(in: [parentOwner, childOwner])
+        try expect(sharedOwners.allSatisfy { $0.leftovers.isEmpty }, "Exact shared folder matches must be excluded for both installed apps.")
+
+        try expect(AppFileAuthorization.isPermissionError(NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError)), "Cocoa permission errors must trigger recovery.")
+        try expect(!AppFileAuthorization.isPermissionError(NSError(domain: NSCocoaErrorDomain, code: NSFileNoSuchFileError)), "A missing file must never trigger administrator authorization.")
+
+        // Exercise the exact two-layer AppleScript/shell argument encoding as
+        // the current user; no administrator prompt or real app is involved.
+        let oddSource = fixtureHome.appendingPathComponent("Quotes ' \" $(touch INJECTION)\nsource")
+        let oddDestination = fixtureHome.appendingPathComponent("Quotes ' \" $(touch INJECTION)\ndestination")
+        try Data("literal path".utf8).write(to: oddSource)
+        func runUnprivilegedScript(source: URL, destination: URL?) throws -> Int32 {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.currentDirectoryURL = fixtureHome
+            let script = try AppFileAuthorization.appleScript(source: source, destination: destination)
+                .replacingOccurrences(of: " with administrator privileges", with: "")
+            process.arguments = ["-e", script]
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            try process.run()
+            let deadline = Date().addingTimeInterval(10)
+            while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.02) }
+            if process.isRunning { process.terminate(); throw TestFailure.assertion("The filesystem script timed out.") }
+            return process.terminationStatus
+        }
+        let scriptMove = try runUnprivilegedScript(source: oddSource, destination: oddDestination)
+        try expect(scriptMove == 0 && fm.fileExists(atPath: oddDestination.path) && !fm.fileExists(atPath: oddSource.path), "The real authorization command must preserve quotes, newlines, and shell metacharacters in paths.")
+        try expect(!fm.fileExists(atPath: fixtureHome.appendingPathComponent("INJECTION").path), "A filename must never be executed as shell code.")
+        try Data("keep me".utf8).write(to: oddSource)
+        let collision = try runUnprivilegedScript(source: oddSource, destination: oddDestination)
+        try expect(collision != 0 && fm.fileExists(atPath: oddSource.path), "The real authorization script must refuse an occupied destination.")
+        let scriptDelete = try runUnprivilegedScript(source: oddDestination, destination: nil)
+        try expect(scriptDelete == 0 && !fm.fileExists(atPath: oddDestination.path) && fm.fileExists(atPath: oddSource.path), "The real deletion script must remove only its exact confirmed path.")
+
+        let one = try makeApp("BatchOne", identifier: "org.housekeeping.batchone")
+        let two = try makeApp("BatchTwo", identifier: "org.housekeeping.batchtwo")
+        _ = try await engine.uninstall([one, two])
+        let batchEntries = engine.quarantineEntries().filter { $0.originalPath.contains("batchone") || $0.originalPath.contains("batchtwo") || $0.originalPath == one.id || $0.originalPath == two.id }
+        let bulkPurge = try engine.permanentlyDelete(batchEntries)
+        try expect(bulkPurge.deleted.count == 4 && bulkPurge.failed.isEmpty, "One confirmed batch deletion must delete multiple apps and related files together.")
+        try expect(fm.fileExists(atPath: canceled.id), "Bulk Quarantine deletion must never touch a failed uninstall still in Applications.")
     }
 
     private static func item(
@@ -1690,5 +1891,45 @@ struct SafetyTests {
     private static func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         assertionCount += 1
         guard condition() else { throw TestFailure.assertion(message) }
+    }
+}
+
+private final class PermissionFailureFileManager: FileManager, @unchecked Sendable {
+    var deniedSources: Set<String> = []
+    var deniedRemovals: Set<String> = []
+    override func removeItem(at URL: URL) throws {
+        if deniedRemovals.contains(URL.path) {
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError)
+        }
+        try super.removeItem(at: URL)
+    }
+    override func moveItem(at srcURL: URL, to dstURL: URL) throws {
+        if deniedSources.contains(srcURL.path) {
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError)
+        }
+        try super.moveItem(at: srcURL, to: dstURL)
+    }
+}
+
+/// The async engine and UI may run on different executors.
+private final class UninstallProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [UninstallProgress] = []
+    private var durableStorage: [Bool] = []
+    var durabilityChecks: [Bool] {
+        lock.lock()
+        defer { lock.unlock() }
+        return durableStorage
+    }
+    var events: [UninstallProgress] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+    func append(_ event: UninstallProgress, durable: Bool? = nil) {
+        lock.lock()
+        defer { lock.unlock() }
+        storage.append(event)
+        if let durable { durableStorage.append(durable) }
     }
 }

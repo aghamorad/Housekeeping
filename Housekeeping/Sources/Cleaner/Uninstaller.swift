@@ -35,7 +35,29 @@ struct Uninstaller {
                 apps.append(app)
             }
         }
-        return apps.sorted { $0.totalSize > $1.totalSize }
+        return unambiguousLeftovers(in: apps).sorted { $0.totalSize > $1.totalSize }
+    }
+
+    /// A vendor folder containing another installed app's support directory is
+    /// shared too, even when the two candidates have different exact paths.
+    static func unambiguousLeftovers(in apps: [InstalledApp]) -> [InstalledApp] {
+        var owners: [String: Set<String>] = [:]
+        for app in apps {
+            for item in app.leftovers {
+                var current = item.url.standardizedFileURL
+                while current.path != "/" {
+                    owners[current.path, default: []].insert(app.id)
+                    current.deleteLastPathComponent()
+                }
+            }
+        }
+        return apps.map { app in
+            var copy = app
+            copy.leftovers = CleanCandidate.nonOverlapping(app.leftovers.filter {
+                owners[$0.url.standardizedFileURL.path, default: []].count == 1
+            })
+            return copy
+        }
     }
 
     private func applicationFolders() -> [URL] {
@@ -197,7 +219,87 @@ struct Uninstaller {
     /// True when the application is open. An open app cannot be moved without
     /// macOS putting it back or refusing outright, so the screen says so first.
     static func isRunning(_ app: InstalledApp) -> Bool {
-        guard let identifier = app.bundleIdentifier else { return false }
-        return !NSRunningApplication.runningApplications(withBundleIdentifier: identifier).isEmpty
+        NSWorkspace.shared.runningApplications.contains {
+            $0.bundleURL?.standardizedFileURL == app.url.standardizedFileURL ||
+            (app.bundleIdentifier != nil && $0.bundleIdentifier == app.bundleIdentifier)
+        }
+    }
+
+    static func isRemovableApp(_ url: URL, home: URL) -> Bool {
+        let app = url.standardizedFileURL
+        return isRemovableAppDestination(app, home: home) && isThirdPartyAppBundle(app)
+    }
+
+    static func isRemovableAppDestination(_ url: URL, home: URL) -> Bool {
+        let app = url.standardizedFileURL
+        let folders = ["/Applications", "/Applications/Utilities", home.appendingPathComponent("Applications").path]
+        return app.pathExtension.lowercased() == "app" && folders.contains(app.deletingLastPathComponent().path)
+            && app != Bundle.main.bundleURL.standardizedFileURL
+    }
+
+    static func isThirdPartyAppBundle(_ app: URL) -> Bool {
+        guard app.resolvingSymlinksInPath() == app.standardizedFileURL,
+              let bundle = Bundle(url: app), let identifier = bundle.bundleIdentifier,
+              !identifier.hasPrefix("com.apple."), identifier != Bundle.main.bundleIdentifier else { return false }
+        return true
+    }
+}
+
+/// A short-lived, system-authorized operation on one reviewed app bundle.
+/// Foundation does the move/delete; arguments are encoded, never executable text.
+/// No helper is installed and no ownership or access permissions are rewritten.
+enum AppFileAuthorization {
+    static func isPermissionError(_ error: Error) -> Bool {
+        let error = error as NSError
+        if error.domain == NSCocoaErrorDomain && [NSFileReadNoPermissionError, NSFileWriteNoPermissionError].contains(error.code) { return true }
+        if error.domain == NSPOSIXErrorDomain && [Int(EACCES), Int(EPERM)].contains(error.code) { return true }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? Error { return isPermissionError(underlying) }
+        return false
+    }
+
+    static func javaScript(source: URL, destination: URL?) throws -> String {
+        let arguments = try JSONSerialization.data(withJSONObject: [source.path, destination?.path ?? ""])
+        let json = String(decoding: arguments, as: UTF8.self)
+        return """
+        ObjC.import('Foundation');
+        var args = \(json), fm = $.NSFileManager.defaultManager, error = Ref();
+        if (args[1] && fm.fileExistsAtPath(args[1])) throw Error('The destination already exists. Nothing was overwritten.');
+        var ok = args[1] ? fm.moveItemAtPathToPathError(args[0], args[1], error) : fm.removeItemAtPathError(args[0], error);
+        if (!ok) throw Error(ObjC.unwrap(error[0].localizedDescription));
+        """
+    }
+
+    static func appleScript(source: URL, destination: URL?) throws -> String {
+        let javascript = try javaScript(source: source, destination: destination)
+        let command = "/usr/bin/osascript -l JavaScript -e " + shellQuote(javascript)
+        let literal = command.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+        return "do shell script \"\(literal)\" with administrator privileges"
+    }
+
+    static func run(source: URL, destination: URL?) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", try appleScript(source: source, destination: destination)]
+        // Suppress raw AppleScript errors; the UI gives a useful recovery message.
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        let deadline = Date().addingTimeInterval(120)
+        while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+        if process.isRunning {
+            process.terminate()
+            if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+            throw CleanupError.restoreError("The permission request timed out. Try again and approve the macOS prompt.")
+        }
+        guard process.terminationStatus == 0 else {
+            throw CleanupError.restoreError("macOS did not approve this change. Try again and approve the administrator prompt. If access is still blocked, reveal the app in Finder to check whether it is locked or managed.")
+        }
+    }
+
+    private static func shellQuote(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }

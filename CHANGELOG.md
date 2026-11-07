@@ -1,3 +1,36 @@
+## 0.27.0 — A dedicated uninstall experience
+
+- Both uninstall screens show the same animated removal workspace, with app icons,
+  file transfers, item counts, macOS permission status and a persistent result report.
+- Progress follows actual operations; success appears after a recovery record is
+  saved. Failed items retain their reason and a Show in Finder action. Interrupted
+  removals retain their known successes instead of claiming nothing was moved.
+- Review shows a live app/related-item count and size. Include All and Keep All
+  Related Files avoid toggling each file individually; paths and categories remain
+  visible. Open apps offer a normal quit request before removal is reviewed.
+- Results distinguish apps, related files and storage held in Quarantine, with
+  restore/review access. Moving files does not claim to free disk space.
+- Transfer animation stops offscreen, in the background, during authorization,
+  after completion and with Reduce Motion. No idle animation timer is added.
+
+## 0.26.9 — Apps and leftovers together; bulk Quarantine controls
+
+- Both uninstall screens use one explicit app-removal engine. The dedicated
+  uninstaller no longer sends apps through the junk-sweep policy or hides failures.
+- Matched related files join uninstall by default, with individual checkboxes
+  and exact paths in the review. Ambiguous data matched to multiple installed
+  apps stays out. Leave Alone applies in both screens and in the engine.
+- An app moves before its related files. If the app is running, protected,
+  missing, or its move fails, its related files remain in place.
+- Permission errors on third-party app bundles offer the macOS administrator
+  prompt. The same recovery supports restoring and permanently deleting those
+  quarantined apps, without changing their ownership or permissions.
+- Quarantine has search, batch selection, Select All Shown, bulk restore,
+  Delete Selected and Empty Quarantine. Permanent deletion is confirmed once
+  with an item count and total size; partial failures remain visible.
+- Bulk restore and deletion run off the interface thread. The uninstaller
+  shows scan progress and actual outcomes, with a link to Quarantine.
+
 ## 0.26.8 — Bookbind binds again, and the menu bar answers
 
 - **Bookbind engine**: the worker no longer holds the job-table lock for the
