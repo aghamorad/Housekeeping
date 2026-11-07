@@ -34,24 +34,30 @@ pass; the Bookbind queue test passes; the rebuilt server loads the patched
 `app.py` (reaches `server_bind`); universal 0.26.8 package built and
 `codesign --verify --deep --strict` passes.
 
-Not done here: the sandbox this session ran in cannot write to
-`/Volumes/SanDisk-AI` (the two projects are symlinks onto that volume) or
-`/Applications`, so the source changes live in `/Users/Morad/C3PO/.work/hkfix`
-and the built app in `/Users/Morad/C3PO/.work/hkfix/Housekeeping/dist`.
+Completed 2026-11-07 with full disk access. The installer copied the source into
+both SanDisk-AI projects, installed the app, and pushed both repositories.
+Fresh packages were then built from the pushed commit:
 
-One installer does the rest, and Morad has to start it:
-`/Users/Morad/C3PO/.work/hkfix/INSTALL.command` (identical copy at
-`dist/install.sh`). It copies the changed source into both projects, kills a
-stubborn old process instead of trusting its broken Quit, installs the app,
-checks the installed version and engine, and commits and pushes both repos
-tolerating network failure. `Bookbind/bin` (137 MB) is written but added to
-Bookbind's `.gitignore`, so the engine never goes to GitHub.
+- Housekeeping 0.26.8 (48), source `c0bb49c`, released at
+  https://github.com/aghamorad/Housekeeping/releases/tag/v0.26.8 with arm64,
+  x86_64, universal and SHA256SUMS assets.
+- Bookbind 1.5.2, source `1619b70`, released at
+  https://github.com/aghamorad/bookbind/releases/tag/v1.5.2; CI passed.
 
-Remaining after the installer runs: confirm `0.26.8` (48) in `/Applications`,
-the menu bar opening on the first click, Quit, and a real merge leaving
-"Waiting for the engine"; then cut the v0.26.8 release with
-`script/package_release.sh` if the installer's push was the first anything
-heard of this version.
+The exact package from the Housekeeping release is now installed in
+`/Applications`, with `HousekeepingSourceCommit` set to `c0bb49c`. Its strict
+code signature verifies and its bundled engine hash matches Bookbind's.
+
+Live GUI check on the installed release: the first menu bar click opens the
+panel in 142 ms; "Open App" brings back a window closed moments before; Quit
+exits in under two seconds with the panel open. The engine A/B was conclusive:
+1.5.1 spent 4.2 s answering the first progress poll and never showed `encoding`;
+1.5.2 answered in 1–2 ms and reported `encoding` during ffmpeg. Both the
+Bookbind release zip and Housekeeping's downloaded copy completed a real
+three-track merge with duration, chapter, decode and tag checks all passing.
+
+The desktop guide still explains the installer under `.work/hkfix`; future
+installs can be done from that folder. No unresolved app defect is known.
 
 The queue test needs no audio stack: it supplies a `mutagen` stub when the
 module is absent. Passing on `app.py` 1.5.2 and failing on the 1.5.1 copy from
