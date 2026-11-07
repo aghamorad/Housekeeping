@@ -1,39 +1,69 @@
-## Current work — 2026-11-08 — Full universal release (publication held)
+## Completed — 2026-11-08 — Housekeeping 0.27.1 (51), fully universal release
 
-Status: in progress, Codex. User rejects Silicon-only bundled tools: every bundled
-executable and library must support Intel and Apple Silicon, including Bookbind.
-Publication remains authorized, but the v0.27.0 draft must stay unpublished until
-this is fixed. No release assets uploaded. Previously built ZIPs are superseded.
-Source commit 3becf47 and tag v0.27.0 were already pushed; do not force-retag.
-Use a new version/tag for the universal fixes and roll up the uninstall fixes.
+Codex; user requested a GitHub release explaining the uninstall fixes and then
+required every bundled executable/library to support Intel and Apple Silicon.
+Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.27.1
+Release source/tag: d18c742343db5e16769da758a0c289d29277969b, v0.27.1.
+Uninstaller implementation commit: 3becf47537b40048ecf093c9443c5c10d71f37ea.
+main and both tags were pushed. The superseded empty v0.27.0 draft was deleted;
+its historical source tag remains. No published v0.27.0 binary release exists.
 
-Confirmed: app/llama universal, but BookbindServer, frozen Python libraries,
-ffmpeg and ffprobe are arm64. BookbindWhere.frozenServer also has an arm64-only
-compile guard. Need universal frozen Python engine and media executables, remove
-launcher guard, and enforce recursive architecture/dependency validation before
-packaging. Build inside .build/universal-runtimes; preserve sibling Bookbind
-checkout and all running services. Rosetta works for Intel smoke tests here.
+Delivered: scoped macOS administrator recovery for app bundles, useful failure
+reports, apps plus matched related files reviewed/default-included together,
+app-before-data safety, shared animated removal workspace and durable results,
+Quarantine search/batch restore/delete/empty. Full details in
+RELEASE_NOTES_v0.27.1.md and CHANGELOG.md; earlier implementation evidence below.
 
-Verified universal runtime built with project-local extracted, signature-checked
-python.org 3.15.2, PyInstaller 6.22.3 universal2 and pinned requirements. No system
-Python changed. FFmpeg/FFprobe 9.0 combine the original arm64 codec build with
-checksum-pinned Evermeet Intel static builds. CI bootstrap uses verified v0.26.8
-media inputs, whose hashes match the local inputs. All 50 native runtime files
-and llama-server contain both slices, use system/relative libraries and meet the
-macOS 13 deployment target. `BookbindWhere.frozenServer` arm64 guard removed.
-Versioned exact Bookbind 1.5.2 source/static in Runtime/Bookbind; source-manifest
-and recursive architecture gates prevent stale or thin bundles. One universal
-app/ZIP replaces the architecture-specific release choices.
+Universal fix: Bookbind's launcher no longer excludes Intel. Versioned Bookbind
+1.5.2 source/static is in Runtime/Bookbind. Project-local extracted, notarized
+python.org 3.15.2 plus PyInstaller 6.22.3 builds a real universal2 onedir runtime;
+all Python extensions/libraries and the bootloader contain both architectures.
+FFmpeg/FFprobe 9.0 combine checksum-pinned original arm64 codecs with Evermeet
+Intel static builds. CI bootstrap uses checksum-verified 0.26.8 media inputs;
+the old frozen engine/Python is never reused. All 52 native files in the final
+app contain arm64 + x86_64, use system/relative libraries and meet macOS 13.
+Packaging rejects thin native files, external absolute dependencies and stale
+engine source manifests. One universal download replaces architecture choices.
+Runtime build/reuse instructions and third-party notices: Runtime/README.md.
 
-Actual engine smoke checks passed arm64 and x86_64 via existing Rosetta: health,
-static UI, scan, audio transcode, AAC copy, chapters/tags and restoring generated
-originals with matching hashes (four jobs). No real media/user apps modified.
-358 safety + 85 background/MCP assertions passed. Evidence under
-.build/universal-runtimes/{runtime-smoke,architecture-check.log,safety.log,mcp.log}.
-Build script recheck with retained third-party notices passes (build-with-notices.log).
-Next: source commit/tag v0.27.1, fresh
-package and downloaded-asset verification before publishing. Existing v0.27.0
-draft has no assets; retain it unpublished until superseded. Do not retag it.
+Published assets (uploaded, downloaded fresh, checksum checked and extracted):
+- Housekeeping-macOS-universal.zip — 160986148 bytes; SHA-256
+  babd71593a166d1aa30a190673d726ad53988dd5c2abeb280d7f2dec27dc82f4
+- SHA256SUMS.txt — 99 bytes.
+GitHub /releases/latest confirms v0.27.1, draft=false and prerelease=false.
+Public page independently read back with explanatory notes and Latest badge.
+
+Validation: 358 safety assertions + 85 background/MCP assertions; no warnings.
+Both optimized GUI architecture compilations pass with warnings-as-errors.
+Native + Intel/Rosetta runtime execution passed actual frozen-engine health,
+static UI, scan, transcode, AAC copy, chapter/tag checks and restoration of the
+generated originals with matching hashes. Repeated on the packaged ZIP and on
+the freshly downloaded GitHub ZIP. Both Housekeeping CLI slices report 0.27.1
+(51). llama-server --version runs for both architecture requests. Deep strict
+signatures, exact tagged source SHA, input fingerprint and all native slices
+verified by script/verify_release.py. Intel execution is through Rosetta on this
+Apple Silicon Mac, not a physical Intel Mac test.
+
+Evidence: .build/release-v0.27.1-{package.log,check.log,check/validation.json,
+download-check.log,download-check/validation.json,installation.json}; runtime
+build/smoke/safety/MCP evidence under .build/universal-runtimes/. Canonical release
+artifact .build/release-v0.27.1; published/downloaded copy
+.build/release-v0.27.1-download. Earlier 0.27.0 packages are superseded.
+
+Installed the exact verified downloaded app at /Applications/Housekeeping.app;
+strict signature, whole-bundle content comparison and CLI version pass. Binary
+SHA-256: 53dcd7171651dc27badb24dabd4c7f7f3033337f331b95d1bb073bdf71923389.
+Old app backup: /Users/Morad/.Trash/Housekeeping-0.27.0-before-0.27.1-20261108-004224.app
+Running Housekeeping PID 8150 stayed alive; no local service was stopped or
+restarted. Visible Quarantine manifest count/digest match before/after (0 at the
+checked root). Desktop guide updated with release/download, controls, verified
+limits and the actual backup: /Users/Morad/Desktop/Housekeeping — a noob's guide.md.
+
+User action: finish any existing media jobs, then Quit/reopen Housekeeping to
+load the installed build. Live uninstall clicks, animation timing and the real
+administrator prompt remain unverified because the native UI bridge could not
+read the window; the prior static fixtures are not live interaction checks.
+No real app or existing Quarantine item was removed as a test. No task work remains.
 
 ## Current work — 2026-11-07 — 0.27.0 (50): Animated uninstaller installed locally
 
