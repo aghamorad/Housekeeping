@@ -412,10 +412,8 @@ private enum BookbindWhere {
 
     static var root: String? { bundled ?? checkout }
 
-    /// A frozen server, when this copy carries one. Only the standalone app's
-    /// builds have it; Housekeeping ships the plain sources and uses Python.
+    /// The self-contained engine supports both Intel and Apple Silicon.
     static var frozenServer: String? {
-        #if arch(arm64)
         let candidates = [
             bundled.map { $0 + "/bin/BookbindServer" },
             "/Applications/Bookbind.app/Contents/Resources/bin/BookbindServer",
@@ -426,7 +424,6 @@ private enum BookbindWhere {
         for p in candidates where fm.isExecutableFile(atPath: p) {
             return p
         }
-        #endif
         return nil
     }
 

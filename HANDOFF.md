@@ -1,21 +1,39 @@
-## Current work — 2026-11-08 — Publish 0.27.0 to GitHub
+## Current work — 2026-11-08 — Full universal release (publication held)
 
-Status: in progress, Codex. User explicitly requests a new GitHub release with
-explanations of the fixes. This authorizes commit, push, version tag, downloadable
-assets and publication. Remote main matches local base `3b5f636`; v0.27.0 is free.
+Status: in progress, Codex. User rejects Silicon-only bundled tools: every bundled
+executable and library must support Intel and Apple Silicon, including Bookbind.
+Publication remains authorized, but the v0.27.0 draft must stay unpublished until
+this is fixed. No release assets uploaded. Previously built ZIPs are superseded.
+Source commit 3becf47 and tag v0.27.0 were already pushed; do not force-retag.
+Use a new version/tag for the universal fixes and roll up the uninstall fixes.
 
-Release notes: `RELEASE_NOTES_v0.27.0.md`, covering the uninstall-policy/error fix,
-scoped permission recovery, matched related files, real animated progress, batch
-Quarantine and the validation limits. Prior local packages lack a release commit;
-rebuild from a clean committed tree before uploading. Keep a draft until every
-archive has been extracted and verified, including source SHA and bundled runtimes.
-Use the local bundled Bookbind engine matching 1.5.2; do not use the older runtime
-restoration in the optional GitHub Actions workflow for this manual release.
+Confirmed: app/llama universal, but BookbindServer, frozen Python libraries,
+ffmpeg and ffprobe are arm64. BookbindWhere.frozenServer also has an arm64-only
+compile guard. Need universal frozen Python engine and media executables, remove
+launcher guard, and enforce recursive architecture/dependency validation before
+packaging. Build inside .build/universal-runtimes; preserve sibling Bookbind
+checkout and all running services. Rosetta works for Intel smoke tests here.
 
-Next: commit the reviewed session changes and notes, build release artifacts,
-verify, push/tag, upload to a draft, download and compare uploaded assets, publish
-and confirm the latest-release API and tag/commit association. Do not stop local
-Housekeeping or media jobs. Existing installation stays in place.
+Verified universal runtime built with project-local extracted, signature-checked
+python.org 3.15.2, PyInstaller 6.22.3 universal2 and pinned requirements. No system
+Python changed. FFmpeg/FFprobe 9.0 combine the original arm64 codec build with
+checksum-pinned Evermeet Intel static builds. CI bootstrap uses verified v0.26.8
+media inputs, whose hashes match the local inputs. All 50 native runtime files
+and llama-server contain both slices, use system/relative libraries and meet the
+macOS 13 deployment target. `BookbindWhere.frozenServer` arm64 guard removed.
+Versioned exact Bookbind 1.5.2 source/static in Runtime/Bookbind; source-manifest
+and recursive architecture gates prevent stale or thin bundles. One universal
+app/ZIP replaces the architecture-specific release choices.
+
+Actual engine smoke checks passed arm64 and x86_64 via existing Rosetta: health,
+static UI, scan, audio transcode, AAC copy, chapters/tags and restoring generated
+originals with matching hashes (four jobs). No real media/user apps modified.
+358 safety + 85 background/MCP assertions passed. Evidence under
+.build/universal-runtimes/{runtime-smoke,architecture-check.log,safety.log,mcp.log}.
+Build script recheck with retained third-party notices passes (build-with-notices.log).
+Next: source commit/tag v0.27.1, fresh
+package and downloaded-asset verification before publishing. Existing v0.27.0
+draft has no assets; retain it unpublished until superseded. Do not retag it.
 
 ## Current work — 2026-11-07 — 0.27.0 (50): Animated uninstaller installed locally
 

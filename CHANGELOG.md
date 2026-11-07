@@ -1,3 +1,12 @@
+## 0.27.1 — Fully universal, including every bundled engine
+
+- BookbindServer, embedded Python/native extensions, ffmpeg and ffprobe now support
+  both Intel and Apple Silicon. The launcher uses the bundled engine on Intel too.
+- One universal download includes the complete toolset. Packaging rejects thin
+  native files, external build-machine libraries and a stale frozen Bookbind engine.
+- Bookbind 1.5.2 source is versioned with Housekeeping; runtime build inputs are
+  pinned. Includes all uninstaller, animated progress and batch Quarantine fixes below.
+
 ## 0.27.0 — A dedicated uninstall experience
 
 - Both uninstall screens show the same animated removal workspace, with app icons,

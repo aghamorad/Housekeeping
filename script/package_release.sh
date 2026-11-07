@@ -71,10 +71,8 @@ trap cleanup EXIT
 
 UNIVERSAL_APP="$OUTPUT_DIR/$APP_NAME.app"
 UNIVERSAL_ZIP="$OUTPUT_DIR/$APP_NAME-macOS-universal.zip"
-ARM_ZIP="$OUTPUT_DIR/$APP_NAME-macOS-arm64.zip"
-X86_ZIP="$OUTPUT_DIR/$APP_NAME-macOS-x86_64.zip"
 
-for existing in "$UNIVERSAL_APP" "$UNIVERSAL_ZIP" "$ARM_ZIP" "$X86_ZIP"; do
+for existing in "$UNIVERSAL_APP" "$UNIVERSAL_ZIP"; do
   if [[ -e "$existing" ]]; then
     echo "Safety stop: $existing already exists." >&2
     exit 1
@@ -92,6 +90,17 @@ if [[ ! -x "$RUNTIME" ]]; then
   echo "Build it with Tools/llama-static/build.sh and copy the result there." >&2
   exit 1
 fi
+
+# A universal entry point is insufficient: every frozen Python extension and
+# media executable must also run on either Mac, without Homebrew or user Python.
+BOOKBIND_SRC="$ROOT_DIR/Runtime/Bookbind"
+BOOKBIND_BIN="${HOUSEKEEPING_BOOKBIND_BIN:-$ROOT_DIR/.build/bookbind-universal/bin}"
+for tool in BookbindServer ffmpeg ffprobe; do
+  [[ -x "$BOOKBIND_BIN/$tool" ]] || { echo "Missing universal $tool; run script/build_bookbind_runtime.sh." >&2; exit 1; }
+done
+[[ -d "$BOOKBIND_BIN/_internal" && -f "$BOOKBIND_SRC/app.py" ]] || { echo "Bookbind's complete runtime/source is missing." >&2; exit 1; }
+python3 "$ROOT_DIR/script/verify_universal_bundle.py" "$RUNTIME" "$BOOKBIND_BIN"
+python3 "$ROOT_DIR/script/bookbind_runtime_manifest.py" verify "$BOOKBIND_SRC" "$BOOKBIND_BIN/runtime-manifest.json"
 
 compile() {
   local arch="$1"
@@ -128,7 +137,7 @@ stage() {
   # A local edit is not the recorded commit. Preserve the base and fingerprint
   # the actual inputs, while leaving SourceCommit absent so the updater cannot
   # claim that this modified app is identical to the published revision.
-  if [[ -n "$(/usr/bin/git -C "$ROOT_DIR" status --porcelain -- Housekeeping script/package_release.sh)" ]]; then
+  if [[ -n "$(/usr/bin/git -C "$ROOT_DIR" status --porcelain -- Housekeeping Runtime script)" ]]; then
     commit=""
   fi
   source_digest="$(shasum -a 256 "${SOURCES[@]}" "$ROOT_DIR/Housekeeping/Info.plist" | shasum -a 256 | awk '{print $1}')"
@@ -156,38 +165,14 @@ stage() {
   chmod 755 "$app/Contents/Resources/llama-server"
   codesign --force --sign - "$app/Contents/Resources/llama-server"
 
-  # MediaDock 9 is compiled directly into this binary. Bookbind's work is
-  # Python/frozen binary, so its complete program files travel inside the bundle —
-  # `Contents/Resources/Bookbind` — including its engine, static assets, and
-  # pre-packaged standalone binaries (BookbindServer, ffmpeg, ffprobe) so it is 100% self-contained.
+  # Versioned source and an explicitly verified universal runtime travel together.
   local bookbind_dst="$app/Contents/Resources/Bookbind"
-  local bookbind_src="${HOUSEKEEPING_BOOKBIND_SRC:-$ROOT_DIR/../Bookbind}"
-  [[ -d "$bookbind_src" ]] || bookbind_src="$HOME/C3PO/Bookbind"
-  if [[ -f "$bookbind_src/app.py" && -f "$bookbind_src/bookbind_cli.py" && -d "$bookbind_src/static" ]]; then
-    mkdir -p "$bookbind_dst"
-    cp "$bookbind_src/app.py" "$bookbind_src/bookbind_cli.py" "$bookbind_dst/"
-    ditto "$bookbind_src/static" "$bookbind_dst/static"
-    local bin_src=""
-    # The checkout's own bin comes first. /Applications can hold an older
-    # Bookbind, and preferring it shipped a stale engine inside a new app.
-    if [[ -d "$bookbind_src/bin" ]]; then
-      bin_src="$bookbind_src/bin"
-    elif [[ -d "$bookbind_src/Bookbind.app/Contents/Resources/bin" ]]; then
-      bin_src="$bookbind_src/Bookbind.app/Contents/Resources/bin"
-    elif [[ -d "/Applications/Bookbind.app/Contents/Resources/bin" ]]; then
-      bin_src="/Applications/Bookbind.app/Contents/Resources/bin"
-    fi
-    if [[ -n "$bin_src" && -d "$bin_src" ]]; then
-      mkdir -p "$bookbind_dst/bin"
-      ditto "$bin_src" "$bookbind_dst/bin"
-      chmod -R 755 "$bookbind_dst/bin"
-    fi
-  else
-    echo "  note: Bookbind's program files are not at $bookbind_src — this build ships without Bookbind"
-  fi
+  ditto "$BOOKBIND_SRC" "$bookbind_dst"
+  ditto "$BOOKBIND_BIN" "$bookbind_dst/bin"
 
   codesign --force --deep --sign - "$app"
   codesign --verify --deep --strict "$app"
+  python3 "$ROOT_DIR/script/verify_universal_bundle.py" "$app"
 }
 
 echo "Compiling for Apple silicon (arm64)..."
@@ -200,29 +185,17 @@ lipo -create \
   "$WORK_ROOT/$APP_NAME-x86_64" \
   -output "$WORK_ROOT/$APP_NAME-universal"
 
-mkdir -p "$OUTPUT_DIR" "$WORK_ROOT/stage-universal" "$WORK_ROOT/stage-arm64" "$WORK_ROOT/stage-x86_64"
+mkdir -p "$OUTPUT_DIR" "$WORK_ROOT/stage-universal"
 
 echo "Staging and signing..."
 
-# Each thin build gets a thin runtime. Handing the Intel reader a universal
-# helper would undo in the housekeeper exactly what the thin app bundle was for.
-lipo -thin arm64 "$RUNTIME" -output "$WORK_ROOT/llama-server-arm64"
-lipo -thin x86_64 "$RUNTIME" -output "$WORK_ROOT/llama-server-x86_64"
-
 stage "$WORK_ROOT/$APP_NAME-universal" "$RUNTIME" "$WORK_ROOT/stage-universal/$APP_NAME.app"
-stage "$WORK_ROOT/$APP_NAME-arm64" "$WORK_ROOT/llama-server-arm64" "$WORK_ROOT/stage-arm64/$APP_NAME.app"
-stage "$WORK_ROOT/$APP_NAME-x86_64" "$WORK_ROOT/llama-server-x86_64" "$WORK_ROOT/stage-x86_64/$APP_NAME.app"
 
-# The universal app is the primary artefact and is copied out as a real .app as
-# well as a zip, so a local reader can run it without unpacking anything. The
-# two thin builds exist because an Intel reader downloading a universal bundle
-# pays for a slice they will never execute.
+# One complete download works on either architecture.
 ditto "$WORK_ROOT/stage-universal/$APP_NAME.app" "$UNIVERSAL_APP"
 ditto -c -k --sequesterRsrc --keepParent "$WORK_ROOT/stage-universal/$APP_NAME.app" "$UNIVERSAL_ZIP"
-ditto -c -k --sequesterRsrc --keepParent "$WORK_ROOT/stage-arm64/$APP_NAME.app" "$ARM_ZIP"
-ditto -c -k --sequesterRsrc --keepParent "$WORK_ROOT/stage-x86_64/$APP_NAME.app" "$X86_ZIP"
 
 echo
 lipo -info "$UNIVERSAL_APP/Contents/MacOS/$APP_NAME"
 echo
-shasum -a 256 "$UNIVERSAL_ZIP" "$ARM_ZIP" "$X86_ZIP"
+shasum -a 256 "$UNIVERSAL_ZIP"

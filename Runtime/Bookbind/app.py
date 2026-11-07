@@ -1,0 +1,1003 @@
+#!/usr/bin/env python3
+"""Bookbind -- merge a folder of loose audio files into one chaptered .m4b.
+
+This is the whole program apart from its window. The .app starts it and points a
+web view at it; run it by hand and any browser will do. Nothing is ever deleted:
+originals are moved into an `_originals` subfolder only after the output passes
+verification, and can be restored with one click. Run with:  python3 app.py
+"""
+import json
+import os
+import plistlib
+import queue
+import re
+import shutil
+import ssl
+import subprocess
+import tempfile
+import threading
+import time
+import urllib.parse
+import urllib.request
+import uuid
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATIC = os.path.join(HERE, "static")
+PORT = int(os.environ.get("BOOKBIND_PORT") or 8765)
+ORIG = "_originals"
+REPO = "aghamorad/bookbind"
+
+# What a bare checkout reports. A released .app carries an Info.plist and that
+# number wins, because it is the one this copy was actually cut at.
+VERSION = "1.5.2"
+
+
+def version():
+    """The version of the copy that is running, and never a guess.
+
+    The bundle's Info.plist is the authority, and it sits in a different place
+    depending on how this copy was put together: above the server inside a
+    self-contained build (the server is copied into `Contents/Resources`),
+    beside it in a release, and inside the .app in a checkout. A copy with no
+    plist anywhere is the bare source, and the constant above is its answer.
+    """
+    for candidate in (os.path.join(HERE, os.pardir, "Info.plist"),
+                      os.path.join(HERE, "Info.plist"),
+                      os.path.join(HERE, "Bookbind.app", "Contents", "Info.plist")):
+        try:
+            with open(candidate, "rb") as fh:
+                found = plistlib.load(fh).get("CFBundleShortVersionString")
+        except Exception:
+            continue
+        if found and str(found).strip():
+            return str(found).strip()
+    return VERSION
+
+AUDIO_EXT = {".mp3", ".m4a", ".m4b", ".aac", ".flac", ".opus", ".wav", ".ogg", ".wma"}
+AAC_EXT = {".m4a", ".m4b", ".aac"}
+IMAGE_EXT = {".jpg", ".jpeg", ".png"}
+SKIP_EXT = {".aa"}                     # Audible-encrypted, needs keys we do not have
+
+from mutagen import File as MFile
+
+
+# ---------------------------------------------------------------- audio helpers
+
+def natkey(s):
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
+
+
+def scan_audio(root):
+    """Every audio file under root, ignoring mac metadata and our own folders."""
+    out = []
+    for dp, dns, fns in os.walk(root):
+        dns[:] = [d for d in dns if not d.startswith(".") and d != ORIG
+                  and d != "__MACOSX"]
+        for f in sorted(fns):
+            if f.startswith("._") or f.startswith("."):
+                continue
+            if os.path.splitext(f)[1].lower() in AUDIO_EXT:
+                out.append(os.path.join(dp, f))
+    return sorted(out, key=lambda p: natkey(os.path.relpath(p, root)))
+
+
+def find_locked(root):
+    """Audible's encrypted .aa under root. They hold audio we cannot read, so a
+    folder containing them is a folder with a piece missing -- see build_plan."""
+    out = []
+    for dp, dns, fns in os.walk(root):
+        dns[:] = [d for d in dns if not d.startswith(".") and d != ORIG
+                  and d != "__MACOSX"]
+        for f in sorted(fns):
+            if not f.startswith(("._", ".")) and \
+                    os.path.splitext(f)[1].lower() in SKIP_EXT:
+                out.append(os.path.relpath(os.path.join(dp, f), root))
+    return out
+
+
+def source_files(folder, chosen=None):
+    """The files a job will actually use, in scan order.
+
+    What was chosen wins. Otherwise it is the folder's own audio minus anything
+    that is a finished book in its own right: an .m4b sitting beside the tracks
+    is the book, not a chapter of one. That is the same rule the file list
+    applies, and it has to live in one place -- a folder holding a completed
+    book plus the tracks it was built from would otherwise merge the book into
+    itself. Adding an .m4b by hand still works; it just cannot be the default.
+    """
+    if chosen:
+        return list(chosen)
+    return [f for f in scan_audio(folder)
+            if os.path.splitext(f)[1].lower() != ".m4b"]
+
+
+def probe(fp):
+    """(seconds, bitrate, sample_rate, channels) -- None entries when unknown."""
+    try:
+        i = MFile(fp).info
+        return (getattr(i, "length", None), getattr(i, "bitrate", None),
+                getattr(i, "sample_rate", None), getattr(i, "channels", None))
+    except Exception:
+        return (None, None, None, None)
+
+
+def duration(fp):
+    return probe(fp)[0]
+
+
+def order_files(files, root, method="auto"):
+    """Track/disc tags win when every file carries a number; else natural path order."""
+    if method == "path":
+        return files, "path"
+    tagged = []
+    for f in files:
+        t = d = None
+        try:
+            a = MFile(f, easy=True)
+            t = (a.get("tracknumber") or [None])[0]
+            d = (a.get("discnumber") or [None])[0]
+            t = int(str(t).split("/")[0]) if t else None
+            d = int(str(d).split("/")[0]) if d else 1
+        except Exception:
+            t = None
+        tagged.append((d or 1, t, f))
+    if all(t is not None for _, t, _ in tagged):
+        if len({t for _, t, _ in tagged}) == len(tagged):
+            return [f for _, _, f in sorted(tagged, key=lambda r: (r[0], r[1]))], "tags"
+    return files, "path"
+
+
+def first_tag(fp, key):
+    try:
+        v = (MFile(fp, easy=True).get(key) or [None])[0]
+    except Exception:
+        return None
+    if not v or re.search(r"unknown|various|^[\W_]*$", str(v), re.I):
+        return None
+    return str(v).strip()
+
+
+def file_row(path, base=None):
+    """One line of the file list: what the page needs to show a track and let
+    somebody reorder it. `base` is the folder it is displayed relative to."""
+    secs = duration(path) or 0.0
+    return {"path": path,
+            "rel": os.path.relpath(path, base) if base else os.path.basename(path),
+            "name": os.path.basename(path), "secs": round(secs, 2),
+            "size": os.path.getsize(path), "title": first_tag(path, "title") or "",
+            "track": first_tag(path, "tracknumber") or ""}
+
+
+# ------------------------------------------------------------- catalogue lookup
+
+def trusting_context():
+    """A TLS context that actually has roots in it.
+
+    A python.org Python on macOS ships with no root certificates until its
+    "Install Certificates.command" has been run, and nothing says so until the
+    first https request: urllib then fails with CERTIFICATE_VERIFY_FAILED —
+    "unable to get local issuer certificate" — which reads like a broken network
+    rather than an empty trust store. That is exactly what the catalogue search
+    showed on this Mac.
+
+    So the bundle is named rather than assumed: certifi's copy when it is
+    installed (it is, beside this interpreter's site-packages), and macOS's own
+    /etc/ssl/cert.pem when it is not. If neither exists the interpreter's default
+    is kept, because a context with no roots at all would fail later and less
+    clearly.
+    """
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        pass
+    for path in ("/etc/ssl/cert.pem", "/usr/local/etc/openssl/cert.pem",
+                 "/opt/homebrew/etc/openssl@3/cert.pem"):
+        if os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:
+                continue
+    return ssl.create_default_context()
+
+
+def itunes_search(author, title, limit=12):
+    terms = [t for t in (author, title) if t]
+    if not terms:
+        return []
+    q = urllib.parse.urlencode({"term": " ".join(terms), "media": "audiobook",
+                                "entity": "audiobook", "limit": limit, "country": "us"})
+    req = urllib.request.Request("https://itunes.apple.com/search?" + q,
+                                 headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=20, context=trusting_context()) as r:
+        data = json.load(r)
+    out = []
+    for c in data.get("results", []):
+        art = (c.get("artistName") or "").strip()
+        parts = [p.strip() for p in re.split(r"[,/&]| - ", art) if p.strip()]
+        out.append({
+            "title": c.get("collectionName") or "",
+            "author": parts[0] if parts else art,
+            "narrator": ", ".join(parts[1:]) if len(parts) > 1 else "",
+            "year": (c.get("releaseDate") or "")[:4],
+            "cover": (c.get("artworkUrl100") or "").replace("100x100bb", "1200x1200bb"),
+            "narrator_note": "catalogue lists", "source": "iTunes",
+        })
+    return out
+
+
+def fetch_cover(url, dest):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30, context=trusting_context()) as r:
+        blob = r.read()
+    tmp = dest + ".dl"
+    with open(tmp, "wb") as fh:
+        fh.write(blob)
+    # normalise to jpeg -- an h264 or odd png in attached_pic trips the muxer
+    r = subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", tmp,
+                        "-frames:v", "1", "-q:v", "3", dest],
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.exists(dest):
+        os.replace(tmp, dest)
+    elif os.path.exists(tmp):
+        os.remove(tmp)
+    return dest
+
+
+# ------------------------------------------------------------------ build steps
+
+def inside(path, folder):
+    return os.path.commonpath([os.path.abspath(path), os.path.abspath(folder)]) \
+        == os.path.abspath(folder)
+
+
+def build_plan(folder, author, title, year, narrator, cover_path, order_method="auto",
+               bitrate_kbps=None, files=None, titles=None, skip_locked=False):
+    """Everything the encoder needs, or an error string explaining what is wrong.
+
+    Hand it `files` and those are the sources, in that order, whatever order they
+    were given in -- the page lets a track be dropped or the chapters resequenced.
+    Leave them out and the folder is scanned instead, which is what asking for a
+    folder on its own does.
+
+    One file is a job like any other: nothing needs merging, so what comes back is
+    that file retagged, with the cover and the chapter list written into it.
+    """
+    chosen = [os.path.abspath(os.path.expanduser(f)) for f in (files or [])]
+    titles = {os.path.abspath(os.path.expanduser(k)): v.strip()
+              for k, v in (titles or {}).items() if (v or "").strip()}
+
+    folder = os.path.abspath(os.path.expanduser(folder)) if folder else ""
+    if chosen and not folder:
+        # Nobody named a folder, so it is whatever holds the files -- that is where
+        # the book goes and where the originals are moved to. Files gathered off
+        # several volumes have no such folder, and merging across them is not
+        # something to guess at.
+        folder = os.path.commonpath([os.path.dirname(f) for f in chosen])
+        if folder == os.path.sep:
+            return None, "those files are not all in one folder -- choose the folder first"
+    if not os.path.isdir(folder):
+        return None, "that folder does not exist"
+
+    gone = [os.path.basename(f) for f in chosen if not os.path.isfile(f)]
+    if gone:
+        return None, "these files are not there any more: " + ", ".join(gone[:4])
+    files = source_files(folder, chosen)
+    if not files:
+        return None, "no audio files in that folder"
+
+    # An encrypted Audible file is audio you own and Bookbind cannot read, so a
+    # folder holding one is missing part of its book. Refusing is the honest
+    # answer: merging the readable files would quietly hand back an abridged
+    # copy. Naming the files by hand is a decision, not an accident, so that
+    # case is left alone.
+    if not chosen:
+        locked = find_locked(folder)
+        if locked and not skip_locked:
+            return None, ("encrypted Audible source, needs keys: "
+                          + ", ".join(locked[:4])
+                          + (f" (+{len(locked)-4} more)" if len(locked) > 4 else "")
+                          + " -- pass --ignore-locked to merge the rest anyway")
+
+    exts = {os.path.splitext(f)[1].lower() for f in files}
+    if exts & SKIP_EXT:
+        return None, f"encrypted Audible source ({', '.join(sorted(exts & SKIP_EXT))}) needs keys"
+    # a partial output from an earlier attempt is an audio file sitting in the same
+    # folder; it must never be picked up as one of its own sources
+    out_dir = folder
+    out_name = safe_name(author, title, year) + ".m4b"
+    out = os.path.join(out_dir, out_name)
+    files = [f for f in files if os.path.abspath(f) != os.path.abspath(out)]
+    if not files:
+        return None, ("the only audio here is the book this job would write -- "
+                      "rename the output, or move that file aside first")
+
+    if not author or not title:
+        return None, "author and title are both required to name the file"
+
+    # every source must be readable before we commit to a long encode
+    bad, total, params = [], 0.0, set()
+    durs = {}
+    for f in files:
+        secs, br, sr, ch = probe(f)
+        if not secs or secs <= 0:
+            bad.append(os.path.basename(f))
+            continue
+        total += secs
+        durs[os.path.abspath(f)] = secs
+        params.add((sr, ch))
+    if bad:
+        return None, ("these files could not be read: " + ", ".join(bad[:4])
+                      + (f" (+{len(bad)-4} more)" if len(bad) > 4 else ""))
+
+    ordered, how = (chosen, "you chose") if chosen else order_files(files, folder, order_method)
+    ordered = [f for f in ordered if os.path.abspath(f) != os.path.abspath(out)]
+
+    lossless = exts <= AAC_EXT and len(params) == 1
+    br = None
+    if not lossless:
+        if bitrate_kbps:
+            br = int(bitrate_kbps) * 1000
+        else:
+            brs = [b for b in (probe(f)[1] for f in ordered) if b]
+            br = max(brs) if brs else 64000
+        br = max(64000, min(br, 160000))
+
+    if not cover_path:
+        for c in ("cover.jpg", "folder.jpg", "Cover.jpg", "cover.png", "folder.png"):
+            p = os.path.join(folder, c)
+            if os.path.exists(p):
+                cover_path = p
+                break
+    if not cover_path:
+        imgs = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
+                if os.path.splitext(f)[1].lower() in IMAGE_EXT]
+        cover_path = imgs[0] if imgs else None
+
+    # The chapter list for the finished book, laid out on the merged timeline. A
+    # source that already carries a chapter track keeps it: re-tagging a finished
+    # .m4b must not flatten thirty named chapters into one. A title typed against
+    # a file still wins for that file, since that is a decision, not a default.
+    chapter_list, cur = [], 0.0
+    for f in ordered:
+        d = durs.get(os.path.abspath(f), 0.0)
+        typed = titles.get(os.path.abspath(f))
+        subs = [] if typed else source_chapters(f)
+        if subs:
+            for j, (s, e, t) in enumerate(subs):
+                s = max(0.0, min(s, d))
+                e = d if j == len(subs) - 1 else max(s, min(e, d))
+                chapter_list.append((cur + s, cur + e, t))
+            # a source whose chapter track stops short of its own end would leave
+            # a silent hole in the book; the last chapter runs to the file's end
+            if chapter_list and chapter_list[-1][1] < cur + d:
+                chapter_list[-1] = (chapter_list[-1][0], cur + d,
+                                    chapter_list[-1][2])
+        else:
+            chapter_list.append((cur, cur + d, typed or default_label(f)))
+        cur += d
+
+    free = shutil.disk_usage(out_dir).free
+    need = total * ((br or 128000) / 8) * 1.15
+    if free < need:
+        return None, (f"not enough space: need about {need/1e9:.1f} GB, "
+                      f"{free/1e9:.1f} GB free")
+
+    return dict(folder=folder, files=ordered, out=out, out_name=out_name,
+                total_secs=total, lossless=lossless, bitrate=br, order=how,
+                author=author, title=title, year=str(year or ""),
+                narrator=narrator or "", cover=cover_path, titles=titles,
+                chapters=chapter_list, n=len(ordered), n_chapters=len(chapter_list),
+                est_bytes=int(need)), None
+
+
+def safe_name(author, title, year):
+    def clean(s):
+        s = (s or "").strip()
+        # a colon is nearly always "Title: Subtitle", so keep the space the
+        # colon was holding instead of collapsing it into a bare dash
+        s = re.sub(r":\s+", " - ", s)
+        s = re.sub(r"[/\\:*?\"<>|]", "-", s)
+        return re.sub(r"\s+", " ", s).strip(" .")
+    base = f"{clean(author)}, {clean(title)}"
+    if str(year or "").strip():
+        base += f" ({clean(str(year))})"
+    return base
+
+
+def write_concat(files, path):
+    with open(path, "w", encoding="utf-8") as fh:
+        for f in files:
+            fh.write("file '" + f.replace("'", "'\\''") + "'\n")
+
+
+def default_label(fp):
+    """What a chapter is called when nothing else names it: its own file name."""
+    label = os.path.splitext(os.path.basename(fp))[0]
+    return re.sub(r"^\s*\d{1,3}\s*[-_.)\]]\s*", "", label).strip() or label
+
+
+def source_chapters(fp):
+    """(start, end, title) for a file that already carries a chapter track.
+
+    Only the containers that can hold one are asked, so a folder of mp3 parts
+    does not pay a probe per file for a track that cannot be there.
+    """
+    if os.path.splitext(fp)[1].lower() not in {".m4a", ".m4b", ".mp4", ".aac"}:
+        return []
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_chapters", "-of", "json", fp],
+                       capture_output=True, text=True)
+    try:
+        raw = json.loads(r.stdout).get("chapters", [])
+    except Exception:
+        return []
+    out = []
+    for c in raw:
+        try:
+            s, e = float(c["start_time"]), float(c["end_time"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        out.append((s, e, (c.get("tags") or {}).get("title") or ""))
+    return out
+
+
+def write_chapters(plan, path):
+    meta = [";FFMETADATA1",
+            f"title={plan['title']}",
+            f"artist={plan['author']}",
+            f"album={plan['title']}"]
+    if plan["year"]:
+        meta.append(f"date={plan['year']}")
+    if plan["narrator"]:
+        meta.append(f"composer={plan['narrator']}")
+        meta.append(f"comment=Narrated by {plan['narrator']}")
+    meta.append("genre=Audiobook")
+    meta.append(f"media_type=2")
+    for start, end, label in plan["chapters"]:
+        label = (label or "").strip() or "Chapter"
+        meta += ["[CHAPTER]", "TIMEBASE=1/1000",
+                 f"START={int(start * 1000)}", f"END={int(end * 1000)}",
+                 f"title={label}"]
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(meta) + "\n")
+
+
+def ffmpeg_command(plan, concat, chapters, out):
+    # every -i must come before the output options: an -i placed after -map_metadata
+    # makes ffmpeg bind that option to the wrong input and it refuses to run
+    cmd = ["ffmpeg", "-nostdin", "-y", "-v", "error", "-progress", "pipe:1", "-nostats",
+           "-f", "concat", "-safe", "0", "-i", concat, "-i", chapters]
+    if plan["cover"]:
+        cmd += ["-i", plan["cover"]]
+    cmd += ["-map_metadata", "1", "-map_chapters", "1", "-dn", "-sn", "-map", "0:a"]
+    if plan["cover"]:
+        cmd += ["-map", "2:v:0"]
+    else:
+        cmd += ["-map", "0:v:0?"]           # keep cover art already in the sources
+    cmd += ["-c:v", "mjpeg", "-disposition:v:0", "attached_pic"]
+    cmd += ["-c:a", "copy"] if plan["lossless"] else ["-c:a", "aac", "-b:a", str(plan["bitrate"])]
+    cmd += ["-movflags", "+faststart", out]
+    return cmd
+
+
+# ------------------------------------------------------------------ verification
+
+def ffprobe_duration(fp):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                        "-of", "csv=p=0", fp], capture_output=True, text=True)
+    try:
+        return float(r.stdout.strip())
+    except Exception:
+        return 0.0
+
+
+def count_chapters(fp):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_chapters", "-of", "json", fp],
+                       capture_output=True, text=True)
+    try:
+        return len(json.loads(r.stdout).get("chapters", []))
+    except Exception:
+        return 0
+
+
+def has_attached_pic(fp):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v",
+                        "-show_entries", "stream_disposition=attached_pic",
+                        "-of", "csv=p=0", fp], capture_output=True, text=True)
+    return "1" in r.stdout
+
+
+def decodes(fp, start=None, length=12):
+    """Decode a slice to nowhere -- catches a truncated or malformed file."""
+    cmd = ["ffmpeg", "-nostdin", "-v", "error", "-xerror"]
+    if start:
+        cmd += ["-ss", str(start)]
+    cmd += ["-t", str(length), "-i", fp, "-f", "null", "-"]
+    return subprocess.run(cmd, capture_output=True, text=True).returncode == 0
+
+
+def verify(plan, out):
+    """Read the finished file back and prove it against what went in."""
+    checks, dur = [], ffprobe_duration(out)
+    if dur <= 0:
+        return False, [("readable", False, "the file could not be opened")]
+    checks.append(("duration", abs(dur - plan["total_secs"]) <= max(5, plan["total_secs"] * 0.01),
+                   f"{dur/3600:.2f}h out vs {plan['total_secs']/3600:.2f}h in"))
+    ch = count_chapters(out)
+    checks.append(("chapters", ch == plan["n_chapters"],
+                   f"{ch} chapters for {plan['n_chapters']} expected"))
+    checks.append(("starts cleanly", decodes(out, 0), "first 12s decode"))
+    if dur > 30:
+        checks.append(("ends cleanly", decodes(out, max(0, dur - 12)),
+                       "last 12s decode"))
+    try:
+        a = MFile(out, easy=True)
+        got = (a.get("artist") or [""])[0]
+        checks.append(("tags", plan["author"].lower() in (got or "").lower()
+                       or bool(got), f"artist tag = {got!r}"))
+    except Exception:
+        checks.append(("tags", False, "no readable tags"))
+    # cover art is only a promise when we had one to embed -- a book with no
+    # cover anywhere is a perfectly good book and must not fail the gate
+    try:
+        art = has_attached_pic(out)
+        checks.append(("cover art", art or not plan["cover"],
+                       "embedded" if art else
+                       ("MISSING" if plan["cover"] else "none available")))
+    except Exception:
+        pass
+    return all(c[1] for c in checks), checks
+
+
+# ------------------------------------------------------------------- job engine
+
+JOBS, JOBS_LOCK = {}, threading.Lock()
+QUEUE = queue.Queue()
+WORKERS = 2
+
+
+class Job:
+    def __init__(self, plan):
+        self.id = uuid.uuid4().hex[:12]
+        self.plan = plan
+        self.state = "queued"
+        self.pct = 0.0
+        self.note = ""
+        self.log = []
+        self.checks = []
+        self.out = plan["out"]
+        self.manifest = None
+        self.cancel = threading.Event()
+        self.proc = None
+        self.t0 = None
+        self.t1 = None
+
+    def say(self, msg):
+        self.log.append(msg)
+        del self.log[:-200]
+
+
+def move_originals(plan):
+    """Move sources into an _originals subfolder. Never deletes, never overwrites."""
+    dest = os.path.join(plan["folder"], ORIG)
+    os.makedirs(dest, exist_ok=True)
+    mapping = []
+    for f in plan["files"]:
+        rel = os.path.relpath(f, plan["folder"])
+        if rel.startswith(os.pardir):
+            # A file added from outside the folder: `../` would walk straight back
+            # out of _originals, so it is stored in a corner of its own by name.
+            # `rel` is kept for the manifest, which puts it back where it came from.
+            inside = os.path.join("elsewhere", os.path.basename(f))
+        else:
+            inside = rel
+        target = os.path.join(dest, inside)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        if os.path.exists(target):
+            stem, ext = os.path.splitext(target)
+            target = f"{stem} (2){ext}"
+        shutil.move(f, target)
+        mapping.append({"from": rel, "to": os.path.relpath(target, plan["folder"])})
+    # tidy up disc subfolders that are now empty
+    for dp, dns, fns in os.walk(plan["folder"], topdown=False):
+        if dp != plan["folder"] and dp != dest and not os.listdir(dp):
+            try:
+                os.rmdir(dp)
+            except OSError:
+                pass
+    return mapping
+
+
+def run_job(job):
+    plan = job.plan
+    job.state, job.t0 = "encoding", time.time()
+    tmpdir = os.path.join(tempfile.gettempdir(), "bookbind")
+    os.makedirs(tmpdir, exist_ok=True)
+    concat = os.path.join(tmpdir, f"{job.id}.concat")
+    chapters = os.path.join(tmpdir, f"{job.id}.ffmeta")
+    partial = plan["out"] + ".partial.m4b"
+    cpath = None
+
+    try:
+        if plan["cover"]:
+            cpath = os.path.join(tmpdir, f"{job.id}.cover.jpg")
+            try:
+                fetch_cover(plan["cover"], cpath) if plan["cover"].startswith("http") \
+                    else shutil.copyfile(plan["cover"], cpath)
+                plan = dict(plan, cover=cpath)
+            except Exception as e:
+                job.say(f"cover art failed ({e}); continuing without it")
+                plan = dict(plan, cover=None)
+
+        write_concat(plan["files"], concat)
+        write_chapters(plan, chapters)
+        job.say(f"encoding {plan['n']} files, {plan['total_secs']/3600:.2f} h "
+                f"({plan['order']} order, {'copy' if plan['lossless'] else str(plan['bitrate']//1000)+'k aac'})")
+
+        if os.path.exists(partial):
+            os.remove(partial)
+        cmd = ffmpeg_command(plan, concat, chapters, partial)
+        job.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, bufsize=1)
+        for line in job.proc.stdout:
+            if job.cancel.is_set():
+                job.proc.kill()
+                break
+            k, _, v = line.strip().partition("=")
+            if k == "out_time_us":
+                try:
+                    done = int(v) / 1e6
+                    job.pct = min(99.0, done / plan["total_secs"] * 100)
+                except ValueError:
+                    pass
+        job.proc.wait()
+        err = (job.proc.stderr.read() or "").strip()
+        if job.cancel.is_set():
+            if os.path.exists(partial):
+                os.remove(partial)
+            job.state, job.note = "cancelled", "stopped; originals untouched"
+            return
+        if job.proc.returncode != 0:
+            if os.path.exists(partial):
+                os.remove(partial)
+            job.state, job.note = "failed", err[:600] or "ffmpeg failed"
+            return
+
+        job.state, job.pct = "verifying", 100.0
+        ok, checks = verify(plan, partial)
+        job.checks = [{"name": c[0], "ok": c[1], "detail": c[2]} for c in checks]
+        if not ok:
+            os.remove(partial)
+            job.state, job.note = "failed", "output did not pass verification"
+            return
+
+        if os.path.exists(plan["out"]):
+            os.replace(plan["out"], plan["out"] + ".rejected")
+            job.say("an existing file was set aside as .rejected")
+        os.replace(partial, plan["out"])
+
+        # A caller may ask for the book and nothing else -- the CLI's
+        # --keep-originals. Then there is nothing to undo, so no manifest either.
+        if plan.get("move", True):
+            job.state = "moving originals"
+            mapping = move_originals(plan)
+            job.manifest = os.path.join(plan["folder"], f".bookbind-{job.id}.json")
+            with open(job.manifest, "w", encoding="utf-8") as fh:
+                json.dump({"id": job.id, "output": plan["out_name"], "moved": mapping,
+                           "checks": job.checks, "at": time.strftime("%Y-%m-%d %H:%M:%S")},
+                          fh, indent=1)
+            job.state, job.note = "done", f"{len(mapping)} originals moved to {ORIG}/"
+        else:
+            job.state, job.note = "done", "book written; sources left where they are"
+    except Exception as e:
+        job.state, job.note = "failed", f"{type(e).__name__}: {e}"
+        if os.path.exists(partial):
+            try:
+                os.remove(partial)
+            except OSError:
+                pass
+    finally:
+        job.t1 = time.time()
+        for p in filter(None, (concat, chapters, cpath)):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
+def worker():
+    while True:
+        job = QUEUE.get()
+        if job is None:
+            return
+        try:
+            # The lock guards the job table, not the work. Holding it for the
+            # whole encode made every /api/jobs poll wait behind ffmpeg, so the
+            # page sat on "Waiting for the engine" for the length of the run.
+            with JOBS_LOCK:
+                queued = job.state == "queued"
+            if queued:
+                run_job(job)
+        finally:
+            QUEUE.task_done()
+
+
+for _ in range(WORKERS):
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def restore(job_id):
+    """Put the originals back and remove the merged file."""
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+    if not job or not job.manifest or not os.path.exists(job.manifest):
+        return False, "no manifest for that job"
+    man = json.load(open(job.manifest, encoding="utf-8"))
+    base = job.plan["folder"]
+    back = 0
+    for m in man["moved"]:
+        src, dst = os.path.join(base, m["to"]), os.path.join(base, m["from"])
+        if os.path.exists(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.move(src, dst)
+            back += 1
+    out = os.path.join(base, man["output"])
+    if os.path.exists(out):
+        os.remove(out)
+    d = os.path.join(base, ORIG)
+    if os.path.isdir(d):
+        for dp, _, _ in os.walk(d, topdown=False):
+            try:
+                os.rmdir(dp)
+            except OSError:
+                pass
+    os.remove(job.manifest)
+    return True, f"{back} files restored"
+
+
+# ------------------------------------------------------------------- web server
+
+def jsonable(job):
+    return {"id": job.id, "state": job.state, "pct": round(job.pct, 1),
+            "note": job.note, "log": job.log[-40:], "checks": job.checks,
+            "name": job.plan["out_name"], "folder": job.plan["folder"],
+            "out": job.plan["out"],          # the file itself, for "saved to"
+            "est_bytes": job.plan.get("est_bytes", 0),
+            "n": job.plan["n"], "n_chapters": job.plan["n_chapters"],
+            "secs": job.plan["total_secs"],
+            "elapsed": round((job.t1 or time.time()) - job.t0, 1) if job.t0 else 0}
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, body, ctype="application/json"):
+        blob = body if isinstance(body, bytes) else json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(blob)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(blob)
+
+    def do_GET(self):
+        u = urllib.parse.urlparse(self.path)
+        q = urllib.parse.parse_qs(u.query)
+
+        if u.path in ("/", "/index.html"):
+            with open(os.path.join(STATIC, "index.html"), "rb") as fh:
+                return self._send(200, fh.read(), "text/html; charset=utf-8")
+        if u.path.startswith("/static/"):
+            p = os.path.join(STATIC, os.path.basename(u.path))
+            if os.path.exists(p):
+                ct = {"css": "text/css", "js": "text/javascript",
+                      "html": "text/html; charset=utf-8",
+                      "png": "image/png", "svg": "image/svg+xml",
+                      "json": "application/json"}.get(
+                    p.rsplit(".", 1)[-1], "application/octet-stream")
+                with open(p, "rb") as fh:
+                    return self._send(200, fh.read(), ct)
+            return self._send(404, {"error": "not found"})
+
+        if u.path == "/api/version":
+            return self._send(200, {"version": version(), "repo": REPO})
+
+        if u.path == "/api/health":
+            # What the app asks before it trusts a server it did not start. An
+            # old copy answering on the port would otherwise be adopted and the
+            # fixed engine would never run.
+            return self._send(200, {"ok": True, "version": version(),
+                                    "pid": os.getpid(),
+                                    "parent": os.environ.get("BOOKBIND_PARENT"),
+                                    "workers": WORKERS,
+                                    "jobs": len(JOBS)})
+
+        if u.path == "/api/home":
+            return self._send(200, {"home": os.path.expanduser("~"),
+                                    "desktop": os.path.expanduser("~/Desktop"),
+                                    "volumes": ["/Volumes/" + v for v in
+                                                sorted(os.listdir("/Volumes"))]})
+        if u.path == "/api/browse":
+            path = (q.get("path") or [os.path.expanduser("~")])[0]
+            path = os.path.abspath(os.path.expanduser(path))
+            if not os.path.isdir(path):
+                return self._send(400, {"error": "not a folder"})
+            dirs, files, audio = [], [], 0
+            try:
+                for name in sorted(os.listdir(path), key=natkey):
+                    if name.startswith("."):
+                        continue
+                    full = os.path.join(path, name)
+                    if os.path.isdir(full):
+                        dirs.append({"name": name, "path": full})
+                    elif os.path.splitext(name)[1].lower() in AUDIO_EXT:
+                        audio += 1
+                        if os.path.splitext(name)[1].lower() not in SKIP_EXT:
+                            files.append({"name": name, "path": full})
+            except PermissionError:
+                return self._send(403, {"error": "no permission for that folder"})
+            parent = os.path.dirname(path)
+            return self._send(200, {"path": path, "dirs": dirs, "files": files,
+                                    "audio": audio,
+                                    "parent": parent if parent != path else None})
+
+        if u.path == "/api/scan":
+            folder = (q.get("path") or [""])[0]
+            folder = os.path.abspath(os.path.expanduser(folder))
+            if not os.path.isdir(folder):
+                return self._send(400, {"error": "that folder does not exist"})
+            # An .m4b sitting in the folder is a book, not a chapter of one -- either
+            # an earlier run of this or something already finished. Never a source;
+            # it gets named below the list instead. (Adding one by hand still works.)
+            here = [f for f in scan_audio(folder)
+                    if os.path.splitext(f)[1].lower() not in SKIP_EXT]
+            already = [os.path.relpath(f, folder) for f in here
+                       if os.path.splitext(f)[1].lower() == ".m4b"]
+            files = [f for f in here if os.path.splitext(f)[1].lower() != ".m4b"]
+            rows = [file_row(f, folder) for f in files]
+            total = sum(r["secs"] for r in rows)
+            tagged = sum(1 for r in rows if r["track"])
+            return self._send(200, {
+                "path": folder, "count": len(rows), "secs": total,
+                "tagged": tagged, "size": sum(r["size"] for r in rows),
+                "files": rows,
+                "sample": [r["rel"] for r in rows[:6]],
+                "orig": os.path.isdir(os.path.join(folder, ORIG)),
+                "already": already})
+
+        if u.path == "/api/look":
+            # Describe loose files -- the ones added by hand from somewhere else, so
+            # the list can show a length and a title for them like any other.
+            paths = [p for p in (q.get("path") or [])
+                     if os.path.isfile(p) and os.path.splitext(p)[1].lower() in AUDIO_EXT]
+            if not paths:
+                return self._send(400, {"error": "no audio files in that"})
+            return self._send(200, {"files": [file_row(p) for p in paths]})
+
+        if u.path == "/api/where":
+            # Loose files with no folder chosen yet: the folder Bookbind would use is
+            # the one that holds them all, and this is how the page finds that out
+            # without guessing at it in JavaScript.
+            paths = [p for p in (q.get("path") or []) if os.path.isfile(p)]
+            if len(paths) == 1:
+                return self._send(200, {"folder": os.path.dirname(paths[0])})
+            if not paths:
+                return self._send(400, {"error": "no such files"})
+            return self._send(200, {"folder": os.path.commonpath(
+                [os.path.dirname(p) for p in paths])})
+
+        if u.path == "/api/search":
+            try:
+                res = itunes_search((q.get("author") or [""])[0], (q.get("title") or [""])[0])
+                return self._send(200, {"results": res})
+            except Exception as e:
+                # The raw exception is kept, because "which failure" matters; the
+                # sentence in front of it says what to do about the common one.
+                return self._send(200, {"results": [], "error":
+                    "The catalogue could not be reached (%s). Filling the fields "
+                    "by hand works, and so does dropping the cover image in."
+                    % e})
+
+        if u.path == "/api/jobs":
+            with JOBS_LOCK:
+                jobs = sorted(JOBS.values(), key=lambda j: j.t0 or 0, reverse=True)
+            return self._send(200, {"jobs": [jsonable(j) for j in jobs[:30]]})
+
+        return self._send(404, {"error": "not found"})
+
+    def do_POST(self):
+        u = urllib.parse.urlparse(self.path)
+        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except Exception:
+            return self._send(400, {"error": "bad request body"})
+
+        if u.path == "/api/drop":
+            # What a drop actually was. The page cannot see where a dropped file
+            # lives, so the app hands over the paths the Finder gave it and this
+            # sorts them out: a folder is a book folder, an audio file is a
+            # chapter, anything else is left alone.
+            folders, audio, other = [], [], []
+            for raw in (body.get("paths") or []):
+                path = os.path.abspath(os.path.expanduser(str(raw)))
+                if os.path.isdir(path):
+                    folders.append(path)
+                elif os.path.isfile(path) and os.path.splitext(path)[1].lower() in AUDIO_EXT:
+                    audio.append(path)
+                else:
+                    other.append(path)
+            return self._send(200, {"folders": folders, "audio": audio, "other": other})
+
+        if u.path == "/api/start":
+            plan, err = build_plan(
+                body.get("folder", ""), body.get("author", "").strip(),
+                body.get("title", "").strip(), body.get("year", "").strip(),
+                body.get("narrator", "").strip(), body.get("cover") or None,
+                body.get("order", "auto"), body.get("bitrate"),
+                body.get("files"), body.get("titles"))
+            if err:
+                return self._send(400, {"error": err})
+            job = Job(plan)
+            with JOBS_LOCK:
+                JOBS[job.id] = job
+            QUEUE.put(job)
+            return self._send(200, {"job": jsonable(job), "est_bytes": plan["est_bytes"]})
+
+        if u.path == "/api/cancel":
+            with JOBS_LOCK:
+                job = JOBS.get(body.get("id"))
+            if not job:
+                return self._send(404, {"error": "no such job"})
+            job.cancel.set()
+            if job.proc and job.proc.poll() is None:
+                job.proc.kill()
+            return self._send(200, {"ok": True})
+
+        if u.path == "/api/restore":
+            ok, msg = restore(body.get("id"))
+            return self._send(200 if ok else 400, {"ok": ok, "message": msg})
+
+        if u.path == "/api/reveal":
+            # Folder or file -- `open -R` shows the file selected inside its folder,
+            # which is what "show me that one" means for a single track.
+            target = body.get("folder") or body.get("path") or ""
+            if os.path.isdir(target):
+                subprocess.Popen(["open", target])
+                return self._send(200, {"ok": True})
+            if os.path.isfile(target):
+                subprocess.Popen(["open", "-R", target])
+                return self._send(200, {"ok": True})
+            return self._send(400, {"error": "no such folder"})
+
+        return self._send(404, {"error": "not found"})
+
+
+def follow_parent():
+    """Quit when the app that launched us does.
+
+    The app passes its own pid in BOOKBIND_PARENT. Without this, force-quitting the
+    app leaves this server running, and the next launch finds the port already
+    answered and quietly reuses the old one -- so an updated app talks to the code
+    from before the update. Only set when the app starts us, so running this by
+    hand keeps behaving like any other server.
+    """
+    pid = os.environ.get("BOOKBIND_PARENT")
+    if not (pid and pid.isdigit()):
+        return
+    while True:
+        time.sleep(1)
+        if os.getppid() != int(pid):
+            os._exit(0)
+
+
+if __name__ == "__main__":
+    threading.Thread(target=follow_parent, daemon=True).start()
+    srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    print(f"Bookbind -> http://127.0.0.1:{PORT}   (ctrl-c to stop)")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        print("\nstopped")
