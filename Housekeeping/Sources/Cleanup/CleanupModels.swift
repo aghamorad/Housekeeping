@@ -1,5 +1,17 @@
 import Foundation
 
+/// Counts reviewed top-level items, never estimates bytes copied or time remaining.
+/// A completed item has a recorded outcome; a permission request is still in flight.
+struct UninstallProgress: Sendable, Equatable {
+    enum Phase: Sendable { case checking, preparing, moving, permission, recording, finished }
+    let phase: Phase
+    var path: String? = nil
+    var completed = 0
+    var total = 0
+    var succeeded: Bool? = nil
+    var message: String? = nil
+}
+
 struct CleanupResult {
     let date: Date
     let movedItems: [MovedItem]
@@ -46,6 +58,11 @@ struct QuarantineEntry: Identifiable, Equatable {
 
 struct PermanentDeletionResult {
     let deleted: [QuarantineEntry]
+    let failed: [(QuarantineEntry, String)]
+}
+
+struct QuarantineRestoreResult {
+    let restored: [QuarantineEntry]
     let failed: [(QuarantineEntry, String)]
 }
 

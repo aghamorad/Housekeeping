@@ -40,6 +40,7 @@ final class CleanerModel: ObservableObject {
     @Published private(set) var lastScan: Date?
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
+    @Published private(set) var uninstallSession: UninstallSession?
 
     @Published var query = ""
     @Published var order: FileOrder = .largest
@@ -101,6 +102,7 @@ final class CleanerModel: ObservableObject {
                 guard let self, self.scanID == id, self.phase == .scanning else { return }
                 self.candidates = snapshot.candidates
                 self.apps = snapshot.apps
+                self.includedRelatedPaths = self.defaultRelatedPaths(snapshot.apps)
                 self.completedCategories = completed
             }
         }
@@ -127,9 +129,15 @@ final class CleanerModel: ObservableObject {
         outcome = "Scan stopped. Showing completed categories only; unvisited categories have not been checked."
     }
 
+    private func defaultRelatedPaths(_ apps: [InstalledApp]) -> Set<String> {
+        let protection = ProtectionList()
+        return Set(apps.flatMap(\.leftovers).filter { !protection.isProtected($0.url) }.map(\.id))
+    }
+
     private func apply(_ snapshot: CleanerSnapshot) {
         candidates = snapshot.candidates
         apps = snapshot.apps
+        includedRelatedPaths = defaultRelatedPaths(snapshot.apps)
         trash = snapshot.trash
         notes = snapshot.notes
         lastScan = Date()
@@ -268,9 +276,8 @@ final class CleanerModel: ObservableObject {
 
     /// Uninstalls everything ticked in one transaction. Open applications are
     /// left out rather than refused, because one open app should not stop the
-    /// other thirty-nine from going. Related files are only included for apps
-    /// whose row was opened and the files ticked — a bulk pass takes the
-    /// applications themselves and nothing else.
+    /// other thirty-nine from going. Matched related files are included by
+    /// default; the reader can uncheck anything they want to keep.
     func requestUninstallSelected() {
         guard phase == .ready else { return }
         let protection = ProtectionList()
@@ -294,9 +301,10 @@ final class CleanerModel: ObservableObject {
 
         pendingAction = .uninstall
         pendingTitle = "Move \(ready.count) application\(ready.count == 1 ? "" : "s") to Quarantine?"
-        pendingDetail = "\(ready.reduce(Int64(0)) { $0 + $1.size }.sizeDescription) of applications. Related support files are included only where you ticked them by opening the row. Everything moved can be put back from Quarantine."
+        let related = CleanCandidate.nonOverlapping(ready.flatMap(\.leftovers).filter { includedRelatedPaths.contains($0.id) && !protection.isProtected($0.url) })
+        pendingDetail = "The applications and \(related.count) included related items move together. Related files may contain settings and personal app data. Uncheck anything you want to keep before continuing. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
         pendingPaths = paths
-        pendingSize = ready.reduce(Int64(0)) { $0 + $1.size }
+        pendingSize = ready.reduce(Int64(0)) { $0 + $1.size } + related.reduce(0) { $0 + $1.size }
         pendingAppName = ready.count == 1 ? ready[0].name : nil
         confirmationText = ""
         confirmationHint = running.isEmpty
@@ -356,7 +364,7 @@ final class CleanerModel: ObservableObject {
 
         pendingAction = .uninstall
         pendingTitle = "Move \(app.name) to Quarantine?"
-        var detail = "The application and \(related.count) explicitly chosen related items, \(size.sizeDescription) together. Unchosen support files stay in place."
+        var detail = "The application and \(related.count) included related items, \(size.sizeDescription) together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
         if let version = app.version {
             detail += " Version \(version)."
         }
@@ -425,27 +433,48 @@ final class CleanerModel: ObservableObject {
         }
         Task { @MainActor [weak self] in
             do {
-                let result = try await engine.quarantineRepairs(
-                    paths: paths,
-                    category: "Clean Up",
-                    reason: title,
-                    categories: categories,
-                    intent: intent
-                )
+                let result: RepairMoveResult
+                if intent == .explicitRemoval {
+                    let targets: [InstalledApp] = self?.apps.filter { moved.contains($0.id) }.map { app in
+                        var copy = app
+                        copy.leftovers = app.leftovers.filter { moved.contains($0.id) }
+                        return copy
+                    } ?? []
+                    self?.uninstallSession = UninstallSession(apps: targets)
+                    result = try await engine.uninstall(targets) { [weak self] event in
+                        await self?.receiveUninstallProgress(event)
+                    }
+                    self?.uninstallSession?.finish(result: result)
+                } else {
+                    result = try await engine.quarantineRepairs(paths: paths, category: "Clean Up",
+                        reason: title, categories: categories, intent: intent)
+                }
                 self?.absorb(result, title: title, noun: noun)
             } catch {
+                self?.uninstallSession?.finish(error: error.localizedDescription)
                 self?.finishWith(error: error)
             }
         }
     }
 
+    private func receiveUninstallProgress(_ event: UninstallProgress) {
+        uninstallSession?.receive(event)
+    }
+
+    func dismissUninstallSession() {
+        guard phase != .working else { return }
+        uninstallSession = nil
+    }
+
     private func absorb(_ result: RepairMoveResult, title: String, noun: String) {
         let moved = Set(result.movedPaths)
-        let movedBytes = candidates.filter { moved.contains($0.id) }.reduce(0) { $0 + $1.size }
-            + apps.reduce(Int64(0)) { total, app in
-                total + (moved.contains(app.id) ? app.size : 0)
-                    + app.leftovers.filter { moved.contains($0.id) }.reduce(0) { $0 + $1.size }
-            }
+        var sizes: [String: Int64] = [:]
+        for candidate in candidates { sizes[candidate.id] = candidate.size }
+        for app in apps {
+            sizes[app.id] = app.size
+            for item in app.leftovers { sizes[item.id] = item.size }
+        }
+        let movedBytes = moved.reduce(Int64(0)) { $0 + (sizes[$1] ?? 0) }
         includedRelatedPaths.subtract(moved)
         candidates.removeAll { moved.contains($0.url.path) }
         apps = apps.compactMap { app in
@@ -488,7 +517,7 @@ final class CleanerModel: ObservableObject {
 
     private func finishWith(error: Error) {
         failures = [error.localizedDescription]
-        outcome = "Nothing was moved."
+        outcome = "Removal stopped. Review Quarantine for any items already moved before trying again."
         phase = .ready
     }
 }

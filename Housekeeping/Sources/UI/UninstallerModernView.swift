@@ -19,7 +19,12 @@ final class UninstallerModel: ObservableObject {
     @Published var searchQuery: String = ""
     @Published var sortOption: AppSortOption = .sizeDescending
     @Published var filterOption: AppFilterOption = .all
+    @Published private(set) var isWorking = false
+    @Published private(set) var outcome: String?
+    @Published private(set) var failures: [String] = []
+    @Published var excludedRelatedPaths: Set<String> = []
     @Published var pendingUninstallPlan: [InstalledApp]? = nil
+    @Published private(set) var session: UninstallSession?
 
     public enum AppFilterOption: String, CaseIterable, Identifiable, Sendable {
         case all = "All Apps"
@@ -58,16 +63,21 @@ final class UninstallerModel: ObservableObject {
     }
 
     func startScan() {
-        guard !isScanning else { return }
+        guard !isScanning, !isWorking else { return }
         isScanning = true
         scanProgress = "Discovering applications…"
 
+        let progress: @Sendable (String) -> Void = { [weak self] line in
+            Task { @MainActor in self?.scanProgress = line }
+        }
         Task.detached(priority: .userInitiated) { [weak self] in
-            let results = Uninstaller.installed { _ in }
+            let results = Uninstaller.installed(progress: progress)
 
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.apps = results
+                self.selectedAppURLs.formIntersection(Set(results.map(\.url)))
+                self.expandedAppURLs.formIntersection(Set(results.map(\.url)))
                 self.isScanning = false
                 self.scanProgress = ""
             }
@@ -128,7 +138,9 @@ final class UninstallerModel: ObservableObject {
     }
 
     var selectedTotalSize: Int64 {
-        apps.filter { selectedAppURLs.contains($0.url) }.reduce(0) { $0 + $1.totalSize }
+        apps.filter { selectedAppURLs.contains($0.url) }.reduce(0) { total, app in
+            total + app.size + includedLeftovers(app).reduce(0) { $0 + $1.size }
+        }
     }
 
     func toggleSelection(_ app: InstalledApp) {
@@ -148,39 +160,135 @@ final class UninstallerModel: ObservableObject {
     }
 
     func prepareUninstall() {
-        let targets = apps.filter { selectedAppURLs.contains($0.url) }
+        guard !isWorking, !isScanning else { return }
+        outcome = nil
+        let selected = apps.filter { selectedAppURLs.contains($0.url) }
+        let targets = selected.filter { !$0.isRunning && !ProtectionList().isProtected($0.url) }
+        failures = selected.filter { $0.isRunning || ProtectionList().isProtected($0.url) }.map {
+            $0.isRunning ? "\($0.name) is open. Quit it, then try again." : "\($0.name) is on the Leave Alone list."
+        }
         guard !targets.isEmpty else { return }
         pendingUninstallPlan = targets
     }
 
-    func executeUninstall() {
-        guard let targets = pendingUninstallPlan else { return }
-        let paths = targets.flatMap { [$0.url.path] + $0.leftovers.map(\.url.path) }
-        let engine = CleanupEngine()
+    func requestQuit(_ app: InstalledApp) {
+        let running = NSWorkspace.shared.runningApplications.filter {
+            $0.bundleURL?.standardizedFileURL == app.url.standardizedFileURL
+                || (app.bundleIdentifier != nil && $0.bundleIdentifier == app.bundleIdentifier)
+        }
+        let accepted = running.map { $0.terminate() }.allSatisfy { $0 }
+        outcome = accepted
+            ? "Quit requested for \(app.name). Save any open work, then click Uninstall when it has closed."
+            : "\(app.name) could not be closed. Quit it from its own menu, then try Uninstall again."
+        failures = []
+    }
 
+    func includedLeftovers(_ app: InstalledApp) -> [CleanCandidate] {
+        app.leftovers.filter { !excludedRelatedPaths.contains($0.id) && !ProtectionList().isProtected($0.url) }
+    }
+
+    func setRelatedFiles(_ app: InstalledApp, included: Bool) {
+        let paths = app.leftovers.map(\.id)
+        if included { excludedRelatedPaths.subtract(paths) }
+        else { excludedRelatedPaths.formUnion(paths) }
+    }
+
+    func executeUninstall() {
+        guard !isWorking, let planned = pendingUninstallPlan else { return }
+        let targets = Uninstaller.unambiguousLeftovers(in: planned.map { app in
+            var copy = app
+            copy.leftovers = includedLeftovers(app)
+            return copy
+        })
+        pendingUninstallPlan = nil
+        isWorking = true
+        outcome = nil
+        session = UninstallSession(apps: targets)
+        let skipped = failures
         Task { @MainActor [weak self] in
-            _ = try? await engine.quarantineRepairs(
-                paths: paths,
-                category: "App Uninstaller",
-                reason: "Uninstalled \(targets.count) application(s)"
-            )
-            self?.selectedAppURLs.removeAll()
-            self?.expandedAppURLs.removeAll()
-            self?.pendingUninstallPlan = nil
+            do {
+                let result = try await CleanupEngine().uninstall(targets) { [weak self] event in
+                    await self?.receiveProgress(event)
+                }
+                let moved = Set(result.movedPaths)
+                let count = targets.filter { moved.contains($0.id) }.count
+                let relatedCount = targets.flatMap(\.leftovers).filter { moved.contains($0.id) }.count
+                self?.outcome = "\(count) app\(count == 1 ? "" : "s") and \(relatedCount) related item\(relatedCount == 1 ? "" : "s") moved to Quarantine. You can put them back there. Space is freed when you delete them permanently."
+                self?.failures = skipped + result.moves.filter { !$0.succeeded }.map {
+                    "\($0.path) — \($0.message ?? "Could not be moved. Try again.")"
+                }
+                self?.selectedAppURLs.subtract(targets.filter { moved.contains($0.id) }.map(\.url))
+                self?.apps.removeAll { moved.contains($0.id) }
+                self?.session?.finish(result: result)
+            } catch {
+                self?.failures = skipped + [error.localizedDescription]
+                self?.session?.finish(error: error.localizedDescription)
+            }
+            self?.isWorking = false
             self?.startScan()
         }
     }
+
+    private func receiveProgress(_ event: UninstallProgress) {
+        session?.receive(event)
+    }
+
+    func dismissSession() {
+        guard !isWorking else { return }
+        session = nil
+    }
+
 }
 
 struct UninstallerModernView: View {
     @ObservedObject var model: UninstallerModel = .shared
+    @EnvironmentObject private var appState: AppState
     @Environment(\.uiStyle) private var style
 
     var body: some View {
+        Group {
+            if let session = model.session {
+                UninstallActivityView(session: session, done: model.dismissSession) {
+                    appState.refreshQuarantineAvailability()
+                    appState.showQuarantineManagement = true
+                }
+            } else {
+                browser
+            }
+        }
+        .background { HousekeepingBackdrop(style: style) }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
+            model.objectWillChange.send()
+        }
+        .sheet(item: Binding(
+            get: { model.pendingUninstallPlan.map { UninstallPlanWrapper(items: $0) } },
+            set: { model.pendingUninstallPlan = $0?.items }
+        )) { wrapper in
+            uninstallConfirmationSheet(wrapper.items)
+                .housekeepingSurface(style)
+        }
+    }
+
+    private var browser: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
                 searchAndActionBar
+                if model.isScanning && !model.apps.isEmpty { scanningView }
+                if model.outcome != nil || !model.failures.isEmpty {
+                    ThemePanel {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if let outcome = model.outcome { Text(outcome).font(style.bodyFont) }
+                            ForEach(model.failures, id: \.self) { failure in
+                                Text(failure).font(style.smallFont).foregroundColor(style.negative).textSelection(.enabled)
+                            }
+                            ThemeButton(title: "Review Quarantine", systemImage: "archivebox") {
+                                appState.refreshQuarantineAvailability()
+                                appState.showQuarantineManagement = true
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
 
                 if model.isScanning && model.apps.isEmpty {
                     scanningView
@@ -195,13 +303,7 @@ struct UninstallerModernView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background { HousekeepingBackdrop(style: style) }
-        .sheet(item: Binding(
-            get: { model.pendingUninstallPlan.map { UninstallPlanWrapper(items: $0) } },
-            set: { model.pendingUninstallPlan = $0?.items }
-        )) { wrapper in
-            uninstallConfirmationSheet(wrapper.items)
-                .housekeepingSurface(style)
-        }
+        .disabled(model.isWorking)
     }
 
     // MARK: - Header
@@ -216,7 +318,7 @@ struct UninstallerModernView: View {
                     Text("App Uninstaller")
                         .font(style.isRetro ? style.titleFont : .system(size: 28, weight: .bold))
                 }
-                Text("Completely remove applications along with their hidden caches, containers, and leftovers.")
+                Text("Remove apps and their matched related files together. Review what is included, then move it to Quarantine.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
@@ -495,45 +597,27 @@ struct UninstallerModernView: View {
                     }
                 }
 
-                // Row action buttons: See Leftovers + Direct Uninstall
-                if !app.leftovers.isEmpty {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            model.toggleExpand(app)
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: isExpanded ? "chevron.up" : "folder.badge.gearshape")
-                            Text(isExpanded ? "Hide" : "See Leftovers")
-                        }
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(style.accent)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(style.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(style.accent.opacity(0.25), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .help(isExpanded ? "Hide leftover components" : "Inspect and reveal the \(app.leftovers.count) leftover items in Finder")
-                }
-
-                // Direct 1-click uninstall
                 Button {
-                    model.selectedAppURLs = [app.url]
-                    model.prepareUninstall()
+                    if app.isRunning {
+                        model.requestQuit(app)
+                    } else {
+                        model.selectedAppURLs = [app.url]
+                        model.prepareUninstall()
+                    }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "trash")
-                        Text("Uninstall")
+                        Image(systemName: app.isRunning ? "stop.circle" : "trash")
+                        Text(app.isRunning ? "Quit to Uninstall" : "Uninstall")
                     }
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.red)
                     .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
+                    .frame(minHeight: 44)
                     .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
-                .help("Uninstall \(app.name) and its leftovers")
+                .help(app.isRunning ? "Ask \(app.name) to quit normally; review removal after it closes" : "Review \(app.name) and its matched related files")
+                .disabled(model.isScanning)
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.18)) {
@@ -809,40 +893,86 @@ struct UninstallerModernView: View {
     // MARK: - Confirmation Sheet
 
     private func uninstallConfirmationSheet(_ targets: [InstalledApp]) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
+        let included = targets.flatMap { model.includedLeftovers($0) }
+        let size = targets.reduce(Int64(0)) { $0 + $1.size } + included.reduce(0) { $0 + $1.size }
+        return VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Image(systemName: "checkmark.app")
                     .font(.system(size: 26))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(style.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Confirm Complete App Removal")
+                    Text("Review App Removal")
                         .font(.system(size: 18, weight: .bold))
-                    Text("The selected applications and all their components will be moved safely to Quarantine.")
+                    Text("Apps and checked related files will move to Quarantine. Related files may hold settings and personal app data. Uncheck anything you want to keep. macOS may ask for an administrator password.")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
             }
 
+            HStack(spacing: 18) {
+                Label("\(targets.count) app\(targets.count == 1 ? "" : "s")", systemImage: "square.stack.3d.up")
+                Label("\(included.count) related items included", systemImage: "folder")
+                Spacer()
+                Text(size.sizeDescription).monospacedDigit()
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .padding(14).background(style.rowSelection, in: RoundedRectangle(cornerRadius: 10))
+
             Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
+                LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(targets) { app in
                         HStack {
                             Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
                                 .resizable()
-                                .frame(width: 24, height: 24)
+                                .frame(width: 36, height: 36)
                             Text(app.name)
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 15, weight: .bold))
                             Spacer()
-                            Text(ByteCountFormatter.string(fromByteCount: app.totalSize, countStyle: .file))
+                            Text((app.size + model.includedLeftovers(app).reduce(0) { $0 + $1.size }).sizeDescription)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
+                        Text(app.url.homeAbbreviatedPath).font(style.pathFont).textSelection(.enabled)
+                        if !app.leftovers.isEmpty {
+                            HStack {
+                                Text("\(model.includedLeftovers(app).count) of \(app.leftovers.count) related files included")
+                                    .font(.system(size: 13)).foregroundStyle(style.secondaryText)
+                                Spacer()
+                                Button("Include All") { model.setRelatedFiles(app, included: true) }
+                                    .frame(minHeight: 44)
+                                Button("Keep All Related Files") { model.setRelatedFiles(app, included: false) }
+                                    .frame(minHeight: 44)
+                            }
+                        }
+                        ForEach(app.leftovers) { item in
+                            Toggle(isOn: Binding(
+                                get: { !model.excludedRelatedPaths.contains(item.id) && !ProtectionList().isProtected(item.url) },
+                                set: { include in
+                                    if include { model.excludedRelatedPaths.remove(item.id) }
+                                    else { model.excludedRelatedPaths.insert(item.id) }
+                                }
+                            )) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(item.name) · \(item.size.sizeDescription)").font(style.bodyFont)
+                                    Text(categoryBadge(for: item.url).label)
+                                        .font(.system(size: 12, weight: .medium)).foregroundStyle(style.accent)
+                                    Text(item.url.homeAbbreviatedPath).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+                                    if ProtectionList().isProtected(item.url) {
+                                        Label("Kept: on the Leave Alone list", systemImage: "hand.raised")
+                                            .font(.system(size: 12)).foregroundStyle(style.caution)
+                                    }
+                                }
+                            }
+                            .disabled(ProtectionList().isProtected(item.url))
+                            .padding(.vertical, 6).frame(minHeight: 48)
+                        }
+                        Divider()
                     }
                 }
             }
-            .frame(maxHeight: 220)
+            .frame(maxHeight: 340)
 
             Divider()
 
@@ -852,7 +982,7 @@ struct UninstallerModernView: View {
                 }
                 Spacer()
                 ThemeButton(
-                    title: "Uninstall & Move to Quarantine",
+                    title: "Uninstall \(targets.count) App\(targets.count == 1 ? "" : "s")",
                     systemImage: "trash.fill",
                     isPrimary: true
                 ) {
@@ -861,7 +991,7 @@ struct UninstallerModernView: View {
             }
         }
         .padding(24)
-        .frame(minWidth: 520, minHeight: 380)
+        .frame(minWidth: 700, minHeight: 500)
     }
 }
 

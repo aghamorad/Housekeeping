@@ -937,32 +937,42 @@ final class AppState: ObservableObject {
     func restoreTransaction(_ transaction: CleanupTransaction) async {
         do {
             lastErrorMessage = nil
-            _ = try await CleanupEngine().restoreTransaction(transaction)
+            let result = try await CleanupEngine().restoreTransaction(transaction)
+            let failures = result.restoredItems.compactMap { item -> String? in
+                if case .failed(let record, let reason) = item {
+                    return "\(record.originalPath ?? "Item"): \(reason)"
+                }
+                return nil
+            }
+            lastErrorMessage = failures.isEmpty ? nil : failures.joined(separator: "\n")
             refreshQuarantineAvailability()
         } catch {
             lastErrorMessage = error.localizedDescription
         }
     }
 
-    func restoreQuarantineEntry(_ entry: QuarantineEntry) {
-        do {
-            try CleanupEngine().restore(entry)
-            lastErrorMessage = nil
-            refreshQuarantineAvailability()
-        } catch {
-            lastErrorMessage = error.localizedDescription
-        }
+    func restoreQuarantineEntries(_ entries: [QuarantineEntry]) async -> Int {
+        let result = await Task.detached(priority: .userInitiated) {
+            CleanupEngine().restore(entries)
+        }.value
+        lastErrorMessage = result.failed.isEmpty ? nil
+            : result.failed.map { "\($0.0.originalPath): \($0.1)" }.joined(separator: "\n")
+        refreshQuarantineAvailability()
+        return result.restored.count
     }
 
-    func permanentlyDeleteQuarantineEntries(_ entries: [QuarantineEntry]) {
+    func permanentlyDeleteQuarantineEntries(_ entries: [QuarantineEntry]) async -> Int {
         do {
-            let result = try CleanupEngine().permanentlyDelete(entries)
-            lastErrorMessage = result.failed.isEmpty
-                ? nil
+            let result = try await Task.detached(priority: .userInitiated) {
+                try CleanupEngine().permanentlyDelete(entries)
+            }.value
+            lastErrorMessage = result.failed.isEmpty ? nil
                 : result.failed.map { "\($0.0.originalPath): \($0.1)" }.joined(separator: "\n")
             refreshQuarantineAvailability()
+            return result.deleted.count
         } catch {
             lastErrorMessage = error.localizedDescription
+            return 0
         }
     }
 

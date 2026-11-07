@@ -1,3 +1,173 @@
+## Current work — 2026-11-08 — Publish 0.27.0 to GitHub
+
+Status: in progress, Codex. User explicitly requests a new GitHub release with
+explanations of the fixes. This authorizes commit, push, version tag, downloadable
+assets and publication. Remote main matches local base `3b5f636`; v0.27.0 is free.
+
+Release notes: `RELEASE_NOTES_v0.27.0.md`, covering the uninstall-policy/error fix,
+scoped permission recovery, matched related files, real animated progress, batch
+Quarantine and the validation limits. Prior local packages lack a release commit;
+rebuild from a clean committed tree before uploading. Keep a draft until every
+archive has been extracted and verified, including source SHA and bundled runtimes.
+Use the local bundled Bookbind engine matching 1.5.2; do not use the older runtime
+restoration in the optional GitHub Actions workflow for this manual release.
+
+Next: commit the reviewed session changes and notes, build release artifacts,
+verify, push/tag, upload to a draft, download and compare uploaded assets, publish
+and confirm the latest-release API and tag/commit association. Do not stop local
+Housekeeping or media jobs. Existing installation stays in place.
+
+## Current work — 2026-11-07 — 0.27.0 (50): Animated uninstaller installed locally
+
+Status: implementation, fixture validation, packaging and installation complete.
+Updated 2026-11-07 23:57 +0330, Codex.
+Project `/Volumes/SanDisk-AI/Apps & Games/Housekeeping`, main at `3b5f636`.
+All session changes remain local/uncommitted and unpublished. No branch, commit,
+push, tag or release was created. No real user app was removed for testing.
+
+User's latest request: a proper uninstaller with animations while removing apps,
+comparable in polish to CleanMyMac or Mole. Builds on the 0.26.9 work below.
+
+Delivered:
+- Both uninstall entry points show the shared `UI/UninstallActivityView.swift`:
+  retained app icons, file-transfer animation, real item counts/progress ring,
+  permission status, per-app/per-file outcomes and a persistent summary.
+- The engine awaits UI progress before starting authorization, and emits successful
+  item outcomes only after the recovery manifest is saved. Preflight refusals,
+  app-before-data dependencies, canceled permission requests and partial failures
+  remain visible. Interrupted reports retain recorded successes.
+- Failed app rows expand with reasons and Finder actions. Results distinguish
+  removed apps, removed related items and storage held in Quarantine. Restore/
+  review access and Back to Apps remain available after completion.
+- Review includes live counts/size, category labels, Include All and Keep All
+  Related Files. Open apps offer a normal quit request. Removed apps disappear
+  from the browser immediately; rescanning remains visible before another choice.
+- Animation follows actual work without fake delays or copied-byte estimates.
+  Existing window visibility tracking stops it when covered, minimized, hidden,
+  inactive, waiting for permission, finished or Reduce Motion is on. No persistent
+  animation timer was added. Actual idle performance has not been measured in the
+  newly installed executable because the old process was deliberately left running.
+- Legacy cleanup totals deduplicate candidate/app-leftover paths; interrupted
+  operations no longer claim that nothing was moved.
+
+Verified:
+- 358 safety assertions pass without warnings. Fixtures check durable recovery
+  visibility during success callbacks, ordered app-before-data progress,
+  permission-before-helper, partial/interrupted summaries, and the prior 0.26.9
+  protection/authorization/bulk-Quarantine cases.
+  Log `.build/uninstall-experience-safety.log`.
+- GUI typecheck and both optimized architecture compilations pass with warnings
+  treated as errors. Final build log `.build/uninstall-experience-package-final.log`.
+- Eight offscreen SwiftUI PNG fixtures rendered (removal, permission, completion,
+  interruption in both themes) in `.build/uninstall-previews/`. Inspected modern
+  removal/completion and Classic interruption layouts. The fixture process uses
+  fake plans only and never invokes the cleanup engine or controls the live app.
+- All three final archives were extracted and checked for version/build,
+  strict deep signatures, expected app/runtime architectures, working bundled
+  ffmpeg/ffprobe, Bookbind engine matching 1.5.2, and a source fingerprint matching
+  the final source tree. `.build/uninstall-experience-validation.json` and
+  `.build/uninstall-experience-artifact-check.log` record the checks.
+- Installed `/Applications/Housekeeping.app` answers `Housekeeping 0.27.0 (build 50)`;
+  its signature verifies and binary hash matches the final packaged app:
+  `2984d496dc75650be54b0bddad134fa24f665b50975c86a996d57ad68c6b021e`.
+- Installation preserved the running process/jobs. Recorded Quarantine manifest
+  count/hash matched before/after (0 manifests at that visible root).
+  `.build/uninstall-experience-installation.json` has the receipt.
+
+Final artifacts: `.build/uninstaller-0.27.0-final/` (.app, three ZIPs, SHA256SUMS).
+The first `.build/uninstaller-0.27.0` package is superseded by a final browser-refresh
+fix; do not install/deliver it. Verifier/installer helpers:
+`.build/verify_uninstall_experience.py`, `.build/install_uninstall_experience.py`.
+Backup: `/Users/Morad/.Trash/Housekeeping-0.26.9-before-0.27.0-20261107-235633.app`.
+Guide `/Users/Morad/Desktop/Housekeeping — a noob's guide.md` now describes 0.27.0,
+review/quit/progress/results, bulk Quarantine, recovery and the verified limits.
+
+Limits / user action: the native bridge still returns "The observed macOS window
+disappeared" (normal/explicit-window reads), so live clicks, animation timing and
+the actual administrator dialog remain unverified. Static rendering and fixture
+tests are not an end-to-end live uninstall. Quit and reopen Housekeeping after
+current Bookbind/MediaDock jobs finish to load the installed update.
+
+Reusable constraints: report progress only after the durable state transition;
+await UI authorization status before a blocking helper; retain icons before moving
+bundles; use shared presentation/reducers for multiple removal entry points;
+keep animation gated by per-window visibility and actual operation state.
+
+## Current work — 2026-11-07 — 0.26.9 (49): Uninstaller and bulk Quarantine installed locally
+
+Status: implementation, fixture validation and local installation complete.
+Updated 2026-11-07 23:23 +0330, Codex.
+Project `/Volumes/SanDisk-AI/Apps & Games/Housekeeping`; main remains at
+`3b5f636`, with these changes uncommitted and unpublished. Current developer
+instructions prohibit commits/pushes without an explicit request. No branch,
+tag, release, remote change, or user-app cleanup was performed.
+
+Objective: fix the wonky uninstall permission flow, include leftovers with an
+app, and end one-at-a-time Quarantine management. Vinegar was already deleted
+by hand before this task; it was not used as a test target.
+
+Delivered:
+- Both uninstall interfaces use CleanupEngine.uninstall with explicitRemoval;
+  the dedicated screen previously used sweep intent and silently discarded errors.
+- Matched related files start included and can be unchecked in exact-path review.
+  Leave Alone is honored in both interfaces and the engine. Shared exact matches
+  and parent folders containing another installed app's data are excluded.
+- The app moves before its related files. Running, missing, protected, Apple or
+  failed apps leave their related data untouched. Actual results and failures show.
+- Permission recovery is restricted to validated third-party app bundles and
+  their recorded Quarantine copies. A bounded macOS administrator request runs
+  Foundation through an argument-encoded JXA command; restore and permanent delete
+  use the same recovery. No ownership/access permissions are rewritten. One
+  canceled/failed request suppresses further prompts in that batch.
+- Quarantine has search, batch selection, Select All Shown, Clear Selection,
+  bulk restore, Delete Selected and Empty Quarantine. Confirmation captures the
+  reviewed entries and shows count/size. Bulk filesystem work runs off the UI
+  actor. Failed items remain waiting. History restore now reports partial failures
+  and prevents overlapping actions in that view.
+
+Verified:
+- 347 assertions pass (29 new), log `.build/uninstaller-safety.log`.
+- GUI typecheck with warnings-as-errors passes, `.build/uninstaller-typecheck.log`.
+- Both optimized architecture builds and universal packaging pass. All three ZIPs
+  were extracted and checked for version/build, strict deep signatures, app/runtime
+  architectures, working ffmpeg/ffprobe, and BookbindServer matching engine 1.5.2.
+  The universal extracted binary also answers --version and matches the installed
+  binary. Evidence `.build/uninstaller-validation.json` and artifact-check log.
+- Fixtures exercise app+settings in one transaction, authorization success/cancel
+  and canceled batches, permission recovery on restore/purge, no broad elevation
+  for related data, missing/protected/Apple refusals, shared parent folders,
+  multi-app deletion, bulk restoration collisions, and both single/bulk review
+  defaults. The actual filesystem command was run without elevation against
+  quotes/newlines/shell metacharacters. No real administrator prompt was exercised.
+- Installed `/Applications/Housekeeping.app` is 0.26.9 (49), signature verifies,
+  and its binary hash equals the packaged build. Installation did not stop the
+  running 0.26.8 process or its services. Quit and reopen after current jobs finish.
+- Old app backup: `/Users/Morad/.Trash/Housekeeping-0.26.8-before-0.26.9-20261107-232200.app`.
+  Installation details: `.build/uninstaller-installation.json`.
+
+Artifacts: `.build/uninstaller-0.26.9/` contains the .app, three ZIPs and
+SHA256SUMS.txt. Package script now uses a fresh compiler cache per run (the old
+cache caused a duplicate-module crash), preserves generated work in Trash, and
+records base commit/input digest while omitting a false published-commit stamp
+for a modified source tree. The updater will therefore show unknown source status
+for this local build rather than claiming it equals the public commit.
+
+Guide: `/Users/Morad/Desktop/Housekeeping — a noob's guide.md` updated, with
+new actions, recovery, backup, and instructions not to rerun the old hkfix installer.
+
+Limits / next action: the native computer-use bridge lists the running app but
+both normal and explicit-window reads return "The observed macOS window
+disappeared". No alternate UI mechanism was used. Visual layout/click verification
+and an actual administrator prompt remain unverified. The new executable loads
+on the user's next quit/reopen. No real user app or Quarantine item was removed
+to test the update. Publication requires an explicit user request.
+
+Reusable engineering constraints: route every uninstall surface through the same
+intent-aware engine; make related-data moves depend on successful app moves;
+exclude overlapping ownership as well as identical paths; preserve failed items
+and cancellation as partial results; test the actual privilege-command encoding
+without elevating fixture tests; bind confirmation to a reviewed batch snapshot.
+
 ## Current work — 2026-11-07 — 0.26.8 (48): Bookbind binds, menu bar answers
 
 Objective: Bookbind sat on "Waiting for the engine", and the menu bar door and
