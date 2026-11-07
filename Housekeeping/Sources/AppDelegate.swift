@@ -30,7 +30,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // while it is up, and it is nobody else's to shut down. Left alone it outlives
         // the app that started it, still resident and still listening, with nothing
         // left running that knows it is there.
-        Housekeeper.shared.server.stopAndWait()
+        // Bounded, and short. A quit that sits on a child process for seconds
+        // reads as a hang; the child is killed at the end of the wait either way.
+        Housekeeper.shared.server.stopAndWait(timeout: 1.2)
 
         // The fake-location session is the same shape of thing: a child process
         // holding a phone somewhere it is not. It ends with the app.

@@ -111,7 +111,7 @@ enum PhoneTool {
         try? current.output.close()
         guard current.process.isRunning else { return }
         current.process.terminate()
-        let deadline = Date().addingTimeInterval(3)
+        let deadline = Date().addingTimeInterval(1.2)
         while current.process.isRunning && Date() < deadline { usleep(50_000) }
         if current.process.isRunning { kill(current.process.processIdentifier, SIGKILL) }
     }

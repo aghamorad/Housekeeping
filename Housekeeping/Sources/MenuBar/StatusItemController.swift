@@ -87,8 +87,29 @@ final class WindowOpener {
         // a window, and only when it is asked from inside the scene. The job is
         // kept even when there is no scene to ask yet, so a window that arrives
         // later — from the menu, from the Dock, from a launch — still runs it.
+        //
+        // A closed SwiftUI window is usually still in `NSApp.windows`, only
+        // invisible. Ordering that one front is the reliable way back: it does
+        // not depend on the `openWindow` action still being valid after its view
+        // was torn down.
+        if let dormant = dormantWindow() {
+            dormant.makeKeyAndOrderFront(nil)
+            if !NSApp.isActive { dormant.orderFrontRegardless() }
+            DispatchQueue.main.async(execute: then)
+            return
+        }
         waiting = then
         open?()
+    }
+
+    /// A window the app has closed but not released. SwiftUI keeps these around,
+    /// and unlike a live window they are not in `liveWindow()`.
+    private func dormantWindow() -> NSWindow? {
+        NSApp.windows.first {
+            $0.level == .normal
+                && $0.styleMask.contains(.titled)
+                && $0.identifier?.rawValue.contains("main") == true
+        }
     }
 
     /// The window that can actually be shown, which is not the same thing as the
@@ -295,20 +316,26 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // The reader may have turned the login item off in System Settings since
         // the panel was last seen; the switch should say what is true now.
         LoginItem.shared.refresh()
-        SystemVitals.shared.start()
 
         let popover = panel()
-        popover.contentViewController?.view.layoutSubtreeIfNeeded()
-        let fitting = popover.contentViewController?.view.fittingSize ?? .zero
-        if fitting.height > 0 {
-            popover.contentSize = NSSize(width: max(392, fitting.width), height: fitting.height)
-        }
 
         // Active first: a popover shown into an inactive app is dismissed by the
         // activation that follows it.
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
+
+        // Put the panel on screen before measuring it or reading the machine.
+        // Both walk every process, and doing that first is what made a click on
+        // the octopus look like it had done nothing at all.
+        DispatchQueue.main.async {
+            SystemVitals.shared.start()
+            popover.contentViewController?.view.layoutSubtreeIfNeeded()
+            let fitting = popover.contentViewController?.view.fittingSize ?? .zero
+            if fitting.height > 0 {
+                popover.contentSize = NSSize(width: max(392, fitting.width), height: fitting.height)
+            }
+        }
     }
 
     private func panel() -> NSPopover {

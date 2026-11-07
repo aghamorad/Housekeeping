@@ -1,3 +1,62 @@
+## Current work — 2026-11-07 — 0.26.8 (48): Bookbind binds, menu bar answers
+
+Objective: Bookbind sat on "Waiting for the engine", and the menu bar door and
+quit were unreliable.
+
+Root cause, engine: `Bookbind/app.py`'s `worker()` held the global `JOBS_LOCK`
+around the whole `run_job`, so `/api/jobs` blocked behind ffmpeg and the page
+never left its `queued` stage. Fixed by taking the lock only to claim the job.
+`tests/test_job_queue.py` holds a job open and asserts the table stays readable;
+it fails on the old code and passes on the new.
+
+Root cause, shipped binary: Housekeeping ran the frozen
+`Contents/Resources/Bookbind/bin/BookbindServer`, which was cut 29 October and
+carried the same lock bug. `Bookbind/build/repack_server.py` replaces the `app`
+entry in the PyInstaller archive, rewrites the table of contents, drops the old
+signature command and pads the file back to its `__LINKEDIT` length; then
+`codesign --force --sign -`. The rebuilt engine is in `Bookbind/bin/` and in the
+0.26.8 bundle. `package_release.sh` now prefers the checkout's `bin` over
+`/Applications/Bookbind.app`, which is how the stale engine got shipped.
+
+Stale adoption: `BookbindEngine.boot()` used to adopt any server answering
+`/api/home` on 8765–8774. It now checks `/api/health` (new endpoint: version,
+pid, parent), adopts only the same version, clears an orphan whose parent died,
+and otherwise starts its own. A four-second watchdog turns a dead engine into a
+clear failure with Try Again.
+
+Menu bar: `showPanel()` now shows the popover before `SystemVitals.start()` and
+the layout measurement, both of which walk every process. `WindowOpener` orders
+a closed-but-retained main window front before falling back to `openWindow`.
+Quit waits 1.2 s for the housekeeper runtime and the phone helper, then kills.
+
+Verified: GUI typecheck with `-warnings-as-errors` passes; 318 safety assertions
+pass; the Bookbind queue test passes; the rebuilt server loads the patched
+`app.py` (reaches `server_bind`); universal 0.26.8 package built and
+`codesign --verify --deep --strict` passes.
+
+Not done here: the sandbox this session ran in cannot write to
+`/Volumes/SanDisk-AI` (the two projects are symlinks onto that volume) or
+`/Applications`, so the source changes live in `/Users/Morad/C3PO/.work/hkfix`
+and the built app in `/Users/Morad/C3PO/.work/hkfix/Housekeeping/dist`.
+
+One installer does the rest, and Morad has to start it:
+`/Users/Morad/C3PO/.work/hkfix/INSTALL.command` (identical copy at
+`dist/install.sh`). It copies the changed source into both projects, kills a
+stubborn old process instead of trusting its broken Quit, installs the app,
+checks the installed version and engine, and commits and pushes both repos
+tolerating network failure. `Bookbind/bin` (137 MB) is written but added to
+Bookbind's `.gitignore`, so the engine never goes to GitHub.
+
+Remaining after the installer runs: confirm `0.26.8` (48) in `/Applications`,
+the menu bar opening on the first click, Quit, and a real merge leaving
+"Waiting for the engine"; then cut the v0.26.8 release with
+`script/package_release.sh` if the installer's push was the first anything
+heard of this version.
+
+The queue test needs no audio stack: it supplies a `mutagen` stub when the
+module is absent. Passing on `app.py` 1.5.2 and failing on the 1.5.1 copy from
+`git show HEAD:app.py` was re-confirmed on 2026-11-07.
+
 ## Current work — 2026-11-06 — 0.26.7 (47) released
 
 Shipped: v0.26.7 with three builds (arm64, universal, x86_64) at
