@@ -1,3 +1,19 @@
+## 0.26.8 — Bookbind binds again, and the menu bar answers
+
+- **Bookbind engine**: the worker no longer holds the job-table lock for the
+  whole encode. `/api/jobs` answers while ffmpeg runs, so the dialog shows real
+  progress instead of "Waiting for the engine". The bundled frozen server was
+  rebuilt from the current `app.py`.
+- **No stale engine**: the app checks `/api/health` and the engine's version
+  before adopting a server on ports 8765–8774, clears out an orphan whose parent
+  died, and watches the engine while the page is open.
+- **Menu bar**: the panel appears before the process sample and layout pass, and
+  "Open App" reorders a closed SwiftUI window directly.
+- **Quit**: child processes get 1.2 seconds, then SIGKILL, instead of a quit that
+  appears to hang.
+- **Packaging**: the release script prefers the checkout's Bookbind engine over
+  an older copy in `/Applications`.
+
 ## 0.24.1 — Official Maid Octopus Mascot & Icon Update
 
 A visual and brand milestone featuring the official Benign Monster Works octopus mascot dressed in housekeeper attire:

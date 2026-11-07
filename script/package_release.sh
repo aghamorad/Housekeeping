@@ -157,10 +157,14 @@ stage() {
     cp "$bookbind_src/app.py" "$bookbind_src/bookbind_cli.py" "$bookbind_dst/"
     ditto "$bookbind_src/static" "$bookbind_dst/static"
     local bin_src=""
-    if [[ -d "/Applications/Bookbind.app/Contents/Resources/bin" ]]; then
-      bin_src="/Applications/Bookbind.app/Contents/Resources/bin"
+    # The checkout's own bin comes first. /Applications can hold an older
+    # Bookbind, and preferring it shipped a stale engine inside a new app.
+    if [[ -d "$bookbind_src/bin" ]]; then
+      bin_src="$bookbind_src/bin"
     elif [[ -d "$bookbind_src/Bookbind.app/Contents/Resources/bin" ]]; then
       bin_src="$bookbind_src/Bookbind.app/Contents/Resources/bin"
+    elif [[ -d "/Applications/Bookbind.app/Contents/Resources/bin" ]]; then
+      bin_src="/Applications/Bookbind.app/Contents/Resources/bin"
     fi
     if [[ -n "$bin_src" && -d "$bin_src" ]]; then
       mkdir -p "$bookbind_dst/bin"

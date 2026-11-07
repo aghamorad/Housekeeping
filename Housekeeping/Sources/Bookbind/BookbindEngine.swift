@@ -41,6 +41,8 @@ final class BookbindEngine: NSObject, ObservableObject {
     private var owned = false
     private var log: FileHandle?
     private var booting = false
+    private var watchdog: Timer?
+    private var missedBeats = 0
     private var storedTheme: AppState.Theme = .liquidGlass
 
     /// Built once, on first use, and never rebuilt: this is what keeps the
@@ -55,6 +57,7 @@ final class BookbindEngine: NSObject, ObservableObject {
         guard !booting, phase != .ready else { return }
         booting = true
         phase = .starting
+        stopWatchdog()
 
         Task {
             let outcome = await Task.detached(priority: .userInitiated) {
@@ -69,6 +72,7 @@ final class BookbindEngine: NSObject, ObservableObject {
                 self.url = url
                 phase = .ready
                 load(url)
+                startWatchdog()
             case .owned(let process, let url, let handle):
                 self.process = process
                 self.owned = true
@@ -76,6 +80,7 @@ final class BookbindEngine: NSObject, ObservableObject {
                 self.url = url
                 phase = .ready
                 load(url)
+                startWatchdog()
             case .failed(let text):
                 phase = .failed(text)
             }
@@ -87,15 +92,69 @@ final class BookbindEngine: NSObject, ObservableObject {
     /// pid on launch, so a force-quit cannot leave one behind to be adopted by
     /// the next run.
     func stop() {
+        stopWatchdog()
         guard owned, let process, process.isRunning else { return }
         process.terminate()
         self.process = nil
         owned = false
+        // A frozen Python that is mid-encode can take a moment to answer SIGTERM.
+        // Give it that moment, then take it away: a quit that waits on the engine
+        // is the same bug as an engine that never starts.
+        let pid = process.processIdentifier
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 2) {
+            if process.isRunning { kill(pid, SIGKILL) }
+        }
     }
 
     func retry() {
+        stop()
         phase = .idle
         startIfNeeded()
+    }
+
+    // MARK: - Keeping the engine honest
+
+    /// A ready page is only useful while the server behind it is alive. The
+    /// engine is a child process, and a child can die without the page noticing:
+    /// the page then queues a job into a server that is no longer there and the
+    /// dialog sits on "Waiting for the engine" forever. Two missed beats is long
+    /// enough to tell a crash from a slow encode, because /api/health never
+    /// touches the encoder.
+    private func startWatchdog() {
+        stopWatchdog()
+        missedBeats = 0
+        let timer = Timer(timeInterval: 4, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let url = self.url, self.phase == .ready else { return }
+                let alive = await Task.detached(priority: .utility) {
+                    BookbindLaunch.health(url) != nil
+                }.value
+                guard self.phase == .ready, self.url == url else { return }
+                if alive {
+                    self.missedBeats = 0
+                } else {
+                    self.missedBeats += 1
+                    if self.missedBeats >= 2 {
+                        self.stopWatchdog()
+                        self.phase = .failed("""
+                        Bookbind's engine stopped answering.
+
+                        Nothing you had queued has been lost — the page keeps \
+                        its list — but the run cannot continue until the engine \
+                        is back. Press Try Again.
+                        """)
+                    }
+                }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        watchdog = timer
+    }
+
+    private func stopWatchdog() {
+        watchdog?.invalidate()
+        watchdog = nil
+        missedBeats = 0
     }
 
     func openLog() {
@@ -389,10 +448,27 @@ private enum BookbindLaunch {
 
     static func boot() -> Outcome {
         let fm = FileManager.default
+        let expected = bundledVersion
 
-        // An instance that is already running is somebody else's; just show it.
-        for port in 8765...8774 where answered(port) {
-            return .external(URL(string: "http://127.0.0.1:\(port)/")!)
+        // A server already on one of our ports is only ours to reuse when it is
+        // this build. An older copy answers /api/home just as cheerfully and then
+        // runs the old job engine — which is how a fixed app could still sit on
+        // "Waiting for the engine" forever. So the handshake includes the version,
+        // and a stale engine left behind by a dead app is cleared out.
+        for port in 8765...8774 {
+            guard let health = health(port) else { continue }
+            let version = health["version"] as? String
+            let parent = (health["parent"] as? String).flatMap(Int32.init)
+            let parentAlive = parent.map { $0 > 1 && kill($0, 0) == 0 } ?? true
+            if parentAlive && (expected == nil || version == expected) {
+                return .external(URL(string: "http://127.0.0.1:\(port)/")!)
+            }
+            if parent != nil && !parentAlive, let pid = health["pid"] as? Int, pid > 1 {
+                kill(pid_t(pid), SIGTERM)
+                for _ in 0..<20 where kill(pid_t(pid), 0) == 0 { usleep(100_000) }
+                if kill(pid_t(pid), 0) == 0 { kill(pid_t(pid), SIGKILL) }
+                for _ in 0..<20 where !free(port) { usleep(100_000) }
+            }
         }
         guard let port = (8765...8774).first(where: free) else {
             return .failed("Every port from 8765 to 8774 is taken.\n\nQuit whatever is using them and open Bookbind again.")
@@ -447,10 +523,54 @@ private enum BookbindLaunch {
             usleep(250_000)
         }
         if answered(port) { return .owned(process, url, log ?? FileHandle.nullDevice) }
-        return .failed("The server stopped on startup.\n\nWhat it said is in:\n\n\(BookbindWhere.logFile)")
+        let tail = logTail()
+        let detail = tail.isEmpty ? "" : "\n\nWhat it said:\n\n\(tail)"
+        return .failed("The server stopped on startup.\(detail)\n\nThe whole log is at:\n\n\(BookbindWhere.logFile)")
     }
 
     // MARK: small tools
+
+    /// The version of the Python that travels with this copy, read from the same
+    /// file the engine runs. A copy with no readable app.py gets no opinion.
+    static var bundledVersion: String? {
+        guard let root = BookbindWhere.root,
+              let text = try? String(contentsOfFile: root + "/app.py", encoding: .utf8) else { return nil }
+        for line in text.split(separator: "\n") where line.hasPrefix("VERSION = ") {
+            return line.split(separator: "\"").dropFirst().first.map(String.init)
+        }
+        return nil
+    }
+
+    /// What a server says about itself, or nil when nothing is listening there.
+    static func health(_ port: Int) -> [String: Any]? {
+        guard let body = httpGet("http://127.0.0.1:\(port)/api/health", timeout: 0.8),
+              let data = body.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return object
+    }
+
+    static func health(_ url: URL) -> [String: Any]? {
+        guard let body = httpGet(url.appendingPathComponent("api/health").absoluteString, timeout: 0.8),
+              let data = body.data(using: .utf8) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    /// The last few lines the engine wrote, so a failure can say what happened
+    /// instead of only where to look.
+    static func logTail(lines: Int = 8) -> String {
+        let path = BookbindWhere.logFile
+        guard let handle = FileHandle(forReadingAtPath: path) else { return "" }
+        defer { try? handle.close() }
+        // A log that has been appended to for months should not be read whole
+        // just to show eight lines.
+        let size = (try? handle.seekToEnd()) ?? 0
+        let window: UInt64 = 65_536
+        try? handle.seek(toOffset: size > window ? size - window : 0)
+        let data = (try? handle.readToEnd()) ?? Data()
+        let text = String(decoding: data, as: UTF8.self)
+        let tail = text.split(separator: "\n").suffix(lines).joined(separator: "\n")
+        return tail.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     static func httpGet(_ url: String, timeout: TimeInterval = 1.5) -> String? {
         guard let u = URL(string: url) else { return nil }
