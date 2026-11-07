@@ -37,7 +37,7 @@ Housekeeping 0.11.0 adds **Two Folders**: comparing two folders that are meant t
 
 The Housekeeper is an optional local chatbot, available with ⌘K. Chat starts off. Choose a downloadable Gemma or Qwen model, review its size, and press Download, or use Apple's on-device Foundation Model on an eligible Mac. It can explain a selected folder and answer general questions. Housekeeping's recorded safety assessment remains separate from generated answers, and the chatbot has no controls for moving or deleting files.
 
-The downloadable build is a universal binary for both Apple-silicon and Intel Macs running macOS 13 or later, and downloads are offered universal as well as separately for each architecture. It is ad-hoc signed for local use and has not been Apple-notarized, so macOS may warn you when you first open it. The source is here for anyone who would prefer to inspect and build it themselves.
+The downloadable build is a universal binary for both Apple-silicon and Intel Macs running macOS 13 or later, including every bundled engine and native library. One universal download works on either architecture. It is ad-hoc signed for local use and has not been Apple-notarized, so macOS may warn you when you first open it. The source is here for anyone who would prefer to inspect and build it themselves.
 
 ## What it looks for
 
@@ -329,13 +329,13 @@ Or use the project-local workflow:
 ./script/build_and_run.sh --verify
 ```
 
-To produce a universal app plus universal, Apple-silicon, and Intel ZIPs without invoking `xcodebuild`:
+To produce a universal app and ZIP without invoking `xcodebuild`:
 
 ```bash
 ./script/package_release.sh /path/to/output-directory
 ```
 
-Packaging requires the universal `Housekeeping/Resources/llama-server` runtime and builds both arm64 and x86_64 slices. The packages are ad-hoc signed. They are not Developer ID signed or notarized.
+Packaging requires the universal `Housekeeping/Resources/llama-server` runtime and Bookbind runtime (`bash script/build_bookbind_runtime.sh`; see `Runtime/README.md`). It builds both arm64 and x86_64 app slices and checks every nested executable and native library before shipping one universal ZIP. The packages are ad-hoc signed. They are not Developer ID signed or notarized.
 
 ### Without Xcode
 
