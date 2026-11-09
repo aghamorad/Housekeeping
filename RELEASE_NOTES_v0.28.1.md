@@ -23,6 +23,13 @@ canned-answer machine into a streaming, general-purpose one.
 - A rewritten system prompt makes the assistant warmer, more concrete and more willing to
   answer anything — not just housekeeping — while keeping the no-invented-files rule.
 
+## Fixed: general questions were being buried in app status
+
+A small on-device model handed a page of scan notes answers "how does the internet work?"
+with remarks about the screen behind the chat panel. App context is now sent only when the
+question is actually about this Mac or Housekeeping (or the chat is open about a specific
+folder); general questions reach the model clean.
+
 ## Fixed: general questions were being hijacked by folder matching
 
 "What is 17 times 23?" was answered with a list of folders named `23`. Folder evidence now

@@ -339,7 +339,18 @@ final class Housekeeper: ObservableObject {
 
         guard contextID == answeringContext else { return }
         let isApple = selectedModel == .apple
-        var messages = HousekeeperConversation.messages(context: briefing, history: history, question: question, contextBudget: isApple ? (hasFolderEvidence ? 4_000 : 2_000) : 8_000, historyBudget: isApple ? 2_000 : 6_000)
+        // Only a question that is actually about this Mac or the app gets the app's
+        // status text. General questions go to the model clean, without a wall of
+        // scan notes for it to misread.
+        let localContext = HousekeeperConversation.wantsMacContext(question) || hasFolderEvidence
+            || subject != nil || inspectedQuestionFolder != nil
+        var messages = HousekeeperConversation.messages(
+            context: localContext ? briefing : nil,
+            history: history,
+            question: question,
+            contextBudget: isApple ? (hasFolderEvidence ? 4_000 : 2_000) : 8_000,
+            historyBudget: isApple ? 2_000 : 6_000
+        )
         if isApple || selectedModel == .gemma1b || selectedModel == .gemma2b {
             messages[0]["content"] = messages[0]["content"]?.replacingOccurrences(of: "/no_think", with: "")
         }
