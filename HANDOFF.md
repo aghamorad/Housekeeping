@@ -23,10 +23,11 @@ Mach-Os, signature, stamped commit, Bookbind manifest); packaged CLI 0.28.2 (54)
 under Rosetta. Downloaded the published asset fresh, checksum matched, verified and installed
 at /Applications/Housekeeping.app (binary SHA-256
 `e85533d8da43c6fff678c3d719dfe358ef814254435fd0511c004edc4800d625`), launched (PID 18808),
-release published Latest. Previous local test build backed up to
-`/Users/Morad/.Trash/Housekeeping-0.28.2-local-test-before-published-20261110-001143.app`;
-0.28.1 published build remains at
-`/Users/Morad/.Trash/Housekeeping-0.28.1-local-test-before-published-20260911-...` (see Trash).
+release published Latest. The 0.28.2 local test build was backed up to
+`/Users/Morad/.Trash/Housekeeping-0.28.2-local-test-before-published-20261110-001143.app`.
+Rollback targets: `~/.Trash/Housekeeping-0.28.0-before-0.28.1-20261109-225426.app` (0.28.0) or
+re-download 0.28.1 from its GitHub release; the 0.28.1 published app itself was replaced in
+place during the 0.28.2 test install and is not in the Trash.
 Also refreshed LaunchServices registration (`lsregister -f`) and touched the app so Finder and
 the Dock pick up the current bundle icon.
 
