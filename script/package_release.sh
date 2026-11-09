@@ -140,7 +140,7 @@ stage() {
   if [[ -n "$(/usr/bin/git -C "$ROOT_DIR" status --porcelain -- Housekeeping Runtime script)" ]]; then
     commit=""
   fi
-  source_digest="$(shasum -a 256 "${SOURCES[@]}" "$ROOT_DIR/Housekeeping/Info.plist" | shasum -a 256 | awk '{print $1}')"
+  source_digest="$(shasum -a 256 "${SOURCES[@]}" "$ROOT_DIR/Housekeeping/Info.plist" "$ROOT_DIR/script/render_app_icon.swift" "$ROOT_DIR/Housekeeping/Resources/BenignMonster/housekeeper_octopus_maid.png" | shasum -a 256 | awk '{print $1}')"
   branch="$(/usr/bin/git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   built="$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
   for pair in "HousekeepingSourceCommit:$commit" "HousekeepingSourceBaseCommit:$base_commit" "HousekeepingSourceDigest:$source_digest" "HousekeepingSourceBranch:$branch" "HousekeepingBuildDate:$built"; do
@@ -150,7 +150,9 @@ stage() {
     /usr/libexec/PlistBuddy -c "Delete :$key" "$plist" >/dev/null 2>&1 || true
     /usr/libexec/PlistBuddy -c "Add :$key string $value" "$plist"
   done
-  cp "$ROOT_DIR/Housekeeping/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
+  # Use the newly rendered exact mascot for packaged macOS releases. The
+  # legacy icon in the source project is retained for development Xcode builds.
+  cp "$WORK_ROOT/generated-icon/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
   ditto "$ROOT_DIR/Housekeeping/Resources/Rules" "$app/Contents/Resources/Rules"
   if [[ -d "$ROOT_DIR/Housekeeping/Resources/BenignMonster" ]]; then
     ditto "$ROOT_DIR/Housekeeping/Resources/BenignMonster" "$app/Contents/Resources/BenignMonster"
@@ -174,6 +176,9 @@ stage() {
   codesign --verify --deep --strict "$app"
   python3 "$ROOT_DIR/script/verify_universal_bundle.py" "$app"
 }
+
+echo "Rendering macOS icon from the checked-in octopus mascot..."
+bash "$ROOT_DIR/script/generate_app_icon.sh" "$WORK_ROOT/generated-icon"
 
 echo "Compiling for Apple silicon (arm64)..."
 compile arm64 "$WORK_ROOT/$APP_NAME-arm64"
