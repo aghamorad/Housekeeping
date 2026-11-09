@@ -136,7 +136,12 @@ final class SystemVitals: NSObject, ObservableObject {
     private var healthTimer: Timer?
     private var highCPUSamples = 0
     private var recoverySamples = 0
-    private var previousCPU: (busy: Double, total: Double)?
+    /// Panel sampling and the background health watch must not consume each
+    /// other's CPU baseline: a 15 s health read would turn the panel's headline
+    /// into a 15 s average, and a 1 s panel read would let the sustained-load
+    /// detector latch on unrelated momentary spikes.
+    private var previousCPUPanel: (busy: Double, total: Double)?
+    private var previousCPUHealth: (busy: Double, total: Double)?
     private var previousInterfaces: [String: (rx: UInt32, tx: UInt32)] = [:]
     private var previousProcessTimes: [pid_t: (cpu: UInt64, memory: UInt64)] = [:]
     private var lastProcessSample = Date()
@@ -170,11 +175,15 @@ final class SystemVitals: NSObject, ObservableObject {
     }
 
     func refreshHealthWatch() {
-        healthTick()
+        healthSample(manual: true)
     }
 
     @objc private func healthTick() {
-        let cpu = readCPU()
+        healthSample(manual: false)
+    }
+
+    private func healthSample(manual: Bool) {
+        let cpu = readCPU(baseline: &previousCPUHealth)
         if cpu >= 0.90 {
             highCPUSamples += 1
         } else if cpu < 0.80 {
@@ -194,9 +203,11 @@ final class SystemVitals: NSObject, ObservableObject {
             recoverySamples = 0
             healthAlert = proposed
         } else if healthAlert != nil {
-            // Two non-dangerous samples are needed before a warning disappears.
+            // The passive watch needs two clean samples so one quiet moment does
+            // not erase a real warning. An explicit refresh reports the reading
+            // it just took, so it can clear the warning in one step.
             recoverySamples += 1
-            if recoverySamples >= 2 {
+            if manual || recoverySamples >= 2 {
                 healthAlert = nil
                 recoverySamples = 0
             }
@@ -321,7 +332,7 @@ final class SystemVitals: NSObject, ObservableObject {
     // MARK: - Sampling
 
     private func sample() {
-        let cpu = readCPU()
+        let cpu = readCPU(baseline: &previousCPUPanel)
         let memory = readMemory()
         let disk = readDisk()
         let network = readNetwork()
@@ -362,7 +373,7 @@ final class SystemVitals: NSObject, ObservableObject {
         }
     }
 
-    private func readCPU() -> Double {
+    private func readCPU(baseline: inout (busy: Double, total: Double)?) -> Double {
         var info: processor_info_array_t?
         var count: mach_msg_type_number_t = 0
         var ncpu: natural_t = 0
@@ -388,8 +399,8 @@ final class SystemVitals: NSObject, ObservableObject {
         }
 
         let total = busy + idle
-        defer { previousCPU = (busy, total) }
-        guard let previous = previousCPU else { return 0 }
+        defer { baseline = (busy, total) }
+        guard let previous = baseline else { return 0 }
         let busyDelta = busy - previous.busy
         let totalDelta = total - previous.total
         guard totalDelta > 0 else { return snapshot.cpu }

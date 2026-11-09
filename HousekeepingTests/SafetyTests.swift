@@ -37,6 +37,8 @@ struct SafetyTests {
                    "Built-in app navigation works without model weights.")
         try expect(HousekeeperConversation.readOnlyAnswer(for: "What is 2 + 2?") == nil,
                    "Unrelated questions must not be handled by fake canned answers.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What can you do about a full disk?") == nil,
+                   "Open-ended questions must reach the model instead of the generic tool list.")
 
 
         let policy = CleanupSafetyPolicy(homeDirectory: home, quarantineRoot: quarantine)

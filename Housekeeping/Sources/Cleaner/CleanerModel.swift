@@ -293,8 +293,8 @@ final class CleanerModel: ObservableObject {
 
     /// Uninstalls everything ticked in one transaction. Open applications are
     /// left out rather than refused, because one open app should not stop the
-    /// other thirty-nine from going. Matched related files are included by
-    /// default; the reader can uncheck anything they want to keep.
+    /// other thirty-nine from going. Related files are left in place unless the
+    /// reader ticks an exact path in the final review.
     func requestUninstallSelected() {
         guard phase == .ready else { return }
         let protection = ProtectionList()
@@ -319,7 +319,9 @@ final class CleanerModel: ObservableObject {
         pendingAction = .uninstall
         pendingTitle = "Move \(ready.count) application\(ready.count == 1 ? "" : "s") to Quarantine?"
         let related = CleanCandidate.nonOverlapping(ready.flatMap(\.leftovers).filter { includedRelatedPaths.contains($0.id) && !protection.isProtected($0.url) })
-        pendingDetail = "The applications and \(related.count) included related items move together. Related files may contain settings and personal app data. Uncheck anything you want to keep before continuing. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+        pendingDetail = related.isEmpty
+            ? "The selected applications move to Quarantine. Their related files and personal data stay where they are unless you tick an exact path in the final review. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+            : "The applications and \(related.count) specifically chosen related item\(related.count == 1 ? "" : "s") move together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
         pendingPaths = paths
         pendingSize = ready.reduce(Int64(0)) { $0 + $1.size } + related.reduce(0) { $0 + $1.size }
         pendingAppName = ready.count == 1 ? ready[0].name : nil
@@ -372,7 +374,9 @@ final class CleanerModel: ObservableObject {
 
         pendingAction = .uninstall
         pendingTitle = "Move \(app.name) to Quarantine?"
-        var detail = "The application and \(related.count) included related items, \(size.sizeDescription) together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+        var detail = related.isEmpty
+            ? "The application, \(size.sizeDescription). Its related files and personal data stay where they are unless you tick an exact path in the final review. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+            : "The application and \(related.count) specifically chosen related item\(related.count == 1 ? "" : "s"), \(size.sizeDescription) together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
         if let version = app.version {
             detail += " Version \(version)."
         }

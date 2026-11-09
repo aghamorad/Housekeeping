@@ -15,16 +15,25 @@ final class UninstallerModel: ObservableObject {
     @Published private(set) var isScanning: Bool = false
     @Published private(set) var scanProgress: String = ""
     @Published private(set) var scanNotice: String?
+    /// Set when a search or filter change cleared apps the reader can no longer
+    /// see, so a selection never disappears without a word.
+    @Published private(set) var selectionNotice: String?
     private var scanWorker: Task<[InstalledApp], Never>?
     private var scanToken = UUID()
     @Published var selectedAppURLs: Set<URL> = []
     @Published var expandedAppURLs: Set<URL> = []
     @Published var searchQuery: String = "" {
-        didSet { retainOnlyVisibleSelections() }
+        didSet {
+            selectionNotice = nil
+            retainOnlyVisibleSelections()
+        }
     }
     @Published var sortOption: AppSortOption = .sizeDescending
     @Published var filterOption: AppFilterOption = .all {
-        didSet { retainOnlyVisibleSelections() }
+        didSet {
+            selectionNotice = nil
+            retainOnlyVisibleSelections()
+        }
     }
     @Published private(set) var isWorking = false
     @Published private(set) var outcome: String?
@@ -156,19 +165,26 @@ final class UninstallerModel: ObservableObject {
 
     private func retainOnlyVisibleSelections() {
         guard !isWorking else { return }
-        // A hidden app must never be silently removed when someone presses
-        // Uninstall Selected after changing a search or category filter.
-        selectedAppURLs.formIntersection(Set(filteredApps.map(\.url)))
+        // A hidden app must never be removed when someone presses Uninstall
+        // Selected after changing a search or category filter — and it must not
+        // disappear from the count without telling the reader either.
+        let visible = Set(filteredApps.map(\.url))
+        let hidden = selectedAppURLs.subtracting(visible)
+        guard !hidden.isEmpty else { return }
+        selectedAppURLs.formIntersection(visible)
+        selectionNotice = "\(hidden.count) selected app\(hidden.count == 1 ? "" : "s") \(hidden.count == 1 ? "is" : "are") hidden by the current search or filter and \(hidden.count == 1 ? "was" : "were") cleared. Clear the search to choose across searches."
     }
 
     func selectAllFiltered() {
         guard !isWorking && !isScanning else { return }
+        selectionNotice = nil
         for app in filteredApps {
             selectedAppURLs.insert(app.url)
         }
     }
 
     func deselectAll() {
+        selectionNotice = nil
         selectedAppURLs.removeAll()
     }
 
@@ -180,6 +196,7 @@ final class UninstallerModel: ObservableObject {
 
     func toggleSelection(_ app: InstalledApp) {
         guard !isWorking && !isScanning else { return }
+        selectionNotice = nil
         if selectedAppURLs.contains(app.url) {
             selectedAppURLs.remove(app.url)
         } else {
@@ -325,6 +342,14 @@ struct UninstallerModernView: View {
                         .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 9))
                 }
                 searchAndActionBar
+                if let notice = model.selectionNotice {
+                    Label(notice, systemImage: "exclamationmark.circle")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 9))
+                }
                 if model.isScanning && !model.apps.isEmpty { scanningView }
                 if model.outcome != nil || !model.failures.isEmpty {
                     ThemePanel {

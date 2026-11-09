@@ -314,11 +314,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 ]
             )
             button.toolTip = "Housekeeping: " + alert.title + ". " + alert.explanation
+            button.setAccessibilityLabel("Housekeeping health warning: " + alert.title)
             item.length = NSStatusItem.variableLength
         } else {
             button.attributedTitle = NSAttributedString(string: "")
             button.imagePosition = .imageOnly
             button.toolTip = "Housekeeping — no sustained CPU or thermal warning"
+            button.setAccessibilityLabel("Housekeeping menu bar item: no sustained CPU or thermal warning")
             item.length = NSStatusItem.squareLength
         }
     }
