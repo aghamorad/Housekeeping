@@ -24,6 +24,21 @@ struct SafetyTests {
         try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: testRoot) }
 
+        // Built-in chat facts remain available without an AI model and must
+        // distinguish observed folders from guessed locations.
+        let mlxFixture = home.appendingPathComponent(".mlx-lm/models", isDirectory: true)
+        try fileManager.createDirectory(at: mlxFixture, withIntermediateDirectories: true)
+        let modelLocations = HousekeeperConversation.readOnlyAnswer(
+            for: "Where are my models?", home: home, fileManager: fileManager
+        ) ?? ""
+        try expect(modelLocations.contains(mlxFixture.path), "Model-location help must report an existing MLX directory.")
+        try expect(!modelLocations.contains("• Ollama:"), "Model-location help must not claim missing runtimes exist.")
+        try expect(modelLocations.contains("not evidence that weights are loaded"), "Stored weights must not be called resident memory.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What can you do?")?.contains("Disk Browser") == true,
+                   "Tool navigation must answer without an AI model.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What is 2 + 2?") == nil,
+                   "Unrelated questions must remain with the actual language model.")
+
         let policy = CleanupSafetyPolicy(homeDirectory: home, quarantineRoot: quarantine)
 
         let cache = home.appendingPathComponent("Library/Caches/com.example.housekeeping-test", isDirectory: true)
