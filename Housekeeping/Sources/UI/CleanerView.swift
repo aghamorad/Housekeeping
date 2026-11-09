@@ -259,6 +259,7 @@ struct CleanerView: View {
 
     private func listPane(_ category: CleanCategory) -> some View {
         let rows = model.visibleCandidates(in: category)
+        let selected = rows.filter(\.isSelected)
         return VStack(spacing: 10) {
             ThemePanel(padding: 10) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -266,7 +267,6 @@ struct CleanerView: View {
                         Text(category.title)
                             .font(style.labelFont)
                         Spacer()
-                        let selected = rows.filter(\.isSelected)
                         let allSelected = !rows.isEmpty && rows.allSatisfy(\.isSelected)
                         HStack(spacing: 6) {
                             ThemeCheckbox(
