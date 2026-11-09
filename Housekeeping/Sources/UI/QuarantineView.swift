@@ -10,6 +10,7 @@ struct QuarantineView: View {
     @State private var selectedIDs: Set<UUID> = []
     @State private var search = ""
     @State private var isWorking = false
+    @State private var workingDescription = ""
     @State private var operationSummary: String?
     /// Which half of the same question the sheet is answering: where is my stuff
     /// now, or what has Housekeeping already done to this Mac.
@@ -65,7 +66,7 @@ struct QuarantineView: View {
             if isWorking {
                 HStack(spacing: 10) {
                     ProgressView().controlSize(.small)
-                    Text("Working on your selection… macOS may ask for permission.").font(style.bodyFont)
+                    Text(workingDescription).font(style.bodyFont).accessibilityAddTraits(.updatesFrequently)
                 }
             }
             if let operationSummary { Text(operationSummary).font(style.bodyFont) }
@@ -629,6 +630,9 @@ struct QuarantineView: View {
     private func perform(_ targets: [QuarantineEntry], deleting: Bool) {
         guard !isWorking, !targets.isEmpty else { return }
         isWorking = true
+        workingDescription = deleting
+            ? "Permanently deleting \(targets.count) item\(targets.count == 1 ? "" : "s")… Please keep Housekeeping open."
+            : "Restoring \(targets.count) item\(targets.count == 1 ? "" : "s") to their original paths…"
         operationSummary = nil
         Task {
             let completed: Int
@@ -638,6 +642,7 @@ struct QuarantineView: View {
                 (completed < targets.count ? " Some operations failed or were refused. Check the failure details before retrying." : "")
             reload()
             isWorking = false
+            workingDescription = ""
         }
     }
 }
