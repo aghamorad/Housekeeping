@@ -55,7 +55,13 @@ struct QuarantineView: View {
             }
 
             switcher
-            if !showingHistory && !entries.isEmpty { selectionBar }
+            if !showingHistory && !entries.isEmpty {
+                Text("Waiting in Quarantine: \(entries.count) items · \(entries.reduce(Int64(0)) { $0 + $1.size }.humanReadable) still occupying disk space. Restoring returns the original location; only permanent deletion can reclaim storage.")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                selectionBar
+            }
             if isWorking {
                 HStack(spacing: 10) {
                     ProgressView().controlSize(.small)
@@ -83,8 +89,15 @@ struct QuarantineView: View {
                             HStack {
                                 Text(batch.entries.first?.appName ?? "Cleanup batch").font(style.labelFont).lineLimit(2)
                                 Spacer()
-                                ThemeButton(title: search.isEmpty ? "Select Batch" : "Select Shown", systemImage: "checkmark.circle") {
-                                    selectedIDs.formUnion(batch.entries.map(\.id))
+                                let allSelected = batch.entries.allSatisfy { selectedIDs.contains($0.id) }
+                                ThemeButton(
+                                    title: allSelected ? "Deselect batch" : "Select batch (\(batch.entries.count))",
+                                    systemImage: allSelected ? "circle" : "checkmark.circle",
+                                    help: "Only items in this batch matching the current search are affected."
+                                ) {
+                                    let ids = Set(batch.entries.map(\.id))
+                                    if allSelected { selectedIDs.subtract(ids) }
+                                    else { selectedIDs.formUnion(ids) }
                                 }
                             }.padding(.top, 8)
                             ForEach(batch.entries) { entry in quarantineRow(entry) }
@@ -117,6 +130,10 @@ struct QuarantineView: View {
         .disabled(isWorking)
         .interactiveDismissDisabled(isWorking)
         .onAppear { reload() }
+        .onChange(of: search) { _ in
+            // Search never leaves invisible targets silently selected.
+            selectedIDs.formIntersection(Set(visibleEntries.map(\.id)))
+        }
         .alert("Delete \(pendingPermanentDeletion.count) item\(pendingPermanentDeletion.count == 1 ? "" : "s") permanently?", isPresented: Binding(
             get: { !pendingPermanentDeletion.isEmpty },
             set: { if !$0 { pendingPermanentDeletion = [] } }
@@ -575,14 +592,19 @@ struct QuarantineView: View {
 
     private var selectionBar: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField("Search by app, original path, or category…", text: $search).textFieldStyle(.roundedBorder)
+            TextField("Find quarantined items by app, path or category", text: $search)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityLabel("Filter quarantined items")
+            Text("Changing the search deselects items it hides, so batch actions affect only visible choices.")
+                .font(style.smallFont)
+                .foregroundColor(style.secondaryText)
             HStack {
                 ThemeButton(title: "Select All Shown", systemImage: "checkmark.circle", isEnabled: !visibleEntries.isEmpty) {
                     selectedIDs.formUnion(visibleEntries.map(\.id))
                 }
                 ThemeButton(title: "Clear Selection", isEnabled: !selectedIDs.isEmpty) { selectedIDs = [] }
                 Spacer()
-                Text("\(selectedEntries.count) selected · \(selectedEntries.reduce(Int64(0)) { $0 + $1.size }.humanReadable)")
+                Text("\(visibleEntries.count) shown · \(selectedEntries.count) selected · \(selectedEntries.reduce(Int64(0)) { $0 + $1.size }.humanReadable)")
                     .font(style.smallFont)
             }
             HStack {
@@ -593,9 +615,13 @@ struct QuarantineView: View {
                     pendingPermanentDeletion = selectedEntries
                 }
                 Spacer()
-                ThemeButton(title: "Empty Quarantine…", systemImage: "trash.fill") { pendingPermanentDeletion = entries }
+                ThemeButton(
+                    title: "Delete ALL waiting items…",
+                    systemImage: "trash.fill",
+                    help: "Includes all \(entries.count) items, even outside the search. Requires another confirmation and cannot be undone."
+                ) { pendingPermanentDeletion = entries }
             }
-            Text("Selections include items hidden by your search. Empty Quarantine includes everything waiting here.")
+            Text("Selected actions affect only visible items. Delete ALL waiting items is a separate, irreversible action across the entire Quarantine.")
                 .font(style.smallFont).foregroundColor(style.secondaryText)
         }
     }
@@ -609,7 +635,7 @@ struct QuarantineView: View {
             if deleting { completed = await appState.permanentlyDeleteQuarantineEntries(targets) }
             else { completed = await appState.restoreQuarantineEntries(targets) }
             operationSummary = "\(completed) of \(targets.count) items \(deleting ? "deleted permanently" : "put back")." +
-                (completed < targets.count ? " The remaining items are still in Quarantine; review the details below." : "")
+                (completed < targets.count ? " Some operations failed or were refused. Check the failure details before retrying." : "")
             reload()
             isWorking = false
         }
