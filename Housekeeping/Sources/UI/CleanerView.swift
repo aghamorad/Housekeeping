@@ -770,6 +770,9 @@ struct CleanerView: View {
         if let outcome = model.outcome {
             return Text(outcome)
         }
+        if !model.notes.isEmpty {
+            return Text(model.notes.joined(separator: " "))
+        }
         let count = model.selectedCandidates.count
         if count == 0 {
             return Text("Select items to review. Nothing moves until you confirm the exact paths.")

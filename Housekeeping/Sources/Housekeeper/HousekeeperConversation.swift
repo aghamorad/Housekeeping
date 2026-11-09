@@ -42,7 +42,16 @@ enum HousekeeperConversation {
             return observed + "\n\nThese are locations, not evidence that weights are loaded into RAM. Open Local Models & AI Runtimes and press Look Again for current runtime reports. Other tools may keep models elsewhere."
         }
 
-        if ["what can you do", "what can housekeeping do", "which tools", "what tools", "help with"].contains(where: query.contains) {
+        // Match the question's intent, not any phrase it happens to contain:
+        // "what can you do about a full disk?" is a real request for the model,
+        // not a request for the tool list.
+        let canonical = query.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        let toolQuestions: Set<String> = [
+            "what can you do", "what can housekeeping do", "what can this do",
+            "what tools", "what tools does housekeeping have", "which tools",
+            "what can housekeeping help with", "help"
+        ]
+        if toolQuestions.contains(canonical) || canonical.hasPrefix("what can housekeeping do ") {
             return toolHelp
         }
 

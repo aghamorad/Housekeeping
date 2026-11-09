@@ -15,6 +15,9 @@ struct QuarantineView: View {
     /// Which half of the same question the sheet is answering: where is my stuff
     /// now, or what has Housekeeping already done to this Mac.
     @State private var showingHistory = false
+    @State private var isReloading = false
+    @State private var reloadPending = false
+    @State private var lastFocusReload = Date.distantPast
 
     private let engine = CleanupEngine()
 
@@ -139,7 +142,11 @@ struct QuarantineView: View {
         .interactiveDismissDisabled(isWorking)
         .onAppear { reload() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            if !isWorking { reload() }
+            // One refresh per activation, never a second one while the first is
+            // still reading, and never twice for the same appearance.
+            guard !isWorking, Date().timeIntervalSince(lastFocusReload) > 1.5 else { return }
+            lastFocusReload = Date()
+            reload()
         }
         .onChange(of: search) { _ in
             // Search never leaves invisible targets silently selected.
@@ -574,10 +581,27 @@ struct QuarantineView: View {
         }
     }
 
+    /// Reads every manifest and transaction record on a background thread; a
+    /// quarantine with many batches must not stall the window when it regains
+    /// focus. A call made while a read is in flight is replayed once it finishes,
+    /// so a reload asked for after an operation is never silently dropped.
     private func reload() {
-        entries = appState.quarantineEntries()
-        transactions = appState.transactionHistory()
-        selectedIDs.formIntersection(Set(entries.map(\.id)))
+        guard !isReloading else { reloadPending = true; return }
+        isReloading = true
+        Task {
+            let snapshot = await Task.detached(priority: .userInitiated) {
+                let engine = CleanupEngine()
+                return (engine.quarantineEntries(), engine.transactionHistory())
+            }.value
+            entries = snapshot.0
+            transactions = snapshot.1
+            selectedIDs.formIntersection(Set(entries.map(\.id)))
+            isReloading = false
+            if reloadPending {
+                reloadPending = false
+                reload()
+            }
+        }
     }
 
     private struct Batch: Identifiable {

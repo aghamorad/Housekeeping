@@ -275,8 +275,8 @@ final class Housekeeper: ObservableObject {
             return
         }
         if let answer = HousekeeperConversation.readOnlyAnswer(for: question) {
-            history.append(contentsOf: [["role": "user", "content": question], ["role": "assistant", "content": answer]])
-            if history.count > 8 { history.removeFirst(history.count - 8) }
+            // Observed first-party answers are not model turns, so they are not
+            // fed back into the history the model later sees.
             turns.append(Turn(speaker: .housekeeper, text: answer))
             return
         }
