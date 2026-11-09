@@ -15,7 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run safety and read-only assistant tests
-        run: bash script/test_safety.sh
+        run: |
+          bash script/test_safety.sh
+          python3 script/audit_ui_controls.py
       - name: Run background / MCP tests
         run: python3 script/test_background_mcp.py
       - name: Compile the macOS app
