@@ -24,14 +24,16 @@ final class UninstallerModel: ObservableObject {
     @Published var expandedAppURLs: Set<URL> = []
     @Published var searchQuery: String = "" {
         didSet {
-            selectionNotice = nil
+            // A notice about the last clearing stays until the reader empties the
+            // search or makes a new explicit choice; clearing it on every
+            // keystroke would erase the message the first character produced.
+            if searchQuery.isEmpty { selectionNotice = nil }
             retainOnlyVisibleSelections()
         }
     }
     @Published var sortOption: AppSortOption = .sizeDescending
     @Published var filterOption: AppFilterOption = .all {
         didSet {
-            selectionNotice = nil
             retainOnlyVisibleSelections()
         }
     }
