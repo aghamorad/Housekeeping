@@ -37,6 +37,7 @@ final class CleanerModel: ObservableObject {
     @Published private(set) var trash = TrashSummary()
     @Published private(set) var notes: [String] = []
     @Published private(set) var progressLine = ""
+    @Published private(set) var workProgress: UninstallProgress?
     @Published private(set) var lastScan: Date?
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
@@ -76,6 +77,7 @@ final class CleanerModel: ObservableObject {
     func scan() {
         guard phase != .scanning, phase != .working else { return }
         phase = .scanning
+        workProgress = nil
         wasStopped = false
         completedCategories = []
         candidates = []
@@ -412,6 +414,7 @@ final class CleanerModel: ObservableObject {
         confirmationText = ""
         confirmationHint = nil
         phase = .working
+        workProgress = UninstallProgress(phase: .preparing, total: pendingPaths.count)
 
         switch action {
         case .clean:
@@ -452,7 +455,9 @@ final class CleanerModel: ObservableObject {
                     self?.uninstallSession?.finish(result: result)
                 } else {
                     result = try await engine.quarantineRepairs(paths: paths, category: "Clean Up",
-                        reason: title, categories: categories, intent: intent)
+                        reason: title, categories: categories, intent: intent) { [weak self] event in
+                            await self?.receiveCleanupProgress(event)
+                        }
                 }
                 self?.absorb(result, title: title, noun: noun)
             } catch {
@@ -463,7 +468,13 @@ final class CleanerModel: ObservableObject {
     }
 
     private func receiveUninstallProgress(_ event: UninstallProgress) {
+        workProgress = event
         uninstallSession?.receive(event)
+    }
+
+    private func receiveCleanupProgress(_ event: UninstallProgress) {
+        guard phase == .working else { return }
+        workProgress = event
     }
 
     func dismissUninstallSession() {
@@ -500,6 +511,7 @@ final class CleanerModel: ObservableObject {
             sentence += " They can be put back from Quarantine."
         }
         outcome = sentence
+        workProgress = nil
         phase = .ready
     }
 
@@ -516,6 +528,7 @@ final class CleanerModel: ObservableObject {
             } else {
                 self?.outcome = "Emptied what it could: \(result.removedCount) item\(result.removedCount == 1 ? "" : "s"), \(result.removedBytes.sizeDescription) freed. \(result.failures.count) could not be removed."
             }
+            self?.workProgress = nil
             self?.phase = .ready
         }
     }
@@ -523,6 +536,7 @@ final class CleanerModel: ObservableObject {
     private func finishWith(error: Error) {
         failures = [error.localizedDescription]
         outcome = "Removal stopped. Review Quarantine for any items already moved before trying again."
+        workProgress = nil
         phase = .ready
     }
 }
