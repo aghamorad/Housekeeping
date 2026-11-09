@@ -158,6 +158,7 @@ final class LocalModelInventory: ObservableObject {
     @Published private(set) var memory = ModelMemory()
     @Published private(set) var isReading = false
     @Published private(set) var hasRead = false
+    @Published private(set) var lastReadAt: Date?
     /// Rows with work in flight. Deliberately at most one at a time: two models
     /// loading together is how 16 GB becomes 8 GB twice.
     @Published private(set) var busy: String?
@@ -181,7 +182,9 @@ final class LocalModelInventory: ObservableObject {
     // MARK: Reading
 
     func readIfNeeded() async {
-        guard !hasRead else { return }
+        // Revisit stale runtime state when the user returns to the screen,
+        // without hammering model stores or APIs on every view recomposition.
+        guard !hasRead || Date().timeIntervalSince(lastReadAt ?? .distantPast) >= 60 else { return }
         await read()
     }
 
@@ -203,6 +206,7 @@ final class LocalModelInventory: ObservableObject {
             .filter { !$0.models.isEmpty || $0.hint != nil }
             .sorted { order($0.runtime) < order($1.runtime) }
         hasRead = true
+        lastReadAt = Date()
         isReading = false
     }
 
