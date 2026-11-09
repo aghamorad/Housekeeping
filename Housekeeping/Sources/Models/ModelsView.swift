@@ -86,6 +86,9 @@ struct ModelsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .task { await model.readIfNeeded() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await model.readIfNeeded() }
+        }
     }
 
     // MARK: Header
@@ -101,6 +104,11 @@ struct ModelsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 12)
+            if let lastReadAt = model.lastReadAt {
+                Text("Checked \(lastReadAt.formatted(date: .omitted, time: .shortened))")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+            }
             ThemeButton(
                 title: model.isReading ? "Reading…" : "Look Again",
                 systemImage: "arrow.clockwise",
