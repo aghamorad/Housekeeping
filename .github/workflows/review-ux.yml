@@ -14,10 +14,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Check release scripts
+      - name: Check release scripts and UI action handlers
         run: |
           bash -n script/generate_app_icon.sh
           bash -n script/package_release.sh
+          python3 script/audit_ui_controls.py
       - name: Test selection, cleanup safety, and recovery
         run: bash script/test_safety.sh
       - name: Generate the actual icon from the canonical mascot
