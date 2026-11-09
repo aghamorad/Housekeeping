@@ -470,8 +470,15 @@ final class LocalModelInventory: ObservableObject {
 
         let onDisk = await Task.detached(priority: .utility) { Self.scanLMStudioStore() }.value
 
+        let canControl = isRunning && lmStudioCLI != nil
         var models: [LocalModel] = onDisk.map { entry in
-            let isLoaded = loaded.keys.contains { entry.name.contains($0) || $0.contains(entry.name) }
+            // Use the runtime identifier for unload, not the local file path.
+            // A vague substring match can otherwise mark the wrong quantization loaded.
+            let loadedID = loaded.keys.first { id in
+                id == entry.name || id == entry.path
+                    || URL(fileURLWithPath: id).lastPathComponent == URL(fileURLWithPath: entry.path).lastPathComponent
+            }
+            let isLoaded = loadedID != nil
             return LocalModel(
                 id: "lmstudio:\(entry.path)",
                 runtime: .lmStudio,
@@ -479,9 +486,9 @@ final class LocalModelInventory: ObservableObject {
                 facts: entry.facts,
                 bytes: entry.bytes,
                 loaded: isLoaded,
-                control: isRunning ? .loadAndUnload : .none,
-                reference: entry.path,
-                note: isRunning ? nil : "LM Studio is not running. Opening it is what loads a model here — Housekeeping will not wake it on your behalf."
+                control: canControl ? .loadAndUnload : .none,
+                reference: loadedID ?? entry.path,
+                note: !isRunning ? "LM Studio is not running. Housekeeping will not wake it without asking." : (!canControl ? "The LM Studio CLI (lms) is unavailable, so load/unload controls are disabled." : nil)
             )
         }
 
@@ -494,12 +501,15 @@ final class LocalModelInventory: ObservableObject {
                 name: id,
                 facts: ["in memory"],
                 loaded: true,
-                control: isRunning ? .unloadOnly : .none,
+                control: canControl ? .unloadOnly : .none,
                 reference: id
             ), at: 0)
         }
 
         group.models = models.sorted { ($0.bytes ?? 0) > ($1.bytes ?? 0) }
+        if isRunning && !canControl {
+            group.hint = "LM Studio is responding, but its lms command is not installed or not executable. The runtime must provide a working CLI before Housekeeping can manage its models."
+        }
         if models.isEmpty {
             group.hint = FileManager.default.fileExists(atPath: Self.lmStudioStore.path)
                 ? "LM Studio is installed and has no models."
@@ -577,12 +587,20 @@ final class LocalModelInventory: ObservableObject {
     }
 
     private func loadInLMStudio(_ model: LocalModel) async {
-        guard let cli = lmStudioCLI else { return }
-        _ = await run(cli, ["load", model.reference ?? model.name, "--yes"], timeout: 120)
+        guard let cli = lmStudioCLI else {
+            problem = "LM Studio’s lms command is not installed. Open LM Studio to install its CLI integration."
+            return
+        }
+        if await run(cli, ["load", model.reference ?? model.name, "--yes"], timeout: 120) == nil {
+            problem = "LM Studio did not confirm loading \(model.name). Check the LM Studio app for an error."
+        }
     }
 
     private func unloadFromLMStudio(_ model: LocalModel) async {
-        guard let cli = lmStudioCLI else { return }
+        guard let cli = lmStudioCLI else {
+            problem = "LM Studio’s lms command is not installed. Unload the model inside LM Studio."
+            return
+        }
         guard let reference = model.reference else { return }
         // Never unload *all* models as a fallback for a failed targeted unload.
         if await run(cli, ["unload", reference], timeout: 30) == nil {
