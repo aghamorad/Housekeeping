@@ -35,7 +35,7 @@ func bitmap(_ drawing: () -> Void) -> NSBitmapImageRep {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = context
     NSColor.clear.setFill()
-    NSRectFill(canvas)
+    NSBezierPath(rect: canvas).fill()
     drawing()
     context.flushGraphics()
     NSGraphicsContext.restoreGraphicsState()
