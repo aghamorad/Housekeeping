@@ -289,7 +289,13 @@ struct HousekeeperView: View {
                     Button("Quarantine") { appState.screen = .quarantine }
                 }
             }.font(style.smallFont)
-            if housekeeper.canChat { askRow }
+            if !housekeeper.canChat {
+                Text("Built-in Mac help works without a model. Open-ended chat needs a downloaded model or an available Apple model.")
+                    .font(style.smallFont)
+                    .foregroundStyle(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            askRow
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -333,7 +339,7 @@ struct HousekeeperView: View {
     /// itself waits on, and it is the whole of what the Ask button needs minus
     /// the question.
     private var runtimeReady: Bool {
-        housekeeper.canChat && !housekeeper.isAnswering
+        !housekeeper.isAnswering
     }
 
     /// Nothing to send, or the model is not up yet, or it is still answering the
