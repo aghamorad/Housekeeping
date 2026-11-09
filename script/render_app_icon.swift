@@ -35,7 +35,7 @@ func bitmap(_ drawing: () -> Void) -> NSBitmapImageRep {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = context
     NSColor.clear.setFill()
-    canvas.fill()
+    NSRectFill(canvas)
     drawing()
     context.flushGraphics()
     NSGraphicsContext.restoreGraphicsState()
