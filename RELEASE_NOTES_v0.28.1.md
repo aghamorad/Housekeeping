@@ -53,8 +53,11 @@ invent a password-vault feature; the app's own answer is the true one.
   answers reviewed for accuracy (17×23 = 391, a 120-word bill-to-law answer, tool list).
 - Universal ZIP with both architectures, verified signature, source stamp and CLI on both
   slices, Bookbind runtime on both slices.
-- Click-through on macOS 27.2 / M1 Pro: chat streaming, Stop keeping the partial answer,
-  copy, follow-up chips, and the press/hover behaviour on the main controls.
+- Click-through on macOS 27.2 / M1 Pro: general and Mac questions answered correctly,
+  live streaming of the reply, the exact tool list for "what can you do?", follow-up chips,
+  a fresh disk-space reading, and the press/hover behaviour on the main controls. The Stop
+  button's partial-answer path is covered by code review and the cancellation guards, but
+  was not clicked by the automation in this pass.
 
 ## Limits, stated plainly
 
