@@ -1,3 +1,31 @@
+## 0.28.0 — Truthful controls, honest numbers, the canonical mascot icon
+
+- Clean Up bulk selection ("Select shown"/"Deselect shown") is scoped to the visible
+  shelf and search, shows how many selections sit outside the view, and checkboxes are
+  disabled while a scan runs instead of silently ignoring clicks. Stopping a scan now
+  reports that unvisited categories were not checked.
+- Scans and moves show measured completed/total progress; the move sheet states that
+  items go to Quarantine (space held, not freed) rather than implying deletion.
+- Uninstaller matched related data now starts excluded and must be opted into per exact
+  path; the confirmation says so and no longer claims it is included by default.
+  Search or filter changes that clear hidden selections say how many were cleared.
+- Quarantine reports how many items and how much disk it holds, scopes batch select to
+  the search, separates "Delete ALL waiting items" from selected actions, and reads
+  manifests/history on a background thread once per activation.
+- Local Models distinguishes runtime-resident weights from files on disk and reports
+  exact locations and load/unload outcomes; a configured default is never shown as RAM.
+- The Housekeeper answers first-party questions (model locations that exist, memory,
+  cores, macOS thermal pressure as a category not a temperature) without the optional
+  model; open-ended questions reach the model and canned answers are no longer written
+  into its chat history.
+- The menu bar shows sustained high-CPU and thermal-pressure warnings with an accessible
+  label and a working Refresh Health Status; panel and health readings use separate CPU
+  baselines so one cannot distort the other.
+- The app icon is rendered at build time from the canonical octopus mascot (1024 px,
+  full iconset, Icon Composer layers); packaged releases use it instead of the old icon.
+- Remaining copy that told the reader to uncheck related files (when they are now
+  excluded) is corrected throughout Clean Up, the uninstaller and its explanations.
+
 ## 0.27.1 — Fully universal, including every bundled engine
 
 - BookbindServer, embedded Python/native extensions, ffmpeg and ffprobe now support
