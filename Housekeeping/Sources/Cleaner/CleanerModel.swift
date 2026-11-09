@@ -196,7 +196,7 @@ final class CleanerModel: ObservableObject {
     }
 
     func toggleRelated(_ candidate: CleanCandidate) {
-        guard phase != .working, !ProtectionList().isProtected(candidate.url) else { return }
+        guard phase == .ready, !ProtectionList().isProtected(candidate.url) else { return }
         if !includedRelatedPaths.insert(candidate.id).inserted { includedRelatedPaths.remove(candidate.id) }
     }
 
@@ -239,7 +239,7 @@ final class CleanerModel: ObservableObject {
     // MARK: - Ticking
 
     func toggle(_ candidate: CleanCandidate) {
-        guard phase != .working, phase != .scanning else { return }
+        guard phase == .ready else { return }
         guard let index = candidates.firstIndex(where: { $0.id == candidate.id }) else { return }
         candidates[index].isSelected.toggle()
     }
@@ -265,6 +265,7 @@ final class CleanerModel: ObservableObject {
     }
 
     func toggleApp(_ app: InstalledApp) {
+        guard phase == .ready else { return }
         guard let index = apps.firstIndex(where: { $0.id == app.id }) else { return }
         apps[index].isSelected.toggle()
     }
