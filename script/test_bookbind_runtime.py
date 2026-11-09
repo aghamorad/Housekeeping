@@ -19,8 +19,13 @@ import urllib.parse
 import urllib.request
 import wave
 
+if len(sys.argv) < 3:
+    sys.exit("Usage: test_bookbind_runtime.py <bin-dir> <new-fixture-dir> [arm64] [x86_64]")
 bin_dir = Path(sys.argv[1]).resolve()
 fixtures = Path(sys.argv[2]).resolve()
+architectures = sys.argv[3:] or ['arm64', 'x86_64']
+if any(arch not in ('arm64', 'x86_64') for arch in architectures):
+    sys.exit("Architecture must be arm64 or x86_64")
 fixtures.mkdir(parents=True, exist_ok=False)
 results = []
 
@@ -34,7 +39,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-for architecture in ['arm64', 'x86_64']:
+for architecture in architectures:
     for tool in ['ffmpeg', 'ffprobe']:
         assert run(architecture, tool, '-version').startswith(tool + ' version')
     folder = fixtures / architecture
