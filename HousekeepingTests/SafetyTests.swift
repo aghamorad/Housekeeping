@@ -24,41 +24,6 @@ struct SafetyTests {
         try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: testRoot) }
 
-        // Bulk cleaning is always scoped to the current visible result set.
-        // Changing search or category must never select paths the user cannot
-        // see, and clearing the current scope must not alter another category.
-        try await MainActor.run {
-            let first = CleanCandidate(
-                url: home.appendingPathComponent("Library/Caches/Cache A"),
-                size: 20, modified: nil, category: .everydayJunk,
-                name: "Cache A", detail: "fixture"
-            )
-            let hidden = CleanCandidate(
-                url: home.appendingPathComponent("Library/Caches/Cache B"),
-                size: 30, modified: nil, category: .everydayJunk,
-                name: "Cache B", detail: "fixture"
-            )
-            let other = CleanCandidate(
-                url: home.appendingPathComponent("Library/Developer/Build"),
-                size: 40, modified: nil, category: .developerLeftovers,
-                name: "Build", detail: "fixture"
-            )
-            let snapshot = CleanerSnapshot(candidates: [first, hidden, other], apps: [], trash: TrashSummary(), notes: [])
-            let picker = CleanerModel(snapshot: snapshot)
-            picker.query = "Cache A"
-            picker.setVisible(selected: true)
-            try expect(picker.selectedCandidates.map(\.id) == [first.id], "Bulk select must not pick hidden or other-category results.")
-            picker.query = ""
-            try expect(picker.selectedCandidates.count == 1, "Clearing search must not silently select additional paths.")
-            picker.category = .developerLeftovers
-            try expect(picker.selectedOutsideVisibleCount == 1, "Selection summary must count items outside the current view.")
-            picker.clearVisibleSelection()
-            try expect(picker.selectedCandidates.map(\.id) == [first.id], "Deselecting shown must preserve another category's selection.")
-            picker.setVisible(selected: true)
-            try expect(Set(picker.selectedCandidates.map(\.id)) == Set([first.id, other.id]), "Selecting another category must only add that category.")
-            picker.clearSelection()
-            try expect(picker.selectedCandidates.isEmpty, "Explicit Clear All Selections must clear all categories.")
-        }
 
         let policy = CleanupSafetyPolicy(homeDirectory: home, quarantineRoot: quarantine)
 
@@ -1225,6 +1190,43 @@ struct SafetyTests {
         )
 
         // MARK: - Clean Up: what it refuses to touch
+
+        // Bulk cleaning is always scoped to the current visible result set.
+        // Changing search or category must never select paths the user cannot
+        // see, and clearing the current scope must not alter another category.
+        try await MainActor.run {
+            let first = CleanCandidate(
+                url: home.appendingPathComponent("Library/Caches/Cache A"),
+                size: 20, modified: nil, category: .everydayJunk,
+                name: "Cache A", detail: "fixture"
+            )
+            let hidden = CleanCandidate(
+                url: home.appendingPathComponent("Library/Caches/Cache B"),
+                size: 30, modified: nil, category: .everydayJunk,
+                name: "Cache B", detail: "fixture"
+            )
+            let other = CleanCandidate(
+                url: home.appendingPathComponent("Library/Developer/Build"),
+                size: 40, modified: nil, category: .developerLeftovers,
+                name: "Build", detail: "fixture"
+            )
+            let snapshot = CleanerSnapshot(candidates: [first, hidden, other], apps: [], trash: TrashSummary(), notes: [])
+            let picker = CleanerModel(snapshot: snapshot)
+            picker.query = "Cache A"
+            picker.setVisible(selected: true)
+            try expect(picker.selectedCandidates.map(\.id) == [first.id], "Bulk select must not pick hidden or other-category results.")
+            picker.query = ""
+            try expect(picker.selectedCandidates.count == 1, "Clearing search must not silently select additional paths.")
+            picker.category = .developerLeftovers
+            try expect(picker.selectedOutsideVisibleCount == 1, "Selection summary must count items outside the current view.")
+            picker.clearVisibleSelection()
+            try expect(picker.selectedCandidates.map(\.id) == [first.id], "Deselecting shown must preserve another category's selection.")
+            picker.setVisible(selected: true)
+            try expect(Set(picker.selectedCandidates.map(\.id)) == Set([first.id, other.id]), "Selecting another category must only add that category.")
+            picker.clearSelection()
+            try expect(picker.selectedCandidates.isEmpty, "Explicit Clear All Selections must clear all categories.")
+        }
+
 
         // Everything the Clean Up screen moves goes through `quarantineRepairs`,
         // which skips the normal cleanup policy on purpose. What keeps that safe
