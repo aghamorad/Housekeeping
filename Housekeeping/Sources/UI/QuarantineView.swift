@@ -64,10 +64,11 @@ struct QuarantineView: View {
                 selectionBar
             }
             if isWorking {
-                HStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text(workingDescription).font(style.bodyFont).accessibilityAddTraits(.updatesFrequently)
-                }
+                TaskProgressCue(
+                    title: "Working through the selected items",
+                    detail: workingDescription,
+                    symbol: "archivebox"
+                )
             }
             if let operationSummary { Text(operationSummary).font(style.bodyFont) }
 
