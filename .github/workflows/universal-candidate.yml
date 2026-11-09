@@ -26,6 +26,7 @@ jobs:
           bash script/test_safety.sh
           python3 script/test_background_mcp.py
           python3 script/test_bookbind_runtime.py
+          python3 script/audit_ui_controls.py
       - name: Restore checksum-pinned release inputs
         run: |
           set -euo pipefail
