@@ -324,9 +324,17 @@ struct CleanerView: View {
 
     private func candidateRow(_ candidate: CleanCandidate) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            ThemeCheckbox(isChecked: candidate.isSelected) {
-                model.toggle(candidate)
-            }
+            Toggle(
+                "Select \(candidate.name), \(candidate.size.sizeDescription)",
+                isOn: Binding(
+                    get: { candidate.isSelected },
+                    set: { _ in model.toggle(candidate) }
+                )
+            )
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .frame(width: 44, height: 44)
+            .help("Include this exact item in the review. Nothing moves until you confirm the paths.")
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(candidate.name)
