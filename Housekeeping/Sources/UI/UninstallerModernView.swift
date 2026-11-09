@@ -14,6 +14,9 @@ final class UninstallerModel: ObservableObject {
     @Published private(set) var apps: [InstalledApp] = []
     @Published private(set) var isScanning: Bool = false
     @Published private(set) var scanProgress: String = ""
+    @Published private(set) var scanNotice: String?
+    private var scanWorker: Task<[InstalledApp], Never>?
+    private var scanToken = UUID()
     @Published var selectedAppURLs: Set<URL> = []
     @Published var expandedAppURLs: Set<URL> = []
     @Published var searchQuery: String = "" {
@@ -69,26 +72,43 @@ final class UninstallerModel: ObservableObject {
     func startScan() {
         guard !isScanning, !isWorking else { return }
         isScanning = true
+        scanNotice = nil
         scanProgress = "Discovering applications…"
+        let token = UUID()
+        scanToken = token
 
         let progress: @Sendable (String) -> Void = { [weak self] line in
-            Task { @MainActor in self?.scanProgress = line }
-        }
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let results = Uninstaller.installed(progress: progress)
-
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.apps = results
-                self.selectedAppURLs.formIntersection(Set(results.map(\.url)))
-                self.expandedAppURLs.formIntersection(Set(results.map(\.url)))
-                // Preserve explicit related-file choices only for paths still
-                // present after a fresh scan. New discoveries remain kept.
-                self.includedRelatedPaths.formIntersection(Set(results.flatMap(\.leftovers).map(\.id)))
-                self.isScanning = false
-                self.scanProgress = ""
+            Task { @MainActor in
+                guard let self, self.scanToken == token, self.isScanning else { return }
+                self.scanProgress = line
             }
         }
+        let worker = Task.detached(priority: .userInitiated) {
+            Uninstaller.installed(progress: progress)
+        }
+        scanWorker = worker
+        Task { @MainActor [weak self] in
+            let results = await worker.value
+            guard let self, self.scanToken == token, !worker.isCancelled else { return }
+            self.apps = results
+            self.selectedAppURLs.formIntersection(Set(results.map(\.url)))
+            self.expandedAppURLs.formIntersection(Set(results.map(\.url)))
+            // New related files remain excluded until deliberately selected.
+            self.includedRelatedPaths.formIntersection(Set(results.flatMap(\.leftovers).map(\.id)))
+            self.isScanning = false
+            self.scanWorker = nil
+            self.scanProgress = ""
+        }
+    }
+
+    func stopScan() {
+        guard isScanning else { return }
+        scanToken = UUID()
+        scanWorker?.cancel()
+        scanWorker = nil
+        isScanning = false
+        scanProgress = ""
+        scanNotice = "Scan stopped. Existing complete results are still shown; click Refresh to start again."
     }
 
     var filteredApps: [InstalledApp] {
@@ -890,13 +910,19 @@ struct UninstallerModernView: View {
     // MARK: - Scanning & Empty Views
 
     private var scanningView: some View {
-        TaskProgressCue(
-            title: "Finding installed apps",
-            detail: model.scanProgress.isEmpty
-                ? "Reading apps and related folders. This does not change files."
-                : model.scanProgress,
-            symbol: "app.badge.magnifyingglass"
-        )
+        HStack(spacing: 12) {
+            TaskProgressCue(
+                title: "Finding installed apps",
+                detail: model.scanProgress.isEmpty
+                    ? "Reading apps and related folders. No files are changed."
+                    : model.scanProgress,
+                symbol: "app.badge.magnifyingglass"
+            )
+            ThemeButton(title: "Stop Scan", systemImage: "stop.circle",
+                        help: "Cancel this read without changing apps or related files.") {
+                model.stopScan()
+            }
+        }
         .padding(12)
     }
 
