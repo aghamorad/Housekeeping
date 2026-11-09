@@ -187,6 +187,13 @@ struct MenuBarPanel: View {
     }
 
     private var verdictTitle: String {
+        if let alert = vitals.healthAlert {
+            switch alert {
+            case .sustainedCPU: return "Sustained High CPU"
+            case .seriousThermal: return "High Thermal Pressure"
+            case .criticalThermal: return "Critical Thermal Pressure"
+            }
+        }
         switch snapshot.healthScore {
         case 80...: return "Mac is Healthy"
         case 60..<80: return "Mac is Busy"
@@ -195,6 +202,13 @@ struct MenuBarPanel: View {
     }
 
     private var verdictSubtitle: String {
+        if let alert = vitals.healthAlert {
+            switch alert {
+            case .sustainedCPU: return "CPU above 90% repeatedly. Check processes."
+            case .seriousThermal: return "macOS reports serious thermal pressure."
+            case .criticalThermal: return "Reduce heavy work and check cooling."
+            }
+        }
         switch snapshot.healthScore {
         case 80...: return "Everything is running smoothly"
         case 60..<80: return "A few apps are working hard"
@@ -203,6 +217,9 @@ struct MenuBarPanel: View {
     }
 
     private var scoreColor: Color {
+        if let alert = vitals.healthAlert {
+            return alert.isCritical ? HousekeepingInk.negative : HousekeepingInk.caution
+        }
         switch snapshot.healthScore {
         case 80...: return HousekeepingInk.positive
         case 60..<80: return HousekeepingInk.caution
@@ -215,16 +232,22 @@ struct MenuBarPanel: View {
             Circle()
                 .stroke(HousekeepingInk.hairline, lineWidth: 3)
             Circle()
-                .trim(from: 0, to: CGFloat(snapshot.healthScore) / 100)
+                .trim(from: 0, to: vitals.healthAlert == nil ? CGFloat(snapshot.healthScore) / 100 : 1)
                 .stroke(scoreColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-            Text("\(snapshot.healthScore)")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundStyle(HousekeepingInk.text)
-                .monospacedDigit()
+            if vitals.healthAlert != nil {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(scoreColor)
+            } else {
+                Text("\(snapshot.healthScore)")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(HousekeepingInk.text)
+                    .monospacedDigit()
+            }
         }
         .frame(width: 40, height: 40)
-        .help("One reading of the whole house: processor, memory and disk together.")
+        .help(vitals.healthAlert?.explanation ?? "One reading of the whole house: processor, memory and disk together.")
     }
 
     // MARK: - The machine, in a line
