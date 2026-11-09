@@ -63,8 +63,9 @@ rendered from the canonical octopus mascot instead of the old static artwork.
 - **Refresh Health Status** in the right-click menu takes a fresh reading; it can clear a
   warning the current state no longer supports.
 - The menu-bar animation honours Reduce Motion and stays still when nobody is looking
-  (the existing idle-energy guarantees are unchanged; measured 0.0% CPU idle over ten
-  minutes with the panel closed in this release pass).
+  (the existing idle-energy guarantees are unchanged; a ten-minute idle sample in this
+  release pass showed 0.0% CPU. The separate window-closed energy gate was not repeated
+  in this pass).
 
 ## The mascot icon
 
