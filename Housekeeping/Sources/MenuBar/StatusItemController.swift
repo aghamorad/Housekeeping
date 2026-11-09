@@ -169,6 +169,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private var item: NSStatusItem?
     private var timer: Timer?
     private var budgetObserver: AnyCancellable?
+    private var healthObserver: AnyCancellable?
     private var pendingResize: DispatchWorkItem?
     private var frames: [NSImage] = []
     private var tick = 0
@@ -193,6 +194,14 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         frames = buildFrames()
         item.button?.image = frames.first
 
+        // An accessible alert appears only when the lightweight health watcher
+        // detects sustained pressure. At rest the item stays icon-only.
+        healthObserver = SystemVitals.shared.$healthAlert
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] alert in self?.updateHealthIndicator(alert) }
+        SystemVitals.shared.startHealthWatch()
+
         // The animation follows the motion budget, not the clock. Before 0.20.1 this
         // timer was installed at launch and never stopped: twelve status-bar image
         // swaps a second from login to logout, each one a menu bar redraw, for a
@@ -210,7 +219,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// frame rather than leaving whatever frame it happened to be on, so the
     /// still image is always the same still image.
     private func setAnimating(_ animating: Bool) {
-        if animating {
+        if animating && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             guard timer == nil, frames.count > 1 else { return }
             let timer = Timer(
                 timeInterval: Self.frameInterval,
@@ -236,7 +245,28 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     private func buildFrames() -> [NSImage] {
         if let templateIcon = HousekeeperMascot.loadMenuBarTemplate() {
-            return [templateIcon]
+            // Preserve the canonical silhouette. Tiny scaling and bobbing give it
+            // a breath without substituting the fallback drawing. Frames are
+            // cached once and MotionBudget stops swaps when nobody is looking.
+            return (0..<Self.frameCount).map { index in
+                let phase = Double(index) * 2 * Double.pi / Double(Self.frameCount)
+                let breath = CGFloat(0.987 + 0.013 * (1 + sin(phase)) / 2)
+                let bob = CGFloat(0.22 * sin(phase))
+                let renderer = ImageRenderer(
+                    content: Image(nsImage: templateIcon)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: Self.markSize, height: Self.markSize)
+                        .scaleEffect(breath)
+                        .offset(y: bob)
+                        .frame(width: Self.markSize, height: Self.markSize)
+                )
+                renderer.scale = 2
+                let image = renderer.nsImage ?? templateIcon
+                image.size = NSSize(width: Self.markSize, height: Self.markSize)
+                image.isTemplate = true
+                return image
+            }
         }
 
         return (0..<Self.frameCount).map { index in
@@ -268,6 +298,29 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard frames.count > 1 else { return }
         tick = (tick + 1) % frames.count
         item?.button?.image = frames[tick]
+    }
+
+    // MARK: - Visible health signal
+
+    private func updateHealthIndicator(_ alert: SystemHealthAlert?) {
+        guard let item, let button = item.button else { return }
+        if let alert {
+            button.imagePosition = .imageLeft
+            button.attributedTitle = NSAttributedString(
+                string: "!",
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 12, weight: .bold),
+                    .foregroundColor: alert.isCritical ? NSColor.systemRed : NSColor.systemOrange
+                ]
+            )
+            button.toolTip = "Housekeeping: " + alert.title + ". " + alert.explanation
+            item.length = NSStatusItem.variableLength
+        } else {
+            button.attributedTitle = NSAttributedString(string: "")
+            button.imagePosition = .imageOnly
+            button.toolTip = "Housekeeping — no sustained CPU or thermal warning"
+            item.length = NSStatusItem.squareLength
+        }
     }
 
     // MARK: - The panel
@@ -454,6 +507,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
 
+        let current = SystemVitals.shared.healthAlert
+        let status = NSMenuItem(
+            title: current?.title ?? "No sustained CPU or thermal warning",
+            action: nil, keyEquivalent: ""
+        )
+        status.isEnabled = false
+        menu.addItem(status)
+        menu.addItem(entry("Refresh Health Status", #selector(refreshHealthMenu)))
+        menu.addItem(.separator())
         menu.addItem(entry("Open Housekeeping", #selector(openMainWindow)))
         menu.addItem(entry("Talk to the Housekeeper", #selector(askTheHousekeeper)))
         menu.addItem(.separator())
@@ -475,6 +537,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         return item
+    }
+
+    @objc private func refreshHealthMenu() {
+        SystemVitals.shared.refreshHealthWatch()
     }
 
     @objc private func openMainWindow() {
