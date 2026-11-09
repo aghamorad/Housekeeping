@@ -29,7 +29,6 @@ jobs:
           set -euo pipefail
           bash script/test_safety.sh
           python3 script/test_background_mcp.py
-          python3 script/test_bookbind_runtime.py
           python3 script/audit_ui_controls.py
       - name: Restore checksum-pinned release inputs
         run: |
@@ -45,6 +44,21 @@ jobs:
         env:
           HOUSEKEEPING_MEDIA_ARM64_BIN: ${{ runner.temp }}/release-base/Housekeeping.app/Contents/Resources/Bookbind/bin
         run: bash script/build_bookbind_runtime.sh
+      - name: Exercise frozen media runtime on runnable CPU architectures
+        run: |
+          set -euo pipefail
+          host="$(uname -m)"
+          args=("$host")
+          other="arm64"
+          [[ "$host" == "arm64" ]] && other="x86_64"
+          if /usr/bin/arch "-$other" /usr/bin/true >/dev/null 2>&1; then
+            args+=("$other")
+          else
+            echo "::warning::Unable to execute $other on this runner. Universal Mach-O files will be checked statically, but live $other testing remains a release blocker."
+          fi
+          python3 script/test_bookbind_runtime.py \
+            "$GITHUB_WORKSPACE/.build/bookbind-universal/bin" \
+            "$RUNNER_TEMP/bookbind-fixtures" "${args[@]}"
       - name: Build complete Intel + Apple Silicon candidate
         run: bash script/package_release.sh "$RUNNER_TEMP/dist"
       - name: Verify the actual packaged ZIP and source provenance
