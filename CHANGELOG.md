@@ -1,3 +1,10 @@
+## 0.28.2 — Codex's canonical octopus menu-bar icon
+
+- Integrates the canonical maid-octopus menu-bar mask from Codex's PR #1: exact silhouette,
+  embedded in the app, tintable template with white details as cut-outs, 18 pt, light/dark.
+- Breathing animation, Reduce Motion, accessibility label and the drawn fallback are kept.
+- Version 0.28.2 (54).
+
 ## 0.28.1 — Living controls and a streaming, general-purpose Housekeeper
 
 - Themed buttons, rail buttons, sidebar rows, action cards and utility tiles now spring on
