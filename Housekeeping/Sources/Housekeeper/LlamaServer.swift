@@ -49,6 +49,13 @@ final class LlamaServer: ObservableObject {
     private var isStopping = false
     private var modelPath: String?
 
+    /// The exact weights file currently served after /health has reported ready.
+    /// A starting or stopped server is never advertised as occupying model RAM.
+    var loadedModelPath: String? {
+        guard case .ready = state, let modelPath else { return nil }
+        return URL(fileURLWithPath: modelPath).standardizedFileURL.path
+    }
+
     /// The runtime ships inside the bundle. It links nothing but system frameworks,
     /// so there is no pile of dylibs to sign beside it.
     static var executable: URL? {
