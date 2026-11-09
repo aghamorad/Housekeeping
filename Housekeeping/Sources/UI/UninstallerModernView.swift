@@ -18,6 +18,9 @@ final class UninstallerModel: ObservableObject {
     /// Set when a search or filter change cleared apps the reader can no longer
     /// see, so a selection never disappears without a word.
     @Published private(set) var selectionNotice: String?
+    /// How many selections the current search or filter has cleared, cumulatively,
+    /// so the notice reports the whole loss rather than only the last keystroke.
+    private var clearedSelectionCount = 0
     private var scanWorker: Task<[InstalledApp], Never>?
     private var scanToken = UUID()
     @Published var selectedAppURLs: Set<URL> = []
@@ -27,13 +30,17 @@ final class UninstallerModel: ObservableObject {
             // A notice about the last clearing stays until the reader empties the
             // search or makes a new explicit choice; clearing it on every
             // keystroke would erase the message the first character produced.
-            if searchQuery.isEmpty { selectionNotice = nil }
+            if searchQuery.isEmpty {
+                selectionNotice = nil
+                clearedSelectionCount = 0
+            }
             retainOnlyVisibleSelections()
         }
     }
     @Published var sortOption: AppSortOption = .sizeDescending
     @Published var filterOption: AppFilterOption = .all {
         didSet {
+            clearedSelectionCount = 0
             retainOnlyVisibleSelections()
         }
     }
@@ -174,12 +181,15 @@ final class UninstallerModel: ObservableObject {
         let hidden = selectedAppURLs.subtracting(visible)
         guard !hidden.isEmpty else { return }
         selectedAppURLs.formIntersection(visible)
-        selectionNotice = "\(hidden.count) selected app\(hidden.count == 1 ? "" : "s") \(hidden.count == 1 ? "is" : "are") hidden by the current search or filter and \(hidden.count == 1 ? "was" : "were") cleared. Clear the search to choose across searches."
+        clearedSelectionCount += hidden.count
+        let count = clearedSelectionCount
+        selectionNotice = "\(count) selected app\(count == 1 ? "" : "s") \(count == 1 ? "is" : "are") hidden by the current search or filter and \(count == 1 ? "was" : "were") cleared. Clear the search to choose across searches."
     }
 
     func selectAllFiltered() {
         guard !isWorking && !isScanning else { return }
         selectionNotice = nil
+        clearedSelectionCount = 0
         for app in filteredApps {
             selectedAppURLs.insert(app.url)
         }
@@ -187,6 +197,7 @@ final class UninstallerModel: ObservableObject {
 
     func deselectAll() {
         selectionNotice = nil
+        clearedSelectionCount = 0
         selectedAppURLs.removeAll()
     }
 
@@ -199,6 +210,7 @@ final class UninstallerModel: ObservableObject {
     func toggleSelection(_ app: InstalledApp) {
         guard !isWorking && !isScanning else { return }
         selectionNotice = nil
+        clearedSelectionCount = 0
         if selectedAppURLs.contains(app.url) {
             selectedAppURLs.remove(app.url)
         } else {
