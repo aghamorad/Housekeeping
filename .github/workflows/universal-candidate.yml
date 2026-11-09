@@ -58,6 +58,12 @@ jobs:
           test -s "$app/Contents/Resources/llama-server"
           test -s "$app/Contents/Resources/AppIcon.icns"
           test "$(lipo -archs "$app/Contents/MacOS/Housekeeping" | wc -w | tr -d ' ')" = "2"
+          # Execute the actual packaged app in its non-GUI, read-only CLI mode.
+          # This verifies the entry point and actual bundle, not a separately
+          # compiled test harness. No files are cleaned or deleted.
+          "$app/Contents/MacOS/Housekeeping" --version | grep -F '0.28.0'
+          "$app/Contents/MacOS/Housekeeping" help | grep -F 'Housekeeping'
+          "$app/Contents/MacOS/Housekeeping" where --json | python3 -m json.tool > /dev/null
           cd "$RUNNER_TEMP/dist"
           shasum -a 256 Housekeeping-macOS-universal.zip > SHA256SUMS.txt
       - name: Upload reproducible universal candidate (not a public release)
