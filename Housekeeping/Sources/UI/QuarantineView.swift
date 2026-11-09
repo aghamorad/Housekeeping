@@ -32,6 +32,12 @@ struct QuarantineView: View {
                 }
                 Spacer()
                 ThemeButton(
+                    title: "Refresh",
+                    systemImage: "arrow.clockwise",
+                    isEnabled: !isWorking,
+                    help: "Recheck Quarantine records and files. No items are changed."
+                ) { reload() }
+                ThemeButton(
                     title: "Show Me the Folder",
                     systemImage: "folder",
                     help: "Opens the quarantine folder in Finder, so you can see it is a real folder you own."
@@ -132,6 +138,9 @@ struct QuarantineView: View {
         .disabled(isWorking)
         .interactiveDismissDisabled(isWorking)
         .onAppear { reload() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if !isWorking { reload() }
+        }
         .onChange(of: search) { _ in
             // Search never leaves invisible targets silently selected.
             selectedIDs.formIntersection(Set(visibleEntries.map(\.id)))
