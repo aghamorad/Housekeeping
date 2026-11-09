@@ -1,3 +1,73 @@
+## 2026-11-09 — Release candidate 0.28.0 (52) tested locally; NOT published
+
+Codex made the update through GitHub only (PR #5, draft, branch
+`release-candidate/universal-ux-20261109` at `c676e52353e325c5a0bc3c0050241ebb2a160e0a`,
+base `main` 2f5927d). It integrates PR #2 (model/menu-bar reliability) and PR #4
+(cleanup/quarantine UX, mascot icon) and says it needs local testing. DeepSeek Harness
+ran every gate that does not need a visible desktop.
+
+Verified locally on 2026-11-09 (macOS 27.2, Xcode 27.2, M1 Pro; worktree
+`Housekeeping/.build/rc-0.28`, which lives on the SanDisk volume via the C3PO symlink):
+- Safety suite: 372 assertions pass (`script/test_safety.sh`).
+- Background/fake-MCP: 85 assertions pass (`script/test_background_mcp.py`).
+- UI no-op audit: clean, 161 buttons / 186 ThemeButtons over 131 sources
+  (`script/audit_ui_controls.py`; new on this branch).
+- `script/typecheck.sh` passes warnings-as-errors; `xcodebuild` Debug build succeeds.
+- Mascot icon renderer passes: 1024 PNG, 16–512 iconset, two Icon Composer layers;
+  legible at 32 px; packaged AppIcon.icns differs from the legacy source icon.
+- Universal package built with `script/package_release.sh`: 52 universal Mach-O files,
+  no external absolute libraries, ad-hoc signature verifies, stamped source commit
+  matches `c676e52`, version 0.28.0 (52).
+- Packaged CLI on both slices: `--version`, `help`, `where --json` under arm64 and
+  under `arch -x86_64` (Rosetta). Bundled `llama-server --version` runs on both slices.
+- Bookbind runtime inside the package passes on arm64 and x86_64: frozen server, static
+  page, scan, transcode, AAC copy, chapters, tags, restore (script/test_bookbind_runtime.py).
+- Read-only CLI on the packaged app: `scan --quick --json` (687 items) and
+  `clean --json` both exit 0.
+- Idle sample, 10 min, window open with the screen locked: CPU 0.0% throughout,
+  RSS averaging 64.9 MB (range 18–143 MB), no crash reports.
+- Artifact: `.build/rc-0.28/.build/dist-0.28/Housekeeping-macOS-universal.zip`
+  (154 MB, SHA-256 `3d962ba963c4a5b34d6dcff61c96322f130bba60f69f010d342c949300931296`)
+  plus `SHA256SUMS.txt`; extracted check bundle in `.build/check-0.28`.
+
+Code review of the diff found real defects that the automated suites cannot see:
+1. HIGH `Sources/MenuBar/SystemVitals.swift:391` (+`:176`) — `healthTick()` and the 1 s
+   panel sampler share one `previousCPU` baseline. With the panel open the CPU headline
+   becomes a 15 s average, and three unrelated ~1 s spikes 15 s apart can latch a false
+   "Sustained high CPU load" alert. Separate baselines needed.
+2. HIGH `Sources/MenuBar/StatusItemController.swift:517` — "Refresh Health Status" makes
+   one sample, but CPU alerts need 3 high samples and warnings clear only after 2 clean
+   samples, so the menu item usually cannot change what it shows.
+3. MEDIUM `Sources/Cleaner/CleanerModel.swift:296,322,375` and
+   `Sources/Cleaner/CleanerModels.swift:79` — copy still says related files are
+   "included by default" and tells the user to "uncheck anything you want to keep",
+   while the branch now excludes related data by default. The uninstall confirmation can
+   read "The application and 0 included related items".
+4. MEDIUM `Sources/UI/QuarantineView.swift:141` — every `didBecomeActive` reloads
+   Quarantine manifests and transaction history synchronously on the main thread;
+   duplicate of `onAppear`, scales with Quarantine size.
+5. MEDIUM `Sources/UI/UninstallerModernView.swift:23,27,157` — changing search or filter
+   silently drops selections that scrolled out of view, with no "outside this view"
+   count (Clean Up does show one).
+6. LOW `Sources/UI/CleanerView.swift:766` — the scan-notes branch was dropped from the
+   status line; unreadable-folder notes now exist only inside Scan Details.
+7. LOW `Sources/Housekeeper/Housekeeper.swift:277` — canned `readOnlyAnswer` matches run
+   before the model check, so substring hits ("What can you do about a full disk?") get
+   the generic tool answer even with a model loaded.
+8. LOW `Sources/MenuBar/StatusItemController.swift:305` — the alert "!" has a tooltip
+   only; no accessibility label/value.
+
+Not verified, blocked or out of reach on this run: the GUI acceptance matrix (the Mac's
+screen was locked — `CGSSessionScreenIsLocked=Yes` — so no window could be focused or
+clicked), physical Intel hardware, live Ollama/LM Studio model load/unload, window-closed
+idle energy, VoiceOver/keyboard navigation, Gatekeeper download experience, clean
+install/rollback on a second Mac.
+
+State: nothing was merged, tagged, pushed or installed. The candidate build remains in
+`.build` only; `/Applications/Housekeeping.app` is still 0.27.1 (51) and was relaunched
+after the test (the test candidate itself was quit). Next: unlock the screen and run the
+GUI matrix; decide fixes for defects 1–3 before any v0.28.0 release.
+
 ## Completed — 2026-11-08 — Housekeeping 0.27.1 (51), fully universal release
 
 Codex; user requested a GitHub release explaining the uninstall fixes and then
