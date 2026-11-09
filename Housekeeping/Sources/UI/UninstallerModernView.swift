@@ -327,7 +327,7 @@ struct UninstallerModernView: View {
                     Text("App Uninstaller")
                         .font(style.isRetro ? style.titleFont : .system(size: 28, weight: .bold))
                 }
-                Text("Remove apps and their matched related files together. Review what is included, then move it to Quarantine.")
+                Text("Remove an app with a recoverable Quarantine move. Related settings and personal data stay put unless you choose them in the final review.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
@@ -695,7 +695,7 @@ struct UninstallerModernView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "folder.badge.gearshape")
                         .foregroundStyle(style.accent)
-                    Text("Associated Components & Leftovers (\(app.leftovers.count))")
+                    Text("Found Related Files (\(app.leftovers.count))")
                         .font(.system(size: 12, weight: .bold))
                 }
 
@@ -714,6 +714,10 @@ struct UninstallerModernView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 10)
+            Text("These are shown for inspection, not automatically selected for removal.")
+                .font(.system(size: 11))
+                .foregroundStyle(style.secondaryText)
+                .padding(.horizontal, 16)
 
             VStack(spacing: 6) {
                 // Main Application Bundle
