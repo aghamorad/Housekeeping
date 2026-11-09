@@ -63,10 +63,11 @@ clicked), physical Intel hardware, live Ollama/LM Studio model load/unload, wind
 idle energy, VoiceOver/keyboard navigation, Gatekeeper download experience, clean
 install/rollback on a second Mac.
 
-State: nothing was merged, tagged, pushed or installed. The candidate build remains in
-`.build` only; `/Applications/Housekeeping.app` is still 0.27.1 (51) and was relaunched
-after the test (the test candidate itself was quit). Next: unlock the screen and run the
-GUI matrix; decide fixes for defects 1–3 before any v0.28.0 release.
+State: the candidate was not merged, tagged, released or installed; only this handoff
+record was committed to `main` (414478e). The candidate build remains in `.build` only;
+`/Applications/Housekeeping.app` is still 0.27.1 (51) and was relaunched after the test
+(the test candidate itself was quit). Next: unlock the screen and run the GUI matrix;
+decide fixes for defects 1–3 before any v0.28.0 release.
 
 ## Completed — 2026-11-08 — Housekeeping 0.27.1 (51), fully universal release
 
