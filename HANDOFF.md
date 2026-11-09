@@ -1,3 +1,56 @@
+## 2026-11-09 — Housekeeping 0.28.1 (53) SHIPPED: living controls and a smarter, streaming Housekeeper
+
+Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.28.1
+Not a prerelease. Tag `v0.28.1` on `0cd347697ae59b512957ad773bd1b833953934c0`; release workflow
+run 42686342083 green; asset Housekeeping-macOS-universal.zip 162789932 bytes, SHA-256
+`2b214bbe0961aeb16e3cd8d81093f760fc8b8c66d6084419583a0ae1139e9eb4` (matches SHA256SUMS.txt).
+
+What went into it (commits f0977b6, 6465500, f97828c, 0cd3476):
+- Buttons/controls: `HousekeepingButtonStyle`, `RailButtonStyle`, `HousekeepingPressableStyle`
+  add spring press travel, hover lift/glow, a travelling sheen and a trackpad tick; applied to
+  themed buttons, rail buttons, sidebar rows, dashboard action cards and utility tiles.
+  State-driven only, Reduce Motion respected, idle cost unchanged.
+- Chat streaming: `AppleHousekeeper.stream` (FoundationModels `streamResponse`) and
+  `LlamaServer.stream` (SSE `stream: true`) drive a new `Housekeeper.liveAnswer`; the panel
+  shows "Thinking…" only until the first word, renders the answer live, keeps the partial
+  answer if stopped, offers Copy on every answer and Simpler / What next? / Example chips.
+- Prompt rewrite: warm, concrete, general-purpose; still forbids invented files/actions;
+  names the real tool screens so a small model cannot invent features.
+- Fixed general questions being hijacked: folder evidence now requires an explicit path, a
+  named folder plus a folder noun, a distinctive name, or a focused "this folder" reference
+  ("What is 17 times 23?" used to answer with folders named 23). Regression assertion added.
+- Fixed general questions being buried in app status: app context is only sent when the
+  question is about this Mac/Housekeeping or the chat is open about a folder; Mac questions
+  get a volume reading taken at question time (older Disk Browser snapshots are labelled
+  dated).
+- Build scripts resolve the physical checkout path (`pwd -P`), fixing intermittent module
+  cache collisions when the tree is opened through the C3PO symlink.
+
+Verified locally before tagging: 375 safety assertions (incl. folder-hijack regression),
+85 background/MCP, static UI audit, warnings-as-errors typecheck, Xcode build, universal
+package (52 universal Mach-Os, signature, source stamp), headless model probe (first token
+1.7-3.3 s, full 3.7-6.7 s on the Apple system model), live GUI pass on macOS 27.2/M1 Pro:
+general internet question answered on topic without app noise, "What can you do?" returns
+the exact tool list, disk-space question answers with a fresh 247.7 GB reading, streaming
+visible, follow-up chips and copy rendered, buttons/layout unchanged otherwise.
+Post-download verification of the published asset: signature OK, version 0.28.1 (53),
+stamped commit equals tag, 52 universal Mach-Os, Bookbind manifest OK, CLI 0.28.1 on arm64
+and Rosetta. Installed that exact app at /Applications/Housekeeping.app (binary SHA-256
+`e1c4ebf594b5f41dbbf78ff45c567a24f541a1e4e4de132a43075c1a4ca7e29d`), launched it (PID
+11909 at verification). Previous local test build backed up to
+`/Users/Morad/.Trash/Housekeeping-0.28.1-local-test-before-published-20261109-234033.app`;
+the 0.28.0 app is at
+`/Users/Morad/.Trash/Housekeeping-0.28.0-before-0.28.1-20261109-225426.app`.
+
+Limits recorded in the notes: Intel via Rosetta only; ad-hoc signed, not notarized; Stop's
+partial-answer path not clicked by the automation (code/cancellation reviewed); the Apple
+system model is small — the downloadable Qwen/Gemma options remain the better choice for
+harder reasoning.
+
+Build evidence: `.build/dist-0.28.1-v2` (last local package), `.build/release-v0.28.1`
+(downloaded asset), `.build/release-v0.28.1-check` (extracted verified bundle). No local
+service was stopped.
+
 ## 2026-11-09 — Housekeeping 0.28.0 (52) SHIPPED: released, verified, installed
 
 Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.28.0
