@@ -876,19 +876,14 @@ struct UninstallerModernView: View {
     // MARK: - Scanning & Empty Views
 
     private var scanningView: some View {
-        HStack(spacing: 14) {
-            ProgressView().controlSize(.small)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(model.scanProgress)
-                    .font(.system(size: 13, weight: .medium))
-                Text("Indexing application support files and container directories…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
+        TaskProgressCue(
+            title: "Finding installed apps",
+            detail: model.scanProgress.isEmpty
+                ? "Reading apps and related folders. This does not change files."
+                : model.scanProgress,
+            symbol: "app.badge.magnifyingglass"
+        )
+        .padding(12)
     }
 
     private var emptyView: some View {
