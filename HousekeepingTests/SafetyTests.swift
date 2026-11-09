@@ -24,6 +24,20 @@ struct SafetyTests {
         try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: testRoot) }
 
+        // Deterministic, read-only assistant responses must use observed data.
+        let mlxFixture = home.appendingPathComponent(".mlx-lm/models", isDirectory: true)
+        try fileManager.createDirectory(at: mlxFixture, withIntermediateDirectories: true)
+        let modelLocations = HousekeeperConversation.readOnlyAnswer(
+            for: "Where are my models?", home: home, fileManager: fileManager
+        ) ?? ""
+        try expect(modelLocations.contains(mlxFixture.path), "Model-location help must report an existing MLX directory.")
+        try expect(!modelLocations.contains("• Ollama:"), "Model-location help must not invent missing runtimes.")
+        try expect(modelLocations.contains("not evidence that weights are loaded"), "Stored weights must not be confused with RAM residency.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What can you do?")?.contains("Disk Browser") == true,
+                   "Built-in app navigation works without model weights.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What is 2 + 2?") == nil,
+                   "Unrelated questions must not be handled by fake canned answers.")
+
 
         let policy = CleanupSafetyPolicy(homeDirectory: home, quarantineRoot: quarantine)
 
