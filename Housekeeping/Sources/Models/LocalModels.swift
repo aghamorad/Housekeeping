@@ -52,7 +52,7 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
     /// which of these is which. The last one is not a runtime at all, and says so.
     var summary: String {
         switch self {
-        case .mlx: return "Native Metal-accelerated MLX models and central registry located in ~/Models and ~/.mlx-lm."
+        case .mlx: return "Local MLX model files and a configured default, if present. A symlink does not prove that a model is occupying memory; start and stop inference in its actual runtime."
         case .drawThings: return "Native Metal-accelerated image generation engine for Apple Silicon (~/Library/Containers/com.liuliu.draw-things)."
         case .comfyUI: return "Node-based visual image synthesis workbench and local server."
         case .ollama: return "A background service that loads a model when something asks and unloads it after a few idle minutes."
@@ -158,6 +158,7 @@ final class LocalModelInventory: ObservableObject {
     @Published private(set) var memory = ModelMemory()
     @Published private(set) var isReading = false
     @Published private(set) var hasRead = false
+    @Published private(set) var lastReadAt: Date?
     /// Rows with work in flight. Deliberately at most one at a time: two models
     /// loading together is how 16 GB becomes 8 GB twice.
     @Published private(set) var busy: String?
@@ -181,7 +182,9 @@ final class LocalModelInventory: ObservableObject {
     // MARK: Reading
 
     func readIfNeeded() async {
-        guard !hasRead else { return }
+        // Revisit stale runtime state when the user returns to the screen,
+        // without hammering model stores or APIs on every view recomposition.
+        guard !hasRead || Date().timeIntervalSince(lastReadAt ?? .distantPast) >= 60 else { return }
         await read()
     }
 
@@ -203,6 +206,7 @@ final class LocalModelInventory: ObservableObject {
             .filter { !$0.models.isEmpty || $0.hint != nil }
             .sorted { order($0.runtime) < order($1.runtime) }
         hasRead = true
+        lastReadAt = Date()
         isReading = false
     }
 
@@ -249,11 +253,11 @@ final class LocalModelInventory: ObservableObject {
                     name: Self.formatMLXModelName(name),
                     facts: facts,
                     bytes: bytes,
-                    loaded: isCurrent,
+                    loaded: false,
                     path: resolved.path,
-                    control: .loadAndUnload,
+                    control: .none,
                     reference: entry.path,
-                    note: isCurrent ? "Active default model pointed to by ~/.mlx-lm/models/current." : "Local MLX model in ~/.mlx-lm/models."
+                    note: isCurrent ? "Configured default, not proof of a running model. Start or unload it in the MLX app or server that owns the process." : "Stored MLX weights. Housekeeping cannot load arbitrary MLX models into memory by changing a symlink."
                 ))
             }
         }
@@ -290,19 +294,17 @@ final class LocalModelInventory: ObservableObject {
                 if isCurrent { facts.append("Active Default") }
                 if bytes > 0 { facts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
 
-                let isMLX = name.lowercased().contains("mlx") || resolved.path.contains("mlx") || category == "llm"
-
                 models.append(LocalModel(
                     id: "registry:\(entry.path)",
                     runtime: .mlx,
                     name: Self.formatRegistryModelName(name),
                     facts: facts,
                     bytes: bytes,
-                    loaded: isCurrent,
+                    loaded: false,
                     path: resolved.path,
-                    control: isMLX ? .loadAndUnload : .none,
+                    control: .none,
                     reference: entry.path,
-                    note: "Registered in ~/Models/\(category)/ -> \(resolved.path)"
+                    note: "Stored in ~/Models/\(category)/. Configuration is not a live memory reading; use the owning runtime to load or unload."
                 ))
             }
         }
@@ -315,7 +317,7 @@ final class LocalModelInventory: ObservableObject {
         if group.models.isEmpty {
             group.hint = "No models detected in ~/Models or ~/.mlx-lm/models."
         } else {
-            group.hint = "Found \(group.models.count) model\(group.models.count == 1 ? "" : "s") in ~/Models and ~/.mlx-lm."
+            group.hint = "Found \(group.models.count) model\(group.models.count == 1 ? "" : "s") on disk. MLX has no universal process-level load/unload API; a selected default is not shown as loaded RAM."
         }
 
         return group
@@ -371,11 +373,13 @@ final class LocalModelInventory: ObservableObject {
         var group = ModelGroup(runtime: .ollama)
         let installedOnDisk = FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/ollama")
             || FileManager.default.isExecutableFile(atPath: "/usr/local/bin/ollama")
-        guard installedOnDisk else { return group }
-
+        // A reachable Ollama daemon is authoritative even if its executable lives
+        // inside an app bundle or a custom installation path.
         guard let tags = await getJSON(ollamaBase.appendingPathComponent("api/tags")),
               let installed = tags["models"] as? [[String: Any]] else {
-            group.hint = "Ollama is installed but is not answering on this Mac. Starting it would let Housekeeping load and unload from here."
+            if installedOnDisk {
+                group.hint = "Ollama is installed but its API is not answering. Start Ollama to manage models here."
+            }
             return group
         }
 
@@ -419,19 +423,21 @@ final class LocalModelInventory: ObservableObject {
     private func loadInOllama(_ model: LocalModel) async {
         // A model is loaded by asking for one token from it. `keep_alive` is what
         // decides whether it stays: the runtime unloads it on its own afterwards.
-        _ = await postJSON(
+        let status = await postJSON(
             ollamaBase.appendingPathComponent("api/generate"),
             ["model": model.reference ?? model.name, "prompt": " ", "stream": false, "keep_alive": "10m", "options": ["num_predict": 1]]
         )
+        if status != 200 { problem = "Ollama did not confirm loading \(model.name) (HTTP \(status.map(String.init) ?? "no response"))." }
     }
 
     private func unloadFromOllama(_ model: LocalModel) async {
         // `keep_alive: 0` is the documented way to take a model out of memory
         // without unloading every other model the reader is using.
-        _ = await postJSON(
+        let status = await postJSON(
             ollamaBase.appendingPathComponent("api/generate"),
             ["model": model.reference ?? model.name, "prompt": "", "stream": false, "keep_alive": 0]
         )
+        if status != 200 { problem = "Ollama did not confirm unloading \(model.name) (HTTP \(status.map(String.init) ?? "no response"))." }
     }
 
     // MARK: LM Studio
@@ -468,8 +474,17 @@ final class LocalModelInventory: ObservableObject {
 
         let onDisk = await Task.detached(priority: .utility) { Self.scanLMStudioStore() }.value
 
+        let canControl = isRunning && lmStudioCLI != nil
         var models: [LocalModel] = onDisk.map { entry in
-            let isLoaded = loaded.keys.contains { entry.name.contains($0) || $0.contains(entry.name) }
+            // Use the runtime identifier for unload, not the local file path.
+            // A vague substring match can otherwise mark the wrong quantization loaded.
+            let matches = loaded.keys.filter { id in
+                id == entry.name || id == entry.path
+                    || URL(fileURLWithPath: id).lastPathComponent == URL(fileURLWithPath: entry.path).lastPathComponent
+            }
+            // Ambiguous local names are not a safe identity for unloading.
+            let loadedID = matches.count == 1 ? matches[0] : nil
+            let isLoaded = loadedID != nil
             return LocalModel(
                 id: "lmstudio:\(entry.path)",
                 runtime: .lmStudio,
@@ -477,9 +492,9 @@ final class LocalModelInventory: ObservableObject {
                 facts: entry.facts,
                 bytes: entry.bytes,
                 loaded: isLoaded,
-                control: isRunning ? .loadAndUnload : .none,
-                reference: entry.path,
-                note: isRunning ? nil : "LM Studio is not running. Opening it is what loads a model here — Housekeeping will not wake it on your behalf."
+                control: canControl ? .loadAndUnload : .none,
+                reference: loadedID ?? entry.path,
+                note: !isRunning ? "LM Studio is not running. Housekeeping will not wake it without asking." : (!canControl ? "The LM Studio CLI (lms) is unavailable, so load/unload controls are disabled." : nil)
             )
         }
 
@@ -492,12 +507,15 @@ final class LocalModelInventory: ObservableObject {
                 name: id,
                 facts: ["in memory"],
                 loaded: true,
-                control: isRunning ? .unloadOnly : .none,
+                control: canControl ? .unloadOnly : .none,
                 reference: id
             ), at: 0)
         }
 
         group.models = models.sorted { ($0.bytes ?? 0) > ($1.bytes ?? 0) }
+        if isRunning && !canControl {
+            group.hint = "LM Studio is responding, but its lms command is not installed or not executable. The runtime must provide a working CLI before Housekeeping can manage its models."
+        }
         if models.isEmpty {
             group.hint = FileManager.default.fileExists(atPath: Self.lmStudioStore.path)
                 ? "LM Studio is installed and has no models."
@@ -575,14 +593,24 @@ final class LocalModelInventory: ObservableObject {
     }
 
     private func loadInLMStudio(_ model: LocalModel) async {
-        guard let cli = lmStudioCLI else { return }
-        _ = await run(cli, ["load", model.reference ?? model.name, "--yes"], timeout: 120)
+        guard let cli = lmStudioCLI else {
+            problem = "LM Studio’s lms command is not installed. Open LM Studio to install its CLI integration."
+            return
+        }
+        if await run(cli, ["load", model.reference ?? model.name, "--yes"], timeout: 120) == nil {
+            problem = "LM Studio did not confirm loading \(model.name). Check the LM Studio app for an error."
+        }
     }
 
     private func unloadFromLMStudio(_ model: LocalModel) async {
-        guard let cli = lmStudioCLI else { return }
-        if let reference = model.reference, await run(cli, ["unload", reference], timeout: 30) == nil {
-            _ = await run(cli, ["unload", "--all"], timeout: 30)
+        guard let cli = lmStudioCLI else {
+            problem = "LM Studio’s lms command is not installed. Unload the model inside LM Studio."
+            return
+        }
+        guard let reference = model.reference else { return }
+        // Never unload *all* models as a fallback for a failed targeted unload.
+        if await run(cli, ["unload", reference], timeout: 30) == nil {
+            problem = "LM Studio did not confirm unloading \(model.name). Other models were left alone."
         }
     }
 
@@ -591,18 +619,21 @@ final class LocalModelInventory: ObservableObject {
     private func readHousekeeper() async -> ModelGroup {
         var group = ModelGroup(runtime: .housekeeper)
         let weights = HousekeeperWeights.shared
-        let port = Housekeeper.shared.server.state.port
+        let server = Housekeeper.shared.server
+        let loadedPath = server.loadedModelPath
+        let port = server.state.port
 
         group.models = weights.storedFiles
             .filter { !$0.url.lastPathComponent.hasSuffix(".partial") }
             .sorted { $0.bytes > $1.bytes }
             .map { file in
+                let isLoaded = loadedPath == file.url.standardizedFileURL.path
                 let eval = Self.evaluateNecessity(
                     runtime: .housekeeper,
                     name: file.url.deletingPathExtension().lastPathComponent,
                     path: file.url.path,
                     bytes: file.bytes,
-                    isLoaded: port != nil,
+                    isLoaded: isLoaded,
                     isCurrentMLX: false
                 )
                 return LocalModel(
@@ -611,10 +642,10 @@ final class LocalModelInventory: ObservableObject {
                     name: file.url.deletingPathExtension().lastPathComponent,
                     facts: [file.sizeLabel],
                     bytes: file.bytes,
-                    loaded: port != nil,
-                    control: LlamaServer.isAvailable ? .loadAndUnload : .unloadOnly,
+                    loaded: isLoaded,
+                    control: LlamaServer.isAvailable ? .loadAndUnload : .none,
                     reference: file.url.path,
-                    note: port == nil ? nil : "The housekeeper is running on port \(port!).",
+                    note: isLoaded ? "This exact model is running on port \(port!)." : "Stored on disk, not currently running.",
                     necessity: eval.status,
                     intersections: eval.intersections,
                     intersectionExplanation: eval.explanation
@@ -635,7 +666,7 @@ final class LocalModelInventory: ObservableObject {
               let list = answer["data"] as? [[String: Any]], !list.isEmpty else {
             return group
         }
-        group.hint = "The Hermes server is running and offers \(list.count) model\(list.count == 1 ? "" : "s"). It holds whichever one it was last asked to run; Unload frees the memory without stopping the server."
+        group.hint = "Hermes offers \(list.count) model\(list.count == 1 ? "" : "s"), but /v1/models does not establish which one is resident in RAM. Per-model load/unload is unavailable until the runtime provides verified state."
         group.models = list.compactMap { (entry: [String: Any]) -> LocalModel? in
             guard let id = entry["id"] as? String else { return nil }
             let eval = Self.evaluateNecessity(
@@ -643,15 +674,16 @@ final class LocalModelInventory: ObservableObject {
                 name: id,
                 path: nil,
                 bytes: nil,
-                isLoaded: true,
+                isLoaded: false,
                 isCurrentMLX: false
             )
             return LocalModel(
                 id: "hermes:\(id)",
                 runtime: .hermes,
                 name: id,
-                facts: ["offered by the server"],
-                control: .unloadOnly,
+                facts: ["offered by the server; residency unknown"],
+                loaded: false,
+                control: .none,
                 reference: id,
                 necessity: eval.status,
                 intersections: eval.intersections,
@@ -663,22 +695,6 @@ final class LocalModelInventory: ObservableObject {
 
     private func unloadHermes() async {
         _ = await postJSON(hermesBase.appendingPathComponent("unload"), [:])
-    }
-
-    private func loadMLX(_ model: LocalModel) async {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let currentLink = home + "/.mlx-lm/models/current"
-        guard let target = model.path ?? model.reference else { return }
-        let fm = FileManager.default
-        try? fm.removeItem(atPath: currentLink)
-        try? fm.createSymbolicLink(atPath: currentLink, withDestinationPath: target)
-    }
-
-    private func unloadMLX(_ model: LocalModel) async {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let currentLink = home + "/.mlx-lm/models/current"
-        try? FileManager.default.removeItem(atPath: currentLink)
-        await unloadHermes()
     }
 
     // MARK: Hugging Face cache
@@ -972,12 +988,23 @@ final class LocalModelInventory: ObservableObject {
         note = "Loading \(model.name)…"
 
         switch model.runtime {
-        case .mlx: await loadMLX(model)
+        case .mlx: break // A filesystem alias cannot load an MLX model.
         case .ollama: await loadInOllama(model)
         case .lmStudio: await loadInLMStudio(model)
         case .housekeeper:
             if let reference = model.reference, LlamaServer.isAvailable {
-                Housekeeper.shared.server.start(model: URL(fileURLWithPath: reference))
+                let server = Housekeeper.shared.server
+                server.start(model: URL(fileURLWithPath: reference))
+                // start() launches asynchronously. Wait for actual /health readiness
+                // before refreshing inventory; otherwise every cold load looks failed.
+                for _ in 0..<360 {
+                    if case .ready = server.state { break }
+                    if case .failed(let reason) = server.state {
+                        problem = reason
+                        break
+                    }
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
             }
         case .hermes, .huggingFace, .drawThings, .comfyUI: break
         }
@@ -985,7 +1012,7 @@ final class LocalModelInventory: ObservableObject {
         busy = nil
         note = nil
         await read()
-        if let fresh = self.model(model.id), !fresh.loaded {
+        if problem == nil, let fresh = self.model(model.id), !fresh.loaded {
             problem = "\(model.name) did not load. \(model.runtime.title) did not report it as running afterwards."
         }
     }
@@ -997,10 +1024,21 @@ final class LocalModelInventory: ObservableObject {
         note = "Unloading \(model.name)…"
 
         switch model.runtime {
-        case .mlx: await unloadMLX(model)
+        case .mlx: break // No arbitrary MLX process is owned by Housekeeping.
         case .ollama: await unloadFromOllama(model)
         case .lmStudio: await unloadFromLMStudio(model)
-        case .housekeeper: Housekeeper.shared.server.stopAndWait()
+        case .housekeeper:
+            let server = Housekeeper.shared.server
+            server.stop()
+            for _ in 0..<40 {
+                if case .idle = server.state { break }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            if case .idle = server.state {
+                // Model memory was released by the actual child exit.
+            } else {
+                problem = "The Housekeeper runtime has not confirmed that it stopped yet. Check again before loading another large model."
+            }
         case .hermes: await unloadHermes()
         case .huggingFace, .drawThings, .comfyUI: break
         }
@@ -1008,7 +1046,7 @@ final class LocalModelInventory: ObservableObject {
         busy = nil
         note = nil
         await read()
-        if let fresh = self.model(model.id), fresh.loaded {
+        if problem == nil, let fresh = self.model(model.id), fresh.loaded {
             problem = "\(model.name) still reports itself as loaded. \(model.runtime.title) may be keeping it for another request."
         }
     }
