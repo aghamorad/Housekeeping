@@ -22,7 +22,7 @@ final class UninstallerModel: ObservableObject {
     @Published private(set) var isWorking = false
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
-    @Published var excludedRelatedPaths: Set<String> = []
+    @Published private(set) var includedRelatedPaths: Set<String> = []
     @Published var pendingUninstallPlan: [InstalledApp]? = nil
     @Published private(set) var session: UninstallSession?
 
@@ -78,6 +78,9 @@ final class UninstallerModel: ObservableObject {
                 self.apps = results
                 self.selectedAppURLs.formIntersection(Set(results.map(\.url)))
                 self.expandedAppURLs.formIntersection(Set(results.map(\.url)))
+                // Preserve explicit related-file choices only for paths still
+                // present after a fresh scan. New discoveries remain kept.
+                self.includedRelatedPaths.formIntersection(Set(results.flatMap(\.leftovers).map(\.id)))
                 self.isScanning = false
                 self.scanProgress = ""
             }
@@ -184,13 +187,19 @@ final class UninstallerModel: ObservableObject {
     }
 
     func includedLeftovers(_ app: InstalledApp) -> [CleanCandidate] {
-        app.leftovers.filter { !excludedRelatedPaths.contains($0.id) && !ProtectionList().isProtected($0.url) }
+        app.leftovers.filter { includedRelatedPaths.contains($0.id) && !ProtectionList().isProtected($0.url) }
     }
 
     func setRelatedFiles(_ app: InstalledApp, included: Bool) {
-        let paths = app.leftovers.map(\.id)
-        if included { excludedRelatedPaths.subtract(paths) }
-        else { excludedRelatedPaths.formUnion(paths) }
+        let paths = app.leftovers.filter { !ProtectionList().isProtected($0.url) }.map(\.id)
+        if included { includedRelatedPaths.formUnion(paths) }
+        else { includedRelatedPaths.subtract(paths) }
+    }
+
+    func setRelatedFile(_ item: CleanCandidate, included: Bool) {
+        guard !ProtectionList().isProtected(item.url) else { return }
+        if included { includedRelatedPaths.insert(item.id) }
+        else { includedRelatedPaths.remove(item.id) }
     }
 
     func executeUninstall() {
@@ -903,7 +912,7 @@ struct UninstallerModernView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Review App Removal")
                         .font(.system(size: 18, weight: .bold))
-                    Text("Apps and checked related files will move to Quarantine. Related files may hold settings and personal app data. Uncheck anything you want to keep. macOS may ask for an administrator password.")
+                    Text("The selected apps will move to Quarantine. Related data starts excluded because it may hold settings, documents or saved games; tick an exact file only if you want to move it too. macOS may ask for an administrator password.")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -940,7 +949,7 @@ struct UninstallerModernView: View {
                                 Text("\(model.includedLeftovers(app).count) of \(app.leftovers.count) related files included")
                                     .font(.system(size: 13)).foregroundStyle(style.secondaryText)
                                 Spacer()
-                                Button("Include All") { model.setRelatedFiles(app, included: true) }
+                                Button("Include All (review first)") { model.setRelatedFiles(app, included: true) }
                                     .frame(minHeight: 44)
                                 Button("Keep All Related Files") { model.setRelatedFiles(app, included: false) }
                                     .frame(minHeight: 44)
@@ -948,11 +957,8 @@ struct UninstallerModernView: View {
                         }
                         ForEach(app.leftovers) { item in
                             Toggle(isOn: Binding(
-                                get: { !model.excludedRelatedPaths.contains(item.id) && !ProtectionList().isProtected(item.url) },
-                                set: { include in
-                                    if include { model.excludedRelatedPaths.remove(item.id) }
-                                    else { model.excludedRelatedPaths.insert(item.id) }
-                                }
+                                get: { model.includedRelatedPaths.contains(item.id) && !ProtectionList().isProtected(item.url) },
+                                set: { include in model.setRelatedFile(item, included: include) }
                             )) {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("\(item.name) · \(item.size.sizeDescription)").font(style.bodyFont)
