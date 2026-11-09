@@ -435,6 +435,14 @@ struct HousekeeperView: View {
     /// Read at submission time, not frozen when the panel first opened.
     private var liveContext: String {
         var lines = ["CURRENT STATUS (refreshed for this question):", "Active local model: " + weights.activeModelName + ". Chat runs on this Mac. No internet browsing or arbitrary file access is available to the model."]
+        // The freshest space figure available: the dashboard reading is computed
+        // in a view and never reaches the model, so old Disk Browser snapshots used
+        // to be quoted as if they were current. Read the volume at question time.
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        if let values = try? home.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey, .volumeNameKey]),
+           let total = values.volumeTotalCapacity, let available = values.volumeAvailableCapacity {
+            lines.append("Fresh reading right now: \(Int64(available).humanReadable) free of \(Int64(total).humanReadable) on \(values.volumeName ?? "the home volume"). Treat older Disk Browser or scan sizes as dated.")
+        }
         lines.append("Screen behind this panel: " + (appState.workspace?.rawValue ?? (appState.showOverview ? "Overview" : "Scan results")))
         switch appState.scanState {
         case .idle: lines.append("Main scan: idle; no main scan has run in this session.")

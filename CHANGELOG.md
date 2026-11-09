@@ -10,7 +10,8 @@
   is told the exact set of Housekeeping screens so it cannot invent features.
 - App status context is only sent to the model for questions about this Mac or
   Housekeeping; general questions are answered from general knowledge instead of being
-  buried in scan notes.
+  buried in scan notes. Mac questions get a fresh volume reading at question time instead
+  of an old snapshot.
 - Folder evidence no longer hijacks general questions: "What is 17 times 23?" used to be
   answered with folders named 23. It now needs an explicit path, a named folder with a
   folder noun, a distinctive name, or a focused "this folder" reference.

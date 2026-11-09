@@ -28,7 +28,9 @@ canned-answer machine into a streaming, general-purpose one.
 A small on-device model handed a page of scan notes answers "how does the internet work?"
 with remarks about the screen behind the chat panel. App context is now sent only when the
 question is actually about this Mac or Housekeeping (or the chat is open about a specific
-folder); general questions reach the model clean.
+folder); general questions reach the model clean. Mac questions get a live volume reading taken at
+question time, so the assistant no longer quotes a dated Disk Browser snapshot as today's
+free space.
 
 ## Fixed: general questions were being hijacked by folder matching
 
