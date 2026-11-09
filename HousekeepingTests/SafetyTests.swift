@@ -1210,8 +1210,23 @@ struct SafetyTests {
                 size: 40, modified: nil, category: .developerLeftovers,
                 name: "Build", detail: "fixture"
             )
-            let snapshot = CleanerSnapshot(candidates: [first, hidden, other], apps: [], trash: TrashSummary(), notes: [])
+            let related = CleanCandidate(
+                url: home.appendingPathComponent("Library/Application Support/Mock/Work.db"),
+                size: 500, modified: nil, category: .uninstall,
+                name: "Work.db", detail: "Potential personal data"
+            )
+            let app = InstalledApp(
+                url: home.appendingPathComponent("Applications/Mock.app"),
+                name: "Mock", bundleIdentifier: "com.example.mock", version: nil,
+                size: 100, leftovers: [related]
+            )
+            let snapshot = CleanerSnapshot(candidates: [first, hidden, other], apps: [app], trash: TrashSummary(), notes: [])
             let picker = CleanerModel(snapshot: snapshot)
+            try expect(picker.includedRelatedPaths.isEmpty, "App support data must not be included by default.")
+            picker.toggleRelated(related)
+            try expect(picker.includedRelatedPaths.contains(related.id), "Explicitly selected related data must be included.")
+            picker.toggleRelated(related)
+            try expect(picker.includedRelatedPaths.isEmpty, "Related-data opt-in must be reversible.")
             picker.query = "Cache A"
             picker.setVisible(selected: true)
             try expect(picker.selectedCandidates.map(\.id) == [first.id], "Bulk select must not pick hidden or other-category results.")
