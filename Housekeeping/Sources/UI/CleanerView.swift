@@ -490,7 +490,7 @@ struct CleanerView: View {
                         .font(style.smallFont).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(.plain)
                 if expandedApps.contains(app.id) {
-                    Text("Related files are included with the app. They can hold settings and personal data. Uncheck anything you want to keep; shared matches are excluded from the scan.")
+                    Text("Related files start unselected. They may contain documents, preferences, accounts or saved games. Include only the exact files you want to move with this app.")
                         .font(style.smallFont).foregroundColor(style.caution)
                     ForEach(app.leftovers) { related in
                         HStack(alignment: .top, spacing: 8) {
