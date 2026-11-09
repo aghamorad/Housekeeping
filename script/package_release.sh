@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 OUTPUT_DIR="${1:-$ROOT_DIR/dist}"
 if [[ -d "${XCODE_APP:-/Applications/Xcode.app}" ]]; then
   XCODE_APP="${XCODE_APP:-/Applications/Xcode.app}"

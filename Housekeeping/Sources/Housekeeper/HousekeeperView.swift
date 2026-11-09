@@ -10,6 +10,7 @@
 // the whole design: the thing that authorises a deletion is Housekeeping's, and
 // the model is only ever the explanation beneath it.
 
+import AppKit
 import SwiftUI
 
 struct HousekeeperView: View {
@@ -157,14 +158,23 @@ struct HousekeeperView: View {
                     }
 
                     if housekeeper.isAnswering {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text("Thinking…")
-                                .font(style.smallFont)
-                                .foregroundStyle(style.secondaryText)
-                            Spacer()
-                            Button("Stop") { housekeeper.stopAnswer() }.font(style.smallFont)
+                        if housekeeper.liveAnswer.isEmpty {
+                            thinkingRow
+                        } else {
+                            VStack(alignment: .leading, spacing: 6) {
+                                TurnRow(turn: Housekeeper.Turn(speaker: .housekeeper,
+                                                               text: housekeeper.liveAnswer + " ▍"))
+                                HStack(spacing: 10) {
+                                    Text("Writing…")
+                                        .font(style.smallFont)
+                                        .foregroundStyle(style.secondaryText)
+                                    Spacer()
+                                    Button("Stop") { housekeeper.stopAnswer() }.font(style.smallFont)
+                                }
+                            }
                         }
+                    } else if housekeeper.turns.count > 1 {
+                        followUps
                     }
 
                     Color.clear.frame(height: 1).id(Self.bottomAnchor)
@@ -185,7 +195,45 @@ struct HousekeeperView: View {
                     proxy.scrollTo(Self.bottomAnchor, anchor: .bottom)
                 }
             }
+            .onReceive(housekeeper.$liveAnswer) { _ in
+                withAnimation(.easeOut(duration: 0.15)) {
+                    proxy.scrollTo(Self.bottomAnchor, anchor: .bottom)
+                }
+            }
         }
+    }
+
+    /// What the panel shows for the wait before the first word. Once the first
+    /// token lands, `liveAnswer` takes over and this disappears: the reader never
+    /// watches a spinner while text is already arriving.
+    private var thinkingRow: some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text("Thinking…")
+                .font(style.smallFont)
+                .foregroundStyle(style.secondaryText)
+            Spacer()
+            Button("Stop") { housekeeper.stopAnswer() }.font(style.smallFont)
+        }
+    }
+
+    /// One-tap continuations under a finished answer, so the conversation keeps
+    /// moving without the reader having to invent the next prompt.
+    private var followUps: some View {
+        HStack(spacing: 8) {
+            ThemeButton(title: "Simpler", systemImage: "text.alignleft") {
+                ask("Explain that more simply, in a couple of sentences.")
+            }
+            ThemeButton(title: "What next?", systemImage: "arrow.forward") {
+                ask("What should I do next? Give me one or two concrete steps.")
+            }
+            ThemeButton(title: "Example", systemImage: "lightbulb") {
+                ask("Give me a concrete example.")
+            }
+            Spacer(minLength: 0)
+        }
+        .disabled(!runtimeReady)
+        .opacity(runtimeReady ? 1 : 0.5)
     }
 
     /// Housekeeping's answer about the item on screen, above the housekeeper's
@@ -457,6 +505,7 @@ struct HousekeeperView: View {
 private struct TurnRow: View {
     @Environment(\.uiStyle) private var style
     let turn: Housekeeper.Turn
+    @State private var copied = false
 
     var body: some View {
         switch turn.speaker {
@@ -465,12 +514,30 @@ private struct TurnRow: View {
                 OctopusMark()
                     .frame(width: 22, height: 22)
                 ThemePanel(padding: 10) {
-                    Text((try? AttributedString(markdown: turn.text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(turn.text))
-                        .font(style.bodyFont)
-                        .foregroundStyle(style.text)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: 520, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text((try? AttributedString(markdown: turn.text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(turn.text))
+                            .font(style.bodyFont)
+                            .foregroundStyle(style.text)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: 520, alignment: .leading)
+                        HStack(spacing: 4) {
+                            Spacer(minLength: 0)
+                            Button {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(turn.text, forType: .string)
+                                copied = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { copied = false }
+                            } label: {
+                                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(style.secondaryText)
+                            }
+                            .buttonStyle(.plain)
+                            .help(copied ? "Copied" : "Copy this answer")
+                            .accessibilityLabel("Copy this answer")
+                        }
+                    }
                 }
                 Spacer(minLength: 0)
             }

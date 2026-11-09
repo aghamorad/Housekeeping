@@ -22,6 +22,10 @@ final class Housekeeper: ObservableObject {
 
     @Published private(set) var turns: [Turn] = []
     @Published private(set) var isAnswering = false
+    /// The answer as the model writes it. Empty until the first token arrives,
+    /// which is what lets the panel show "Thinking…" only for the wait that is
+    /// actually a wait, and then fill in live instead of freezing.
+    @Published private(set) var liveAnswer = ""
     /// Set when something went wrong that the reader should see instead of an answer.
     @Published private(set) var problem: String?
     @Published private(set) var inspectedQuestionFolder: String?
@@ -209,6 +213,7 @@ final class Housekeeper: ObservableObject {
         // Set synchronously, before spawning work, so rapid double submission
         // cannot start two generations against the same history.
         isAnswering = true
+        liveAnswer = ""
         let requestContext = contextID
         answerTask = Task { [weak self] in
             guard let self else { return }
@@ -244,6 +249,13 @@ final class Housekeeper: ObservableObject {
         answerTask = nil
         contextID = UUID()
         isAnswering = false
+        // Keep what was already written. A reader who stops an answer mid-flight
+        // asked for the words so far, not for them to vanish.
+        let partial = liveAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !partial.isEmpty {
+            turns.append(Turn(speaker: .housekeeper, text: partial + " …"))
+        }
+        liveAnswer = ""
         problem = nil
         turns.append(Turn(speaker: .housekeeper, text: "Response stopped."))
     }
@@ -257,6 +269,7 @@ final class Housekeeper: ObservableObject {
             if contextID == answeringContext {
                 isAnswering = false
                 answerTask = nil
+                liveAnswer = ""
             }
         }
 
@@ -274,7 +287,7 @@ final class Housekeeper: ObservableObject {
             turns.append(Turn(speaker: .housekeeper, text: answer))
             return
         }
-        if let answer = HousekeeperConversation.readOnlyAnswer(for: question) {
+        if let answer = HousekeeperConversation.readOnlyAnswer(for: question, modelAvailable: canChat) {
             // Observed first-party answers are not model turns, so they are not
             // fed back into the history the model later sees.
             turns.append(Turn(speaker: .housekeeper, text: answer))
@@ -354,9 +367,30 @@ final class Housekeeper: ObservableObject {
         }
     }
 
+    /// Streams one turn and publishes it while it is written. The finished text
+    /// is returned so the existing repeat-detection and history rules still run
+    /// on the complete answer rather than on a partial one.
     private func generate(_ messages: [[String: String]], using model: HousekeeperModel) async throws -> String {
-        if model == .apple { return try await AppleHousekeeper.complete(messages: messages) }
-        return try await server.complete(messages: HousekeeperConversation.transportMessages(messages, for: model))
+        liveAnswer = ""
+        let stream: AsyncThrowingStream<String, Error>
+        if model == .apple {
+            stream = AppleHousekeeper.stream(messages: messages)
+        } else {
+            stream = server.stream(messages: HousekeeperConversation.transportMessages(messages, for: model))
+        }
+        var latest = ""
+        for try await partial in stream {
+            try Task.checkCancellation()
+            latest = partial
+            liveAnswer = partial
+        }
+        liveAnswer = ""
+        let answer = latest.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !answer.isEmpty else {
+            throw NSError(domain: "Housekeeper", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "The local model returned an empty response. Ask again, or choose another model."])
+        }
+        return answer
     }
 
     /// Called when the housekeeper's window closes. The conversation survives — it is

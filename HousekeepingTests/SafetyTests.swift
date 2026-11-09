@@ -40,6 +40,19 @@ struct SafetyTests {
         try expect(HousekeeperConversation.readOnlyAnswer(for: "What can you do about a full disk?") == nil,
                    "Open-ended questions must reach the model instead of the generic tool list.")
 
+        // A word that happens to equal a folder name may not turn a general
+        // question into a folder question. "What is 17 times 23?" used to be
+        // answered with a list of folders named 23.
+        let folderRequest = HousekeeperFolderEvidence.Request(
+            focusedPath: nil,
+            locations: [.init(path: home.appendingPathComponent("sessions/2026/10/23").path)],
+            home: home.path
+        )
+        try expect(HousekeeperFolderEvidence.inspect(question: "What is 17 times 23?", request: folderRequest) == nil,
+                   "Bare words matching a folder name must not hijack general questions.")
+        try expect(HousekeeperFolderEvidence.inspect(question: "Explain the folder at \(home.path)/sessions/2026/10/23", request: folderRequest) != nil,
+                   "An explicit path must still produce folder evidence.")
+
 
         let policy = CleanupSafetyPolicy(homeDirectory: home, quarantineRoot: quarantine)
 

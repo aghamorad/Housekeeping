@@ -32,8 +32,26 @@ enum HousekeeperFolderEvidence {
             let name = URL(fileURLWithPath: location.path).lastPathComponent.lowercased()
             return name.count > 1 && query.range(of: "(?<![\\w])" + NSRegularExpression.escapedPattern(for: name) + "(?![\\w])", options: .regularExpression) != nil
         }
-        let aboutFolder = !paths.isEmpty || !named.isEmpty || ["folder", "directory", "cache"].contains(where: words.contains)
-            || (request.focusedPath != nil && (["this", "that", "it", "inside", "wheels", "archives", "packages", "python"].contains(where: words.contains) || query.contains("what about")))
+        // A folder only enters the conversation when the question actually asks
+        // about one: an explicit path, a named folder together with a folder noun,
+        // or "this/that" while a folder is on screen. Matching a bare word that
+        // happens to equal a folder name (a date, "23", a common noun) used to
+        // hijack unrelated questions — "What is 17 times 23?" was answered with a
+        // list of session folders. General questions must reach the model.
+        let folderWord = ["folder", "directory", "cache", "caches", "path"].contains(where: words.contains)
+        let deictic = ["this", "that", "it", "these", "those", "inside", "wheels", "archives", "packages", "python"].contains(where: words.contains)
+        let aboutThisFolder = request.focusedPath != nil && (deictic || query.contains("what about"))
+        let namedFolder = !named.isEmpty && folderWord
+        // A distinctive name ("wheels-v7", ".codex", "Housekeeping") is itself a
+        // folder question; a bare date or number is not. That distinction is what
+        // keeps "What is 17 times 23?" a general question.
+        let distinctiveNamed = named.contains { location in
+            let name = URL(fileURLWithPath: location.path).lastPathComponent.lowercased()
+            let numeric = name.allSatisfy { $0.isNumber }
+            let shaped = name.count >= 3 || name.contains(".") || name.contains("-") || name.contains("_")
+            return name.count >= 2 && !numeric && shaped
+        }
+        let aboutFolder = !paths.isEmpty || namedFolder || aboutThisFolder || distinctiveNamed
         guard aboutFolder else { return nil }
 
         var locations: [String: Location] = [:]

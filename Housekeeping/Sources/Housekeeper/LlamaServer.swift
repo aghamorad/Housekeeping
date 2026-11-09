@@ -174,6 +174,62 @@ final class LlamaServer: ObservableObject {
         return answer
     }
 
+    /// The same turn as `complete`, but published while it is being written:
+    /// each element is the cumulative answer so far, read from the server's
+    /// server-sent events. Cancelling the consumer cancels the request.
+    func stream(messages: [[String: String]], maxTokens: Int = 768) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    guard let port = state.port,
+                          let url = URL(string: "http://127.0.0.1:\(port)/v1/chat/completions") else {
+                        throw Failure.notRunning
+                    }
+                    let payload: [String: Any] = [
+                        "messages": messages,
+                        "max_tokens": maxTokens,
+                        "temperature": 0.65,
+                        "top_p": 0.95,
+                        "repeat_penalty": 1.05,
+                        "stream": true,
+                        "chat_template_kwargs": ["enable_thinking": false],
+                    ]
+                    var request = URLRequest(url: url)
+                    request.httpMethod = "POST"
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+                    request.timeoutInterval = 120
+
+                    let (bytes, response) = try await URLSession.shared.bytes(for: request)
+                    let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                    guard status == 200 else {
+                        throw Failure.rejected("Local model stream failed (HTTP \(status)).")
+                    }
+                    var accumulated = ""
+                    for try await line in bytes.lines {
+                        try Task.checkCancellation()
+                        guard line.hasPrefix("data:") else { continue }
+                        let chunk = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+                        if chunk == "[DONE]" { break }
+                        guard let data = chunk.data(using: .utf8),
+                              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                              let choices = object["choices"] as? [[String: Any]],
+                              let delta = choices.first?["delta"] as? [String: Any],
+                              let piece = delta["content"] as? String else { continue }
+                        accumulated += piece
+                        continuation.yield(accumulated)
+                    }
+                    let answer = Self.tidy(accumulated)
+                    guard !answer.isEmpty else { throw Failure.unreadableAnswer }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Launching
 
     private func launch(executable: URL, model: URL) async {

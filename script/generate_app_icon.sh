@@ -3,7 +3,7 @@
 # No image generator, third-party library, network request, or hard-coded home path.
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 OUT_DIR="${1:-$ROOT_DIR/.build/generated-app-icon}"
 MASCOT="$ROOT_DIR/Housekeeping/Resources/BenignMonster/housekeeper_octopus_maid.png"
 [[ -f "$MASCOT" ]] || { echo "Missing canonical mascot: $MASCOT" >&2; exit 1; }

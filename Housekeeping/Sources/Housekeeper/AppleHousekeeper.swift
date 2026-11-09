@@ -56,6 +56,51 @@ enum AppleHousekeeper {
         throw Failure.unavailable(status.message)
     }
 
+    /// The answer as it is being written. Each element is the cumulative text so
+    /// far, which is exactly what the transcript row needs; the caller keeps the
+    /// last one it receives. Cancelling the consumer cancels generation.
+    static func stream(messages: [[String: String]]) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    guard status.isAvailable else { throw Failure.unavailable(status.message) }
+                    #if canImport(FoundationModels)
+                    if #available(macOS 26.0, *) {
+                        let entries: [Transcript.Entry] = messages.dropLast().compactMap { message in
+                            let segments: [Transcript.Segment] = [.text(.init(content: message["content"] ?? ""))]
+                            switch message["role"] {
+                            case "system": return .instructions(.init(segments: segments, toolDefinitions: []))
+                            case "user": return .prompt(.init(segments: segments))
+                            case "assistant": return .response(.init(assetIDs: [], segments: segments))
+                            default: return nil
+                            }
+                        }
+                        let session = LanguageModelSession(model: SystemLanguageModel.default, transcript: Transcript(entries: entries))
+                        try Task.checkCancellation()
+                        var latest = ""
+                        for try await snapshot in session.streamResponse(
+                            to: messages.last?["content"] ?? "",
+                            options: GenerationOptions(temperature: 0.7, maximumResponseTokens: 768)
+                        ) {
+                            try Task.checkCancellation()
+                            latest = snapshot.content
+                            continuation.yield(latest)
+                        }
+                        let answer = latest.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !answer.isEmpty else { throw Failure.unavailable("Apple's local model returned an empty response.") }
+                        continuation.finish()
+                        return
+                    }
+                    #endif
+                    throw Failure.unavailable(status.message)
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     enum Failure: LocalizedError {
         case unavailable(String)
         var errorDescription: String? { switch self { case .unavailable(let message): return message } }

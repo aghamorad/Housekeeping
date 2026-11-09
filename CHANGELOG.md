@@ -1,3 +1,20 @@
+## 0.28.1 — Living controls and a streaming, general-purpose Housekeeper
+
+- Themed buttons, rail buttons, sidebar rows, action cards and utility tiles now spring on
+  press, lift and glow under the pointer, and give a trackpad tick. State-driven only, so
+  idle cost is unchanged; Reduce Motion removes the movement.
+- The assistant streams its answer token by token for both Apple's model and downloaded
+  models, shows "Thinking…" only until the first word, keeps the partial answer when
+  stopped, and offers Copy plus Simpler / What next? / Example continuations.
+- A warmer, more concrete system prompt answers general questions as well as app ones, and
+  is told the exact set of Housekeeping screens so it cannot invent features.
+- Folder evidence no longer hijacks general questions: "What is 17 times 23?" used to be
+  answered with folders named 23. It now needs an explicit path, a named folder with a
+  folder noun, a distinctive name, or a focused "this folder" reference.
+- "What can you do?" keeps the exact tool list even with a model loaded.
+- Build scripts resolve the real (non-symlinked) checkout path, fixing intermittent module
+  cache collisions when Housekeeping is opened through a symlink.
+
 ## 0.28.0 — Truthful controls, honest numbers, the canonical mascot icon
 
 - Clean Up bulk selection ("Select shown"/"Deselect shown") is scoped to the visible

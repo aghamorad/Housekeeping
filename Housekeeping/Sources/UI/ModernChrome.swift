@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Static lighting gives the burgundy surfaces depth without an animation loop.
@@ -71,15 +72,29 @@ extension View {
 
 /// Quiet shared controls with visible hover and press feedback. Classic 9
 /// keeps its own drawn buttons.
+/// One place for the small physical pleasures of a control: a spring on the
+/// way down, a lift under the pointer, a warm glow that says where the action
+/// is, and a quiet tap on a trackpad. Everything here is state-driven, so a
+/// button costs nothing while the pointer is elsewhere — the app still idles at
+/// zero and Reduce Motion is honoured for every transform.
+enum HousekeepingFeedback {
+    @MainActor static func press() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+    }
+}
+
 struct HousekeepingButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, quiet }
     let style: UIStyle
     let kind: Kind
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let pressed = configuration.isPressed
+        let lifted = hovering && enabled && !reduceMotion
+        return configuration.label
             .font(style.labelFont)
             .foregroundStyle(kind == .primary && enabled ? Color.white : style.text)
             .padding(.horizontal, kind == .quiet ? 9 : 13)
@@ -87,21 +102,63 @@ struct HousekeepingButtonStyle: ButtonStyle {
             .background {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(kind == .primary ? style.accentShaded.opacity(enabled ? 1 : 0.22)
-                          : Color.primary.opacity(hovering ? 0.08 : (kind == .quiet ? 0 : 0.04)))
+                          : Color.primary.opacity(hovering ? 0.11 : (kind == .quiet ? 0 : 0.04)))
                 if kind == .primary {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(LinearGradient(colors: [.white.opacity(hovering ? 0.17 : 0.11), .clear, .black.opacity(0.09)],
+                        .fill(LinearGradient(colors: [.white.opacity(hovering ? 0.24 : 0.11), .clear, .black.opacity(0.09)],
                                              startPoint: .top, endPoint: .bottom))
                 }
             }
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(LinearGradient(colors: [.white.opacity(kind == .primary ? 0.28 : 0.12), Color.primary.opacity(0.06)],
-                                             startPoint: .top, endPoint: .bottom), lineWidth: kind == .quiet ? 0 : 0.75))
-            .shadow(color: .black.opacity(kind == .primary && enabled ? 0.16 : 0), radius: 4, y: 2)
+                .strokeBorder(LinearGradient(colors: [.white.opacity(kind == .primary ? (hovering ? 0.42 : 0.28) : 0.12),
+                                                      Color.primary.opacity(0.06)],
+                                             startPoint: .top, endPoint: .bottom),
+                              lineWidth: kind == .quiet ? 0 : 0.75))
+            .overlay {
+                // A sheen that slides across the face under the pointer, like
+                // light moving over glass. Purely decorative and only while
+                // hovered, so it can never animate on its own.
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(LinearGradient(colors: [.clear, .white.opacity(kind == .primary ? 0.16 : 0.08), .clear],
+                                         startPoint: .leading, endPoint: .trailing))
+                    .offset(x: hovering ? 18 : -30)
+                    .blendMode(.softLight)
+                    .clipped()
+            }
+            .shadow(color: kind == .primary && enabled
+                    ? style.accent.opacity(lifted ? 0.38 : 0.16)
+                    : .black.opacity(lifted ? 0.14 : 0.05),
+                    radius: lifted ? 10 : 4, y: lifted ? 3 : 2)
+            .scaleEffect(pressed ? 0.955 : (lifted ? 1.022 : 1))
+            .offset(y: pressed ? 1 : (lifted ? -0.5 : 0))
             .opacity(enabled ? 1 : 0.45)
-            .brightness(configuration.isPressed ? -0.07 : 0)
-            .animation(.easeOut(duration: 0.12), value: hovering)
-            .onHover { hovering = $0 && enabled }
+            .brightness(pressed ? -0.06 : (hovering ? 0.015 : 0))
+            .animation(HousekeepingMotion.press, value: pressed)
+            .animation(HousekeepingMotion.hover, value: hovering)
+            .onHover { inside in hovering = inside && enabled }
+            .onChange(of: pressed) { isPressed in
+                guard isPressed, enabled else { return }
+                HousekeepingFeedback.press()
+            }
+    }
+}
+
+/// Press feedback for controls that carry their own card or row chrome.
+/// Keeps the card's own hover treatment and adds the spring, the press travel
+/// and the trackpad tick.
+struct HousekeepingPressableStyle: ButtonStyle {
+    var pressedScale: CGFloat = 0.975
+    var haptic: Bool = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? pressedScale : 1)
+            .animation(HousekeepingMotion.press, value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { pressed in
+                guard pressed, haptic else { return }
+                HousekeepingFeedback.press()
+            }
     }
 }
 
@@ -396,10 +453,15 @@ struct RailButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(tint.opacity(hovering && enabled ? 0.13 : 0))
             )
-            .scaleEffect(configuration.isPressed ? 0.97 : (hovering && enabled ? 1.015 : 1))
+            .scaleEffect(configuration.isPressed ? 0.955 : (hovering && enabled ? 1.02 : 1))
+            .brightness(configuration.isPressed ? -0.05 : 0)
             .opacity(enabled ? 1 : 0.45)
             .animation(HousekeepingMotion.press, value: configuration.isPressed)
             .animation(HousekeepingMotion.hover, value: hovering)
+            .onChange(of: configuration.isPressed) { pressed in
+                guard pressed, enabled else { return }
+                HousekeepingFeedback.press()
+            }
     }
 }
 

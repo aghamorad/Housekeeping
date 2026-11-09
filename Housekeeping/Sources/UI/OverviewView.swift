@@ -240,7 +240,7 @@ struct OverviewView: View {
                 Spacer()
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }.padding(16).contentShape(Rectangle())
-        }.buttonStyle(.plain)
+        }.buttonStyle(HousekeepingPressableStyle(pressedScale: 0.97))
             .housekeepingCard(cornerRadius: 12)
             .hoverHighlight(cornerRadius: 12, hovered: style.accent.opacity(0.04))
             .accessibilityLabel(title)
@@ -362,7 +362,7 @@ private struct OverviewActionCard: View {
             .housekeepingCard(cornerRadius: 16, highlighted: hovering)
             .offset(y: hovering && !reduceMotion && !style.isRetro ? -2 : 0)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(HousekeepingPressableStyle(pressedScale: 0.98))
         .onHover { hovering = $0 }
         .animation(reduceMotion || style.isRetro ? nil : .easeOut(duration: 0.14), value: hovering)
         .accessibilityLabel(title)
@@ -427,7 +427,8 @@ struct SidebarNavigationRow: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain).disabled(!enabled).opacity(enabled ? 1 : 0.45)
+        .buttonStyle(HousekeepingPressableStyle(pressedScale: 0.97))
+        .disabled(!enabled).opacity(enabled ? 1 : 0.45)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
         .accessibilityLabel(title)
