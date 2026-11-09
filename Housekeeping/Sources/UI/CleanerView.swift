@@ -348,7 +348,8 @@ struct CleanerView: View {
             .labelsHidden()
             .toggleStyle(.checkbox)
             .frame(width: 44, height: 44)
-            .help("Include this exact item in the review. Nothing moves until you confirm the paths.")
+            .disabled(model.phase != .ready)
+            .help(model.phase == .ready ? "Include this exact item in the review." : "Selections are available after scanning finishes.")
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(candidate.name)
@@ -468,6 +469,7 @@ struct CleanerView: View {
                     isChecked: app.isSelected,
                     help: "Ticks this application for removal. Nothing moves until you press the button at the bottom and confirm the exact paths."
                 ) { model.toggleApp(app) }
+                .disabled(model.phase != .ready)
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
                     .resizable().frame(width: 28, height: 28)
                 VStack(alignment: .leading, spacing: 3) {
@@ -509,6 +511,7 @@ struct CleanerView: View {
                     ForEach(app.leftovers) { related in
                         HStack(alignment: .top, spacing: 8) {
                             ThemeCheckbox(isChecked: model.includedRelatedPaths.contains(related.id)) { model.toggleRelated(related) }
+                                .disabled(model.phase != .ready)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(related.name).font(style.labelFont)
                                 Text(related.url.homeAbbreviatedPath).font(style.pathFont).textSelection(.enabled)
