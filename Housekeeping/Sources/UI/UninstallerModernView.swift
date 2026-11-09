@@ -16,9 +16,13 @@ final class UninstallerModel: ObservableObject {
     @Published private(set) var scanProgress: String = ""
     @Published var selectedAppURLs: Set<URL> = []
     @Published var expandedAppURLs: Set<URL> = []
-    @Published var searchQuery: String = ""
+    @Published var searchQuery: String = "" {
+        didSet { retainOnlyVisibleSelections() }
+    }
     @Published var sortOption: AppSortOption = .sizeDescending
-    @Published var filterOption: AppFilterOption = .all
+    @Published var filterOption: AppFilterOption = .all {
+        didSet { retainOnlyVisibleSelections() }
+    }
     @Published private(set) var isWorking = false
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
@@ -130,7 +134,15 @@ final class UninstallerModel: ObservableObject {
         }
     }
 
+    private func retainOnlyVisibleSelections() {
+        guard !isWorking else { return }
+        // A hidden app must never be silently removed when someone presses
+        // Uninstall Selected after changing a search or category filter.
+        selectedAppURLs.formIntersection(Set(filteredApps.map(\.url)))
+    }
+
     func selectAllFiltered() {
+        guard !isWorking && !isScanning else { return }
         for app in filteredApps {
             selectedAppURLs.insert(app.url)
         }
@@ -147,6 +159,7 @@ final class UninstallerModel: ObservableObject {
     }
 
     func toggleSelection(_ app: InstalledApp) {
+        guard !isWorking && !isScanning else { return }
         if selectedAppURLs.contains(app.url) {
             selectedAppURLs.remove(app.url)
         } else {
@@ -164,6 +177,7 @@ final class UninstallerModel: ObservableObject {
 
     func prepareUninstall() {
         guard !isWorking, !isScanning else { return }
+        retainOnlyVisibleSelections()
         outcome = nil
         let selected = apps.filter { selectedAppURLs.contains($0.url) }
         let targets = selected.filter { !$0.isRunning && !ProtectionList().isProtected($0.url) }
