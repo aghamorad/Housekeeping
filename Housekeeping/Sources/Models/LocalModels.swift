@@ -478,10 +478,12 @@ final class LocalModelInventory: ObservableObject {
         var models: [LocalModel] = onDisk.map { entry in
             // Use the runtime identifier for unload, not the local file path.
             // A vague substring match can otherwise mark the wrong quantization loaded.
-            let loadedID = loaded.keys.first { id in
+            let matches = loaded.keys.filter { id in
                 id == entry.name || id == entry.path
                     || URL(fileURLWithPath: id).lastPathComponent == URL(fileURLWithPath: entry.path).lastPathComponent
             }
+            // Ambiguous local names are not a safe identity for unloading.
+            let loadedID = matches.count == 1 ? matches[0] : nil
             let isLoaded = loadedID != nil
             return LocalModel(
                 id: "lmstudio:\(entry.path)",
@@ -1025,7 +1027,18 @@ final class LocalModelInventory: ObservableObject {
         case .mlx: break // No arbitrary MLX process is owned by Housekeeping.
         case .ollama: await unloadFromOllama(model)
         case .lmStudio: await unloadFromLMStudio(model)
-        case .housekeeper: Housekeeper.shared.server.stopAndWait()
+        case .housekeeper:
+            let server = Housekeeper.shared.server
+            server.stop()
+            for _ in 0..<40 {
+                if case .idle = server.state { break }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            if case .idle = server.state {
+                // Model memory was released by the actual child exit.
+            } else {
+                problem = "The Housekeeper runtime has not confirmed that it stopped yet. Check again before loading another large model."
+            }
         case .hermes: await unloadHermes()
         case .huggingFace, .drawThings, .comfyUI: break
         }
