@@ -316,6 +316,14 @@ struct UninstallerModernView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
+                if let notice = model.scanNotice {
+                    Label(notice, systemImage: "info.circle")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 9))
+                }
                 searchAndActionBar
                 if model.isScanning && !model.apps.isEmpty { scanningView }
                 if model.outcome != nil || !model.failures.isEmpty {
