@@ -135,7 +135,7 @@ final class LlamaServer: ObservableObject {
 
     /// One turn. `history` is already in OpenAI chat form, oldest first, and `system`
     /// carries the housekeeper's standing instructions.
-    func complete(messages: [[String: String]], maxTokens: Int = 512) async throws -> String {
+    func complete(messages: [[String: String]], maxTokens: Int = 768) async throws -> String {
         guard let port = state.port,
               let url = URL(string: "http://127.0.0.1:\(port)/v1/chat/completions") else {
             throw Failure.notRunning
@@ -177,6 +177,7 @@ final class LlamaServer: ObservableObject {
     // MARK: - Launching
 
     private func launch(executable: URL, model: URL) async {
+        guard !Task.isCancelled else { return }
         let port = Self.freePort()
         guard port > 0 else {
             state = .failed("Housekeeping could not find a free port for the housekeeper to listen on.")
@@ -216,6 +217,10 @@ final class LlamaServer: ObservableObject {
             }
         }
 
+        guard !Task.isCancelled else {
+            closeLog()
+            return
+        }
         do {
             try process.run()
         } catch {
@@ -225,6 +230,12 @@ final class LlamaServer: ObservableObject {
         }
 
         self.process = process
+        if Task.isCancelled {
+            // A stop requested during process.run must not leave a hidden server.
+            isStopping = true
+            process.terminate()
+            return
+        }
 
         let becameReady = await waitUntilAnswering(port: port)
         guard self.process === process, !Task.isCancelled else { return }
@@ -240,11 +251,13 @@ final class LlamaServer: ObservableObject {
     /// is generous because a cold disk on an Intel Mac is not.
     private func waitUntilAnswering(port: Int) async -> Bool {
         guard let health = URL(string: "http://127.0.0.1:\(port)/health") else { return false }
+        var request = URLRequest(url: health)
+        request.timeoutInterval = 2
         let deadline = Date().addingTimeInterval(90)
 
         while Date() < deadline {
             if Task.isCancelled { return false }
-            if let (_, response) = try? await URLSession.shared.data(from: health),
+            if let (_, response) = try? await URLSession.shared.data(for: request),
                let http = response as? HTTPURLResponse, http.statusCode == 200 {
                 return true
             }
