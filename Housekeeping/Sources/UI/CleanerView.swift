@@ -272,20 +272,20 @@ struct CleanerView: View {
                             ThemeCheckbox(
                                 isChecked: allSelected,
                                 isMixed: !selected.isEmpty && !allSelected,
-                                help: "Ticks or unticks everything on this shelf. Nothing is moved until you press the button at the bottom."
+                                help: "Changes only the items currently visible after your search and category filter. Other categories and hidden results are unchanged."
                             ) {
                                 model.setVisible(selected: !allSelected)
                             }
-                            Text(allSelected ? "Untick shown" : "Tick shown")
+                            Text(allSelected ? "Deselect shown" : "Select shown")
                                 .font(style.smallFont)
                                 .foregroundColor(style.secondaryText)
                                 .onTapGesture {
                                     model.setVisible(selected: !allSelected)
                                 }
-                                .help("Same as the box beside it: ticks or unticks every item on this shelf.")
+                                .help("Changes only the visible results on this shelf, never hidden rows.")
                         }
                     }
-                    Text("\(rows.count) shown of \(model.count(in: category)) · \(rows.reduce(Int64(0)) { $0 + $1.size }.sizeDescription)")
+                    Text("\(rows.count) shown of \(model.count(in: category)) · \(selected.count) shown selected · \(rows.reduce(Int64(0)) { $0 + $1.size }.sizeDescription)")
                         .font(style.smallFont).foregroundColor(style.secondaryText)
                     Text(category.explanation)
                         .font(style.smallFont)
@@ -681,7 +681,9 @@ struct CleanerView: View {
                     .lineLimit(2)
                 Spacer()
                 if !model.selectedCandidates.isEmpty {
-                    Button("Clear selection") { model.clearSelection() }.font(style.smallFont)
+                    Button("Clear all selections") { model.clearSelection() }
+                        .font(style.smallFont)
+                        .help("Deselect all categories, including any items hidden by search.")
                 }
             }
             HStack(spacing: 10) {
@@ -692,11 +694,21 @@ struct CleanerView: View {
                     appState.screen = .quarantine
                 }
                 if model.category != .uninstall && model.category != .trash {
-                    if model.selectedCandidates.isEmpty && model.phase == .ready {
-                        ThemeButton(title: "Tick everything", systemImage: "checkmark.circle",
-                                    help: "Ticks every item on every shelf, not just this one. Nothing moves until you confirm the exact paths — and a shelf can never contain an app container, a model library, or anything holding your own files.") {
-                            model.selectEverything()
-                        }
+                    let shown = model.visibleCandidates(in: model.category)
+                    let selectedShown = shown.filter(\.isSelected)
+                    ThemeButton(
+                        title: "Select shown (\(shown.count))",
+                        systemImage: "checkmark.circle",
+                        isEnabled: model.phase == .ready && !shown.isEmpty && selectedShown.count < shown.count,
+                        help: "Select only the results on this shelf currently matching the search; nothing moves yet."
+                    ) { model.setVisible(selected: true) }
+                    if !selectedShown.isEmpty {
+                        ThemeButton(
+                            title: "Deselect shown",
+                            systemImage: "xmark.circle",
+                            isEnabled: model.phase == .ready,
+                            help: "Leave other shelves and search-hidden items unchanged."
+                        ) { model.clearVisibleSelection() }
                     }
                     ThemeButton(title: cleanButtonTitle, systemImage: "checklist", isPrimary: true,
                                 isEnabled: !model.selectedCandidates.isEmpty && model.phase == .ready,
@@ -733,9 +745,6 @@ struct CleanerView: View {
         if let outcome = model.outcome {
             return Text(outcome)
         }
-        if !model.notes.isEmpty {
-            return Text(model.notes.joined(separator: " "))
-        }
         let count = model.selectedCandidates.count
         if count == 0 {
             return Text("Select items to review. Nothing moves until you confirm the exact paths.")
@@ -745,7 +754,7 @@ struct CleanerView: View {
         let downloadNote = downloads.isEmpty
             ? ""
             : " · \(downloads.count) must be downloaded again (\(downloads.reduce(Int64(0)) { $0 + $1.size }.sizeDescription))"
-        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription)\(hidden > 0 ? " · \(hidden) outside this view" : "")\(downloadNote).")
+        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription) held if moved · frees 0 B until deleted from Quarantine\(hidden > 0 ? " · \(hidden) outside this view" : "")\(downloadNote).")
     }
 
     // MARK: - Confirmation
@@ -796,7 +805,7 @@ struct CleanerView: View {
                                 }
                             }
                         }.frame(maxHeight: 200)
-                        Text("Quarantine retains these files on this disk. It does not immediately free storage.")
+                        Text("Space freed now: 0 B. Quarantine holds the full data on this disk until you later review permanent deletion.")
                             .font(style.smallFont).foregroundColor(style.caution)
                     }
                     HStack(spacing: 8) {
