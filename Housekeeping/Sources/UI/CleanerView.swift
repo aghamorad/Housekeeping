@@ -32,6 +32,7 @@ struct CleanerView: View {
             VStack(spacing: 12) {
                 header
                 if model.phase == .scanning { scanProgress }
+                if model.phase == .working { activeCleanupProgress }
                 if model.category != .trash { browsingControls }
                 HStack(alignment: .top, spacing: 12) {
                     sidebar
@@ -100,17 +101,30 @@ struct CleanerView: View {
 
     private var scanProgress: some View {
         HStack(spacing: 12) {
-            ProgressView().controlSize(.small)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(model.progressLine).font(style.labelFont)
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text("\(Int(context.date.timeIntervalSince(model.scanStartedAt ?? context.date)))s elapsed · Reading only")
-                        .font(style.smallFont).foregroundColor(style.secondaryText)
-                }
+            TaskProgressCue(
+                title: "Looking through the Mac",
+                detail: model.progressLine + " · Nothing is being moved.",
+                symbol: "magnifyingglass",
+                completed: model.completedCategories.count,
+                total: CleanCategory.allCases.count
+            )
+            ThemeButton(title: "Stop Scan", systemImage: "stop.fill",
+                        help: "Stop reading; results from categories already checked stay visible.") {
+                model.stopScan()
             }
-            Spacer()
-            ThemeButton(title: "Stop Scan", systemImage: "stop.fill") { model.stopScan() }
-        }.padding(10).background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    private var activeCleanupProgress: some View {
+        let progress = model.workProgress
+        let current = progress?.path.map { URL(fileURLWithPath: $0).lastPathComponent }
+        return TaskProgressCue(
+            title: model.category == .trash ? "Emptying the Trash" : "Moving your selected items to Quarantine",
+            detail: current.map { "Checking: " + $0 } ?? "Each item is recorded before it moves. Do not quit while this is running.",
+            symbol: "archivebox",
+            completed: progress?.completed,
+            total: progress?.total
+        )
     }
 
     private var browsingControls: some View {
