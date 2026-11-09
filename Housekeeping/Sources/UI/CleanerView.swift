@@ -32,6 +32,7 @@ struct CleanerView: View {
             VStack(spacing: 12) {
                 header
                 if model.phase == .scanning { scanProgress }
+                if model.phase == .working { activeCleanupProgress }
                 if model.category != .trash { browsingControls }
                 HStack(alignment: .top, spacing: 12) {
                     sidebar
@@ -100,17 +101,30 @@ struct CleanerView: View {
 
     private var scanProgress: some View {
         HStack(spacing: 12) {
-            ProgressView().controlSize(.small)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(model.progressLine).font(style.labelFont)
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text("\(Int(context.date.timeIntervalSince(model.scanStartedAt ?? context.date)))s elapsed · Reading only")
-                        .font(style.smallFont).foregroundColor(style.secondaryText)
-                }
+            TaskProgressCue(
+                title: "Looking through the Mac",
+                detail: model.progressLine + " · Nothing is being moved.",
+                symbol: "magnifyingglass",
+                completed: model.completedCategories.count,
+                total: CleanCategory.allCases.count
+            )
+            ThemeButton(title: "Stop Scan", systemImage: "stop.fill",
+                        help: "Stop reading; results from categories already checked stay visible.") {
+                model.stopScan()
             }
-            Spacer()
-            ThemeButton(title: "Stop Scan", systemImage: "stop.fill") { model.stopScan() }
-        }.padding(10).background(style.rowBackground, in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    private var activeCleanupProgress: some View {
+        let progress = model.workProgress
+        let current = progress?.path.map { URL(fileURLWithPath: $0).lastPathComponent }
+        return TaskProgressCue(
+            title: model.category == .trash ? "Emptying the Trash" : "Moving your selected items to Quarantine",
+            detail: current.map { "Checking: " + $0 } ?? "Each item is recorded before it moves. Do not quit while this is running.",
+            symbol: "archivebox",
+            completed: progress?.completed,
+            total: progress?.total
+        )
     }
 
     private var browsingControls: some View {
@@ -259,6 +273,7 @@ struct CleanerView: View {
 
     private func listPane(_ category: CleanCategory) -> some View {
         let rows = model.visibleCandidates(in: category)
+        let selected = rows.filter(\.isSelected)
         return VStack(spacing: 10) {
             ThemePanel(padding: 10) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -266,26 +281,25 @@ struct CleanerView: View {
                         Text(category.title)
                             .font(style.labelFont)
                         Spacer()
-                        let selected = rows.filter(\.isSelected)
                         let allSelected = !rows.isEmpty && rows.allSatisfy(\.isSelected)
                         HStack(spacing: 6) {
                             ThemeCheckbox(
                                 isChecked: allSelected,
                                 isMixed: !selected.isEmpty && !allSelected,
-                                help: "Ticks or unticks everything on this shelf. Nothing is moved until you press the button at the bottom."
+                                help: "Changes only the items currently visible after your search and category filter. Other categories and hidden results are unchanged."
                             ) {
                                 model.setVisible(selected: !allSelected)
                             }
-                            Text(allSelected ? "Untick shown" : "Tick shown")
+                            Text(allSelected ? "Deselect shown" : "Select shown")
                                 .font(style.smallFont)
                                 .foregroundColor(style.secondaryText)
                                 .onTapGesture {
                                     model.setVisible(selected: !allSelected)
                                 }
-                                .help("Same as the box beside it: ticks or unticks every item on this shelf.")
+                                .help("Changes only the visible results on this shelf, never hidden rows.")
                         }
                     }
-                    Text("\(rows.count) shown of \(model.count(in: category)) · \(rows.reduce(Int64(0)) { $0 + $1.size }.sizeDescription)")
+                    Text("\(rows.count) shown of \(model.count(in: category)) · \(selected.count) shown selected · \(rows.reduce(Int64(0)) { $0 + $1.size }.sizeDescription)")
                         .font(style.smallFont).foregroundColor(style.secondaryText)
                     Text(category.explanation)
                         .font(style.smallFont)
@@ -324,9 +338,18 @@ struct CleanerView: View {
 
     private func candidateRow(_ candidate: CleanCandidate) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            ThemeCheckbox(isChecked: candidate.isSelected) {
-                model.toggle(candidate)
-            }
+            Toggle(
+                "Select \(candidate.name), \(candidate.size.sizeDescription)",
+                isOn: Binding(
+                    get: { candidate.isSelected },
+                    set: { _ in model.toggle(candidate) }
+                )
+            )
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .frame(width: 44, height: 44)
+            .disabled(model.phase != .ready)
+            .help(model.phase == .ready ? "Include this exact item in the review." : "Selections are available after scanning finishes.")
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(candidate.name)
@@ -446,6 +469,7 @@ struct CleanerView: View {
                     isChecked: app.isSelected,
                     help: "Ticks this application for removal. Nothing moves until you press the button at the bottom and confirm the exact paths."
                 ) { model.toggleApp(app) }
+                .disabled(model.phase != .ready)
                 Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
                     .resizable().frame(width: 28, height: 28)
                 VStack(alignment: .leading, spacing: 3) {
@@ -482,11 +506,12 @@ struct CleanerView: View {
                         .font(style.smallFont).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(.plain)
                 if expandedApps.contains(app.id) {
-                    Text("Related files are included with the app. They can hold settings and personal data. Uncheck anything you want to keep; shared matches are excluded from the scan.")
+                    Text("Related files start unselected. They may contain documents, preferences, accounts or saved games. Include only the exact files you want to move with this app.")
                         .font(style.smallFont).foregroundColor(style.caution)
                     ForEach(app.leftovers) { related in
                         HStack(alignment: .top, spacing: 8) {
                             ThemeCheckbox(isChecked: model.includedRelatedPaths.contains(related.id)) { model.toggleRelated(related) }
+                                .disabled(model.phase != .ready)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(related.name).font(style.labelFont)
                                 Text(related.url.homeAbbreviatedPath).font(style.pathFont).textSelection(.enabled)
@@ -681,7 +706,9 @@ struct CleanerView: View {
                     .lineLimit(2)
                 Spacer()
                 if !model.selectedCandidates.isEmpty {
-                    Button("Clear selection") { model.clearSelection() }.font(style.smallFont)
+                    Button("Clear all selections") { model.clearSelection() }
+                        .font(style.smallFont)
+                        .help("Deselect all categories, including any items hidden by search.")
                 }
             }
             HStack(spacing: 10) {
@@ -692,11 +719,21 @@ struct CleanerView: View {
                     appState.screen = .quarantine
                 }
                 if model.category != .uninstall && model.category != .trash {
-                    if model.selectedCandidates.isEmpty && model.phase == .ready {
-                        ThemeButton(title: "Tick everything", systemImage: "checkmark.circle",
-                                    help: "Ticks every item on every shelf, not just this one. Nothing moves until you confirm the exact paths — and a shelf can never contain an app container, a model library, or anything holding your own files.") {
-                            model.selectEverything()
-                        }
+                    let shown = model.visibleCandidates(in: model.category)
+                    let selectedShown = shown.filter(\.isSelected)
+                    ThemeButton(
+                        title: "Select shown (\(shown.count))",
+                        systemImage: "checkmark.circle",
+                        isEnabled: model.phase == .ready && !shown.isEmpty && selectedShown.count < shown.count,
+                        help: "Select only the results on this shelf currently matching the search; nothing moves yet."
+                    ) { model.setVisible(selected: true) }
+                    if !selectedShown.isEmpty {
+                        ThemeButton(
+                            title: "Deselect shown",
+                            systemImage: "xmark.circle",
+                            isEnabled: model.phase == .ready,
+                            help: "Leave other shelves and search-hidden items unchanged."
+                        ) { model.clearVisibleSelection() }
                     }
                     ThemeButton(title: cleanButtonTitle, systemImage: "checklist", isPrimary: true,
                                 isEnabled: !model.selectedCandidates.isEmpty && model.phase == .ready,
@@ -745,7 +782,7 @@ struct CleanerView: View {
         let downloadNote = downloads.isEmpty
             ? ""
             : " · \(downloads.count) must be downloaded again (\(downloads.reduce(Int64(0)) { $0 + $1.size }.sizeDescription))"
-        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription)\(hidden > 0 ? " · \(hidden) outside this view" : "")\(downloadNote).")
+        return Text("\(count) selected across all categories · \(model.selectedSize.sizeDescription) held if moved · frees 0 B until deleted from Quarantine\(hidden > 0 ? " · \(hidden) outside this view" : "")\(downloadNote).")
     }
 
     // MARK: - Confirmation
@@ -796,7 +833,7 @@ struct CleanerView: View {
                                 }
                             }
                         }.frame(maxHeight: 200)
-                        Text("Quarantine retains these files on this disk. It does not immediately free storage.")
+                        Text("Space freed now: 0 B. Quarantine holds the full data on this disk until you later review permanent deletion.")
                             .font(style.smallFont).foregroundColor(style.caution)
                     }
                     HStack(spacing: 8) {

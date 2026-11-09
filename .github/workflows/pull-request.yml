@@ -1,0 +1,40 @@
+name: Pull request validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run safety and read-only assistant tests
+        run: |
+          bash script/test_safety.sh
+          python3 script/audit_ui_controls.py
+      - name: Run background / MCP tests
+        run: python3 script/test_background_mcp.py
+      - name: Compile the macOS app
+        run: |
+          set -euo pipefail
+          # The signed llama-server binary is intentionally not checked into git.
+          # This placeholder satisfies the Xcode resource reference for a compile
+          # check ONLY. Nothing from this workflow is packaged or published.
+          printf 'compile-only CI placeholder; not a model runtime\n' > Housekeeping/Resources/llama-server
+          xcodebuild \
+            -project Housekeeping.xcodeproj \
+            -scheme Housekeeping \
+            -configuration Debug \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            build

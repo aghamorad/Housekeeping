@@ -76,7 +76,7 @@ enum CleanCategory: String, CaseIterable, Identifiable, Sendable {
         case .largeFiles:
             return "These are simply the biggest files on your Mac. Size says nothing about importance, so nothing here is ticked for you — open one before deciding. Everything moved can be put back from Quarantine."
         case .uninstall:
-            return "Inspect an app and expand its related files. These may include settings, documents, accounts, or shared vendor data. Matched related files are included with the app. Uncheck anything you want to keep, then review the exact paths before uninstalling. Quarantine can restore moved items."
+            return "Inspect an app and expand its related files. These may include settings, documents, accounts, or shared vendor data. Related files are left in place by default; tick an exact path only if you want it moved too. Review the exact paths before uninstalling. Quarantine can restore moved items."
         case .trash:
             return "The Trash is the one place in Housekeeping where something can be lost for good. Emptying it permanently deletes what is in it, and there is no Quarantine copy afterwards."
         }

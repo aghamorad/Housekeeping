@@ -613,3 +613,79 @@ struct BadgePill: View {
         .overlay(Capsule().strokeBorder(tint.opacity(0.32), lineWidth: 1))
     }
 }
+
+
+/// Friendly feedback for real, in-flight operations. Its numerical bar counts
+/// *completed work units*, never pretends to know elapsed time or reclaimed space.
+/// The small icon only breathes while its window is visible, motion is allowed,
+/// and the user has not enabled Reduce Motion. The native progress indicator
+/// communicates activity even without decorative animation.
+struct TaskProgressCue: View {
+    let title: String
+    let detail: String
+    var symbol: String = "sparkles"
+    var completed: Int? = nil
+    var total: Int? = nil
+
+    @Environment(\.uiStyle) private var style
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject private var budget = MotionBudget.shared
+    @State private var onScreen = false
+    @State private var breathing = false
+
+    private var shouldAnimate: Bool {
+        !reduceMotion && budget.isTicking && onScreen && !style.isRetro
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(style.accent)
+                .frame(width: 34, height: 34)
+                .background(style.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+                .scaleEffect(shouldAnimate && breathing ? 1.07 : 1)
+                .opacity(shouldAnimate && !breathing ? 0.72 : 1)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(style.labelFont)
+                    .foregroundStyle(style.text)
+                Text(detail)
+                    .font(style.smallFont)
+                    .foregroundStyle(style.secondaryText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let completed, let total, total > 0 {
+                    ProgressView(value: Double(max(0, min(total, completed))),
+                                 total: Double(total))
+                        .animation(reduceMotion ? nil : HousekeepingMotion.count, value: completed)
+                    Text("\(completed) of \(total) completed")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .monospacedDigit()
+                } else {
+                    ProgressView().controlSize(.small)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
+        .tracksOnScreen($onScreen)
+        .onAppear { updateAnimation() }
+        .onChange(of: shouldAnimate) { _ in updateAnimation() }
+        .onDisappear { breathing = false }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title + ". " + detail)
+    }
+
+    private func updateAnimation() {
+        guard shouldAnimate else { breathing = false; return }
+        breathing = false
+        withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+            breathing = true
+        }
+    }
+}

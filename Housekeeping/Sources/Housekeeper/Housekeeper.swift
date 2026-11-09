@@ -274,9 +274,15 @@ final class Housekeeper: ObservableObject {
             turns.append(Turn(speaker: .housekeeper, text: answer))
             return
         }
+        if let answer = HousekeeperConversation.readOnlyAnswer(for: question) {
+            // Observed first-party answers are not model turns, so they are not
+            // fed back into the history the model later sees.
+            turns.append(Turn(speaker: .housekeeper, text: answer))
+            return
+        }
         let selectedModel = weights.selection
         guard canChat else {
-            problem = selectedModel == .apple ? AppleHousekeeper.status.message : "Choose an optional model and download it before chatting. Housekeeping works without the chatbot."
+            problem = selectedModel == .apple ? AppleHousekeeper.status.message : "I can answer basic Mac and Housekeeping questions without a model. For open-ended conversation, choose and download a chat model above."
             return
         }
         var hasFolderEvidence = false

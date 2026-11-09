@@ -1,0 +1,96 @@
+name: Universal release candidate
+
+# Branch-only candidate. It never publishes a release, creates tags, or merges
+# changes. Only verified ZIPs are uploaded as short-lived CI artifacts.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  universal:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate source, safety and background operations
+        run: |
+          set -euo pipefail
+          bash script/test_safety.sh
+          python3 script/test_background_mcp.py
+          python3 script/audit_ui_controls.py
+      - name: Restore checksum-pinned release inputs
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-base"
+          gh release download v0.26.8 --pattern Housekeeping-macOS-universal.zip --dir "$RUNNER_TEMP/release-base"
+          cd "$RUNNER_TEMP/release-base"
+          echo '7eb6b3bd6662165f4c79d8a6f59af0161e8afb4f9c2ef88861dcfb7553c7d827  Housekeeping-macOS-universal.zip' | shasum -a 256 -c -
+          ditto -x -k Housekeeping-macOS-universal.zip .
+          codesign --verify --deep --strict Housekeeping.app
+          cp Housekeeping.app/Contents/Resources/llama-server "$GITHUB_WORKSPACE/Housekeeping/Resources/llama-server"
+      - name: Rebuild universal media dependencies from versioned sources
+        env:
+          HOUSEKEEPING_MEDIA_ARM64_BIN: ${{ runner.temp }}/release-base/Housekeeping.app/Contents/Resources/Bookbind/bin
+        run: bash script/build_bookbind_runtime.sh
+      - name: Exercise frozen media runtime on runnable CPU architectures
+        run: |
+          set -euo pipefail
+          host="$(uname -m)"
+          args=("$host")
+          other="arm64"
+          [[ "$host" == "arm64" ]] && other="x86_64"
+          if /usr/bin/arch "-$other" /usr/bin/true >/dev/null 2>&1; then
+            args+=("$other")
+          else
+            echo "::warning::Unable to execute $other on this runner. Universal Mach-O files will be checked statically, but live $other testing remains a release blocker."
+          fi
+          python3 script/test_bookbind_runtime.py \
+            "$GITHUB_WORKSPACE/.build/bookbind-universal/bin" \
+            "$RUNNER_TEMP/bookbind-fixtures" "${args[@]}"
+      - name: Build complete Intel + Apple Silicon candidate
+        run: bash script/package_release.sh "$RUNNER_TEMP/dist"
+      - name: Verify the actual packaged ZIP and source provenance
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/check"
+          ditto -x -k "$RUNNER_TEMP/dist/Housekeeping-macOS-universal.zip" "$RUNNER_TEMP/check"
+          app="$RUNNER_TEMP/check/Housekeeping.app"
+          codesign --verify --deep --strict "$app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :HousekeepingSourceCommit' "$app/Contents/Info.plist")" = "$(git rev-parse HEAD)"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" = "0.28.0"
+          python3 script/verify_universal_bundle.py "$app"
+          python3 script/bookbind_runtime_manifest.py verify Runtime/Bookbind "$app/Contents/Resources/Bookbind/bin/runtime-manifest.json"
+          cmp Runtime/Bookbind/app.py "$app/Contents/Resources/Bookbind/app.py"
+          cmp Runtime/Bookbind/bookbind_cli.py "$app/Contents/Resources/Bookbind/bookbind_cli.py"
+          test -s "$app/Contents/Resources/llama-server"
+          test -s "$app/Contents/Resources/AppIcon.icns"
+          test "$(lipo -archs "$app/Contents/MacOS/Housekeeping" | wc -w | tr -d ' ')" = "2"
+          # Execute the actual packaged app in its non-GUI, read-only CLI mode.
+          # This verifies the entry point and actual bundle, not a separately
+          # compiled test harness. No files are cleaned or deleted.
+          "$app/Contents/MacOS/Housekeeping" --version | grep -F '0.28.0'
+          "$app/Contents/MacOS/Housekeeping" help | grep -F 'Housekeeping'
+          "$app/Contents/MacOS/Housekeeping" where --json | python3 -m json.tool > /dev/null
+          cd "$RUNNER_TEMP/dist"
+          shasum -a 256 Housekeeping-macOS-universal.zip > SHA256SUMS.txt
+      - name: Upload reproducible universal candidate (not a public release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Housekeeping-v0.28.0-universal-CANDIDATE
+          path: |
+            ${{ runner.temp }}/dist/Housekeeping-macOS-universal.zip
+            ${{ runner.temp }}/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

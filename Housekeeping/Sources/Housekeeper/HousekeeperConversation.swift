@@ -13,6 +13,74 @@ enum HousekeeperConversation {
     Housekeeping tools are separate screens. Open a tool is the chat panel's navigation menu. Clean Up reviews caches, build files, installers, large files and apps; choose items, use Review selection, and confirm exact paths. Disk Browser measures folders and sorts them with Largest; Show in Finder opens a folder in Finder. It does not list individual files or remove anything. Update Apps lists available updates. Terminal Health diagnoses command installations. Two Folders compares a folder with its backup. Quarantine stores moved originals on the same disk: Put It Back restores them, Delete Permanently removes them after confirmation. MediaDock downloads media; Bookbind combines audiobook tracks. Background Activity > Recommendations assesses optional widgets, app helpers and startup leftovers using measurements and recorded usage answers. What can I do without? in chat runs a fresh read-only review without requiring an AI model. Recommendations has I use this / I don't use this choices, confirmed Pause Widget / Restore Widget controls, and links to startup removal or a targeted app uninstall review. Protected services and unknown items are preserved. Chat cannot perform cleanup operations.
     """
 
+    /// Reliable first-party answers for questions we can answer from the current
+    /// Mac and known app locations, even if the optional language model is off.
+    /// No file contents or arbitrary folders are searched and no changes are made.
+    static func readOnlyAnswer(for question: String, home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                               fileManager: FileManager = .default) -> String? {
+        let query = question.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let modelQuestion = ["model", "weights", "gguf", "mlx"].contains(where: query.contains)
+        let locationQuestion = ["where", "location", "folder", "stored", "find"].contains(where: query.contains)
+
+        if modelQuestion && locationQuestion {
+            let known: [(String, String)] = [
+                ("Housekeeping's own chat models", "Library/Application Support/Housekeeping/Models"),
+                ("MLX models", ".mlx-lm/models"),
+                ("Local model registry", "Models"),
+                ("Ollama", ".ollama/models"),
+                ("LM Studio", ".lmstudio/models"),
+                ("Hugging Face cache", ".cache/huggingface/hub")
+            ]
+            let found = known.compactMap { title, relative -> String? in
+                let url = home.appendingPathComponent(relative, isDirectory: true)
+                guard fileManager.fileExists(atPath: url.path) else { return nil }
+                return "• \(title): \(url.path)"
+            }
+            let observed = found.isEmpty
+                ? "I could not find any of the usual model storage folders under your home directory."
+                : "These model storage locations exist on this Mac:\n" + found.joined(separator: "\n")
+            return observed + "\n\nThese are locations, not evidence that weights are loaded into RAM. Open Local Models & AI Runtimes and press Look Again for current runtime reports. Other tools may keep models elsewhere."
+        }
+
+        // Match the question's intent, not any phrase it happens to contain:
+        // "what can you do about a full disk?" is a real request for the model,
+        // not a request for the tool list.
+        let canonical = query.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        let toolQuestions: Set<String> = [
+            "what can you do", "what can housekeeping do", "what can this do",
+            "what tools", "what tools does housekeeping have", "which tools",
+            "what can housekeeping help with", "help"
+        ]
+        if toolQuestions.contains(canonical) || canonical.hasPrefix("what can housekeeping do ") {
+            return toolHelp
+        }
+
+        let asksMemory = ["how much ram", "how much memory", "how many gb of ram", "how much physical memory"].contains(where: query.contains)
+        if asksMemory {
+            let total = ProcessInfo.processInfo.physicalMemory
+            return "This Mac has \(ByteCountFormatter.string(fromByteCount: Int64(total), countStyle: .memory)) of physical memory. For current use and the largest memory-holding apps, click the menu-bar octopus and open Memory. A model file's size on disk is not its RAM use."
+        }
+
+        if ["how many cpu cores", "how many cores", "what cpu usage", "how busy is my cpu"].contains(where: query.contains) {
+            let cores = ProcessInfo.processInfo.processorCount
+            return "macOS reports \(cores) logical processor cores. I do not have a fresh CPU-use sample for this chat. Open the menu-bar octopus to see live processor use and the busiest processes."
+        }
+
+        if (query.contains("thermal") || query.contains("overheating") || query.contains("cpu temperature")) &&
+            (query.contains("my") || query.contains("mac") || query.contains("cpu")) {
+            let status: String
+            switch ProcessInfo.processInfo.thermalState {
+            case .nominal: status = "nominal"
+            case .fair: status = "fair"
+            case .serious: status = "serious"
+            case .critical: status = "critical"
+            @unknown default: status = "unknown"
+            }
+            return "macOS currently reports \(status) thermal pressure. That is an OS pressure category, not a temperature reading in degrees. Open the octopus for CPU activity; available temperature sensors are shown separately. Housekeeping does not claim a temperature when the sensor is unavailable."
+        }
+        return nil
+    }
+
     static func wantsBackgroundReview(_ question: String) -> Bool {
         let query = question.lowercased()
         let exact = query.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))

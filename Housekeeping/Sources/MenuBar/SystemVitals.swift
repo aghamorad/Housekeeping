@@ -37,6 +37,37 @@ struct BatteryState: Equatable {
     let minutesLeft: Int?
 }
 
+/// Read-only, conservative menu-bar warnings. macOS thermal pressure is not a
+/// temperature in Celsius; CPU usage alone is not evidence of overheating.
+enum SystemHealthAlert: Equatable {
+    case sustainedCPU
+    case seriousThermal
+    case criticalThermal
+
+    var title: String {
+        switch self {
+        case .sustainedCPU: return "Sustained high CPU load"
+        case .seriousThermal: return "Mac under serious thermal pressure"
+        case .criticalThermal: return "Mac under critical thermal pressure"
+        }
+    }
+
+    var explanation: String {
+        switch self {
+        case .sustainedCPU:
+            return "CPU usage has remained above 90% for several readings. Check the busiest processes."
+        case .seriousThermal:
+            return "macOS reports serious thermal pressure. Check ventilation and running work."
+        case .criticalThermal:
+            return "macOS reports critical thermal pressure. Reduce heavy work and check cooling."
+        }
+    }
+
+    var isCritical: Bool {
+        self == .criticalThermal
+    }
+}
+
 struct VitalsSnapshot: Equatable {
     var cpu: Double = 0
     var coreCount: Int = ProcessInfo.processInfo.processorCount
@@ -96,12 +127,21 @@ final class SystemVitals: NSObject, ObservableObject {
 
     @Published private(set) var snapshot = VitalsSnapshot()
     @Published var ramPurgeMessage: String?
+    @Published private(set) var healthAlert: SystemHealthAlert?
 
     let machineName: String
     let osVersion: String
 
     private var timer: Timer?
-    private var previousCPU: (busy: Double, total: Double)?
+    private var healthTimer: Timer?
+    private var highCPUSamples = 0
+    private var recoverySamples = 0
+    /// Panel sampling and the background health watch must not consume each
+    /// other's CPU baseline: a 15 s health read would turn the panel's headline
+    /// into a 15 s average, and a 1 s panel read would let the sustained-load
+    /// detector latch on unrelated momentary spikes.
+    private var previousCPUPanel: (busy: Double, total: Double)?
+    private var previousCPUHealth: (busy: Double, total: Double)?
     private var previousInterfaces: [String: (rx: UInt32, tx: UInt32)] = [:]
     private var previousProcessTimes: [pid_t: (cpu: UInt64, memory: UInt64)] = [:]
     private var lastProcessSample = Date()
@@ -119,6 +159,60 @@ final class SystemVitals: NSObject, ObservableObject {
     }
 
     // MARK: - Running
+
+    /// A very small background health check, deliberately separate from the
+    /// per-second panel sampler. No process enumeration, GPU polling, disk scan,
+    /// network inspection or temperature driver is run while the panel is closed.
+    /// The timer has generous tolerance so it can coalesce with other work.
+    func startHealthWatch() {
+        guard healthTimer == nil else { return }
+        refreshHealthWatch()
+        let watch = Timer(timeInterval: 15, target: self,
+                          selector: #selector(healthTick), userInfo: nil, repeats: true)
+        watch.tolerance = 3
+        RunLoop.main.add(watch, forMode: .common)
+        healthTimer = watch
+    }
+
+    func refreshHealthWatch() {
+        healthSample(manual: true)
+    }
+
+    @objc private func healthTick() {
+        healthSample(manual: false)
+    }
+
+    private func healthSample(manual: Bool) {
+        let cpu = readCPU(baseline: &previousCPUHealth)
+        if cpu >= 0.90 {
+            highCPUSamples += 1
+        } else if cpu < 0.80 {
+            highCPUSamples = 0
+        }
+
+        let proposed: SystemHealthAlert?
+        switch ProcessInfo.processInfo.thermalState {
+        case .critical: proposed = .criticalThermal
+        case .serious: proposed = .seriousThermal
+        case .nominal, .fair:
+            proposed = highCPUSamples >= 3 ? .sustainedCPU : nil
+        @unknown default:
+            proposed = highCPUSamples >= 3 ? .sustainedCPU : nil
+        }
+        if let proposed {
+            recoverySamples = 0
+            healthAlert = proposed
+        } else if healthAlert != nil {
+            // The passive watch needs two clean samples so one quiet moment does
+            // not erase a real warning. An explicit refresh reports the reading
+            // it just took, so it can clear the warning in one step.
+            recoverySamples += 1
+            if manual || recoverySamples >= 2 {
+                healthAlert = nil
+                recoverySamples = 0
+            }
+        }
+    }
 
     func start() {
         guard timer == nil else { return }
@@ -238,7 +332,7 @@ final class SystemVitals: NSObject, ObservableObject {
     // MARK: - Sampling
 
     private func sample() {
-        let cpu = readCPU()
+        let cpu = readCPU(baseline: &previousCPUPanel)
         let memory = readMemory()
         let disk = readDisk()
         let network = readNetwork()
@@ -279,7 +373,7 @@ final class SystemVitals: NSObject, ObservableObject {
         }
     }
 
-    private func readCPU() -> Double {
+    private func readCPU(baseline: inout (busy: Double, total: Double)?) -> Double {
         var info: processor_info_array_t?
         var count: mach_msg_type_number_t = 0
         var ncpu: natural_t = 0
@@ -305,8 +399,8 @@ final class SystemVitals: NSObject, ObservableObject {
         }
 
         let total = busy + idle
-        defer { previousCPU = (busy, total) }
-        guard let previous = previousCPU else { return 0 }
+        defer { baseline = (busy, total) }
+        guard let previous = baseline else { return 0 }
         let busyDelta = busy - previous.busy
         let totalDelta = total - previous.total
         guard totalDelta > 0 else { return snapshot.cpu }

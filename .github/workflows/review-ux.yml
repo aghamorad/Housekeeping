@@ -1,0 +1,48 @@
+name: Review and icon validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check release scripts and UI action handlers
+        run: |
+          bash -n script/generate_app_icon.sh
+          bash -n script/package_release.sh
+          python3 script/audit_ui_controls.py
+      - name: Test selection, cleanup safety, and recovery
+        run: bash script/test_safety.sh
+      - name: Generate the actual icon from the canonical mascot
+        run: |
+          bash script/generate_app_icon.sh "$RUNNER_TEMP/housekeeping-icon"
+          test -s "$RUNNER_TEMP/housekeeping-icon/AppIcon.icns"
+          test -s "$RUNNER_TEMP/housekeeping-icon/Icon-01-Background.png"
+          test -s "$RUNNER_TEMP/housekeeping-icon/Icon-02-Octopus-Foreground.png"
+      - name: Upload reviewable icon artwork (never a shipping app)
+        uses: actions/upload-artifact@v4
+        with:
+          name: housekeeping-macos-icon-preview
+          path: ${{ runner.temp }}/housekeeping-icon/
+          if-no-files-found: error
+      - name: Compile the app on macOS
+        run: |
+          set -euo pipefail
+          # Only satisfies the missing runtime resource entry for source compile.
+          # This placeholder is not functional and must never be distributed.
+          printf 'compile-only placeholder\n' > Housekeeping/Resources/llama-server
+          xcodebuild -project Housekeeping.xcodeproj -scheme Housekeeping \
+            -configuration Debug -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO build

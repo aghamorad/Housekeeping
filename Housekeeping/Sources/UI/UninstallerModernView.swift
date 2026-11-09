@@ -14,15 +14,40 @@ final class UninstallerModel: ObservableObject {
     @Published private(set) var apps: [InstalledApp] = []
     @Published private(set) var isScanning: Bool = false
     @Published private(set) var scanProgress: String = ""
+    @Published private(set) var scanNotice: String?
+    /// Set when a search or filter change cleared apps the reader can no longer
+    /// see, so a selection never disappears without a word.
+    @Published private(set) var selectionNotice: String?
+    /// How many selections the current search or filter has cleared, cumulatively,
+    /// so the notice reports the whole loss rather than only the last keystroke.
+    private var clearedSelectionCount = 0
+    private var scanWorker: Task<[InstalledApp], Never>?
+    private var scanToken = UUID()
     @Published var selectedAppURLs: Set<URL> = []
     @Published var expandedAppURLs: Set<URL> = []
-    @Published var searchQuery: String = ""
+    @Published var searchQuery: String = "" {
+        didSet {
+            // A notice about the last clearing stays until the reader empties the
+            // search or makes a new explicit choice; clearing it on every
+            // keystroke would erase the message the first character produced.
+            if searchQuery.isEmpty {
+                selectionNotice = nil
+                clearedSelectionCount = 0
+            }
+            retainOnlyVisibleSelections()
+        }
+    }
     @Published var sortOption: AppSortOption = .sizeDescending
-    @Published var filterOption: AppFilterOption = .all
+    @Published var filterOption: AppFilterOption = .all {
+        didSet {
+            clearedSelectionCount = 0
+            retainOnlyVisibleSelections()
+        }
+    }
     @Published private(set) var isWorking = false
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
-    @Published var excludedRelatedPaths: Set<String> = []
+    @Published private(set) var includedRelatedPaths: Set<String> = []
     @Published var pendingUninstallPlan: [InstalledApp]? = nil
     @Published private(set) var session: UninstallSession?
 
@@ -65,23 +90,43 @@ final class UninstallerModel: ObservableObject {
     func startScan() {
         guard !isScanning, !isWorking else { return }
         isScanning = true
+        scanNotice = nil
         scanProgress = "Discovering applications…"
+        let token = UUID()
+        scanToken = token
 
         let progress: @Sendable (String) -> Void = { [weak self] line in
-            Task { @MainActor in self?.scanProgress = line }
-        }
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let results = Uninstaller.installed(progress: progress)
-
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.apps = results
-                self.selectedAppURLs.formIntersection(Set(results.map(\.url)))
-                self.expandedAppURLs.formIntersection(Set(results.map(\.url)))
-                self.isScanning = false
-                self.scanProgress = ""
+            Task { @MainActor in
+                guard let self, self.scanToken == token, self.isScanning else { return }
+                self.scanProgress = line
             }
         }
+        let worker = Task.detached(priority: .userInitiated) {
+            Uninstaller.installed(progress: progress)
+        }
+        scanWorker = worker
+        Task { @MainActor [weak self] in
+            let results = await worker.value
+            guard let self, self.scanToken == token, !worker.isCancelled else { return }
+            self.apps = results
+            self.selectedAppURLs.formIntersection(Set(results.map(\.url)))
+            self.expandedAppURLs.formIntersection(Set(results.map(\.url)))
+            // New related files remain excluded until deliberately selected.
+            self.includedRelatedPaths.formIntersection(Set(results.flatMap(\.leftovers).map(\.id)))
+            self.isScanning = false
+            self.scanWorker = nil
+            self.scanProgress = ""
+        }
+    }
+
+    func stopScan() {
+        guard isScanning else { return }
+        scanToken = UUID()
+        scanWorker?.cancel()
+        scanWorker = nil
+        isScanning = false
+        scanProgress = ""
+        scanNotice = "Scan stopped. Existing complete results are still shown; click Refresh to start again."
     }
 
     var filteredApps: [InstalledApp] {
@@ -127,13 +172,32 @@ final class UninstallerModel: ObservableObject {
         }
     }
 
+    private func retainOnlyVisibleSelections() {
+        guard !isWorking else { return }
+        // A hidden app must never be removed when someone presses Uninstall
+        // Selected after changing a search or category filter — and it must not
+        // disappear from the count without telling the reader either.
+        let visible = Set(filteredApps.map(\.url))
+        let hidden = selectedAppURLs.subtracting(visible)
+        guard !hidden.isEmpty else { return }
+        selectedAppURLs.formIntersection(visible)
+        clearedSelectionCount += hidden.count
+        let count = clearedSelectionCount
+        selectionNotice = "\(count) selected app\(count == 1 ? "" : "s") \(count == 1 ? "is" : "are") hidden by the current search or filter and \(count == 1 ? "was" : "were") cleared. Clear the search to choose across searches."
+    }
+
     func selectAllFiltered() {
+        guard !isWorking && !isScanning else { return }
+        selectionNotice = nil
+        clearedSelectionCount = 0
         for app in filteredApps {
             selectedAppURLs.insert(app.url)
         }
     }
 
     func deselectAll() {
+        selectionNotice = nil
+        clearedSelectionCount = 0
         selectedAppURLs.removeAll()
     }
 
@@ -144,6 +208,9 @@ final class UninstallerModel: ObservableObject {
     }
 
     func toggleSelection(_ app: InstalledApp) {
+        guard !isWorking && !isScanning else { return }
+        selectionNotice = nil
+        clearedSelectionCount = 0
         if selectedAppURLs.contains(app.url) {
             selectedAppURLs.remove(app.url)
         } else {
@@ -161,6 +228,7 @@ final class UninstallerModel: ObservableObject {
 
     func prepareUninstall() {
         guard !isWorking, !isScanning else { return }
+        retainOnlyVisibleSelections()
         outcome = nil
         let selected = apps.filter { selectedAppURLs.contains($0.url) }
         let targets = selected.filter { !$0.isRunning && !ProtectionList().isProtected($0.url) }
@@ -184,13 +252,19 @@ final class UninstallerModel: ObservableObject {
     }
 
     func includedLeftovers(_ app: InstalledApp) -> [CleanCandidate] {
-        app.leftovers.filter { !excludedRelatedPaths.contains($0.id) && !ProtectionList().isProtected($0.url) }
+        app.leftovers.filter { includedRelatedPaths.contains($0.id) && !ProtectionList().isProtected($0.url) }
     }
 
     func setRelatedFiles(_ app: InstalledApp, included: Bool) {
-        let paths = app.leftovers.map(\.id)
-        if included { excludedRelatedPaths.subtract(paths) }
-        else { excludedRelatedPaths.formUnion(paths) }
+        let paths = app.leftovers.filter { !ProtectionList().isProtected($0.url) }.map(\.id)
+        if included { includedRelatedPaths.formUnion(paths) }
+        else { includedRelatedPaths.subtract(paths) }
+    }
+
+    func setRelatedFile(_ item: CleanCandidate, included: Bool) {
+        guard !ProtectionList().isProtected(item.url) else { return }
+        if included { includedRelatedPaths.insert(item.id) }
+        else { includedRelatedPaths.remove(item.id) }
     }
 
     func executeUninstall() {
@@ -273,7 +347,23 @@ struct UninstallerModernView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
+                if let notice = model.scanNotice {
+                    Label(notice, systemImage: "info.circle")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 9))
+                }
                 searchAndActionBar
+                if let notice = model.selectionNotice {
+                    Label(notice, systemImage: "exclamationmark.circle")
+                        .font(style.smallFont)
+                        .foregroundStyle(style.secondaryText)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 9))
+                }
                 if model.isScanning && !model.apps.isEmpty { scanningView }
                 if model.outcome != nil || !model.failures.isEmpty {
                     ThemePanel {
@@ -318,7 +408,7 @@ struct UninstallerModernView: View {
                     Text("App Uninstaller")
                         .font(style.isRetro ? style.titleFont : .system(size: 28, weight: .bold))
                 }
-                Text("Remove apps and their matched related files together. Review what is included, then move it to Quarantine.")
+                Text("Remove an app with a recoverable Quarantine move. Related settings and personal data stay put unless you choose them in the final review.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
@@ -686,7 +776,7 @@ struct UninstallerModernView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "folder.badge.gearshape")
                         .foregroundStyle(style.accent)
-                    Text("Associated Components & Leftovers (\(app.leftovers.count))")
+                    Text("Found Related Files (\(app.leftovers.count))")
                         .font(.system(size: 12, weight: .bold))
                 }
 
@@ -705,6 +795,10 @@ struct UninstallerModernView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 10)
+            Text("These are shown for inspection, not automatically selected for removal.")
+                .font(.system(size: 11))
+                .foregroundStyle(style.secondaryText)
+                .padding(.horizontal, 16)
 
             VStack(spacing: 6) {
                 // Main Application Bundle
@@ -863,19 +957,20 @@ struct UninstallerModernView: View {
     // MARK: - Scanning & Empty Views
 
     private var scanningView: some View {
-        HStack(spacing: 14) {
-            ProgressView().controlSize(.small)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(model.scanProgress)
-                    .font(.system(size: 13, weight: .medium))
-                Text("Indexing application support files and container directories…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+        HStack(spacing: 12) {
+            TaskProgressCue(
+                title: "Finding installed apps",
+                detail: model.scanProgress.isEmpty
+                    ? "Reading apps and related folders. No files are changed."
+                    : model.scanProgress,
+                symbol: "app.badge.magnifyingglass"
+            )
+            ThemeButton(title: "Stop Scan", systemImage: "stop.circle",
+                        help: "Cancel this read without changing apps or related files.") {
+                model.stopScan()
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
+        .padding(12)
     }
 
     private var emptyView: some View {
@@ -903,7 +998,7 @@ struct UninstallerModernView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Review App Removal")
                         .font(.system(size: 18, weight: .bold))
-                    Text("Apps and checked related files will move to Quarantine. Related files may hold settings and personal app data. Uncheck anything you want to keep. macOS may ask for an administrator password.")
+                    Text("The selected apps will move to Quarantine. Related data starts excluded because it may hold settings, documents or saved games; tick an exact file only if you want to move it too. macOS may ask for an administrator password.")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -940,7 +1035,7 @@ struct UninstallerModernView: View {
                                 Text("\(model.includedLeftovers(app).count) of \(app.leftovers.count) related files included")
                                     .font(.system(size: 13)).foregroundStyle(style.secondaryText)
                                 Spacer()
-                                Button("Include All") { model.setRelatedFiles(app, included: true) }
+                                Button("Include All (review first)") { model.setRelatedFiles(app, included: true) }
                                     .frame(minHeight: 44)
                                 Button("Keep All Related Files") { model.setRelatedFiles(app, included: false) }
                                     .frame(minHeight: 44)
@@ -948,11 +1043,8 @@ struct UninstallerModernView: View {
                         }
                         ForEach(app.leftovers) { item in
                             Toggle(isOn: Binding(
-                                get: { !model.excludedRelatedPaths.contains(item.id) && !ProtectionList().isProtected(item.url) },
-                                set: { include in
-                                    if include { model.excludedRelatedPaths.remove(item.id) }
-                                    else { model.excludedRelatedPaths.insert(item.id) }
-                                }
+                                get: { model.includedRelatedPaths.contains(item.id) && !ProtectionList().isProtected(item.url) },
+                                set: { include in model.setRelatedFile(item, included: include) }
                             )) {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("\(item.name) · \(item.size.sizeDescription)").font(style.bodyFont)

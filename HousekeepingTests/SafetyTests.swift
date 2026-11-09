@@ -24,6 +24,23 @@ struct SafetyTests {
         try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: testRoot) }
 
+        // Deterministic, read-only assistant responses must use observed data.
+        let mlxFixture = home.appendingPathComponent(".mlx-lm/models", isDirectory: true)
+        try fileManager.createDirectory(at: mlxFixture, withIntermediateDirectories: true)
+        let modelLocations = HousekeeperConversation.readOnlyAnswer(
+            for: "Where are my models?", home: home, fileManager: fileManager
+        ) ?? ""
+        try expect(modelLocations.contains(mlxFixture.path), "Model-location help must report an existing MLX directory.")
+        try expect(!modelLocations.contains("• Ollama:"), "Model-location help must not invent missing runtimes.")
+        try expect(modelLocations.contains("not evidence that weights are loaded"), "Stored weights must not be confused with RAM residency.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What can you do?")?.contains("Disk Browser") == true,
+                   "Built-in app navigation works without model weights.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What is 2 + 2?") == nil,
+                   "Unrelated questions must not be handled by fake canned answers.")
+        try expect(HousekeeperConversation.readOnlyAnswer(for: "What can you do about a full disk?") == nil,
+                   "Open-ended questions must reach the model instead of the generic tool list.")
+
+
         let policy = CleanupSafetyPolicy(homeDirectory: home, quarantineRoot: quarantine)
 
         let cache = home.appendingPathComponent("Library/Caches/com.example.housekeeping-test", isDirectory: true)
@@ -1190,6 +1207,58 @@ struct SafetyTests {
 
         // MARK: - Clean Up: what it refuses to touch
 
+        // Bulk cleaning is always scoped to the current visible result set.
+        // Changing search or category must never select paths the user cannot
+        // see, and clearing the current scope must not alter another category.
+        try await MainActor.run {
+            let first = CleanCandidate(
+                url: home.appendingPathComponent("Library/Caches/Cache A"),
+                size: 20, modified: nil, category: .everydayJunk,
+                name: "Cache A", detail: "fixture"
+            )
+            let hidden = CleanCandidate(
+                url: home.appendingPathComponent("Library/Caches/Cache B"),
+                size: 30, modified: nil, category: .everydayJunk,
+                name: "Cache B", detail: "fixture"
+            )
+            let other = CleanCandidate(
+                url: home.appendingPathComponent("Library/Developer/Build"),
+                size: 40, modified: nil, category: .developerLeftovers,
+                name: "Build", detail: "fixture"
+            )
+            let related = CleanCandidate(
+                url: home.appendingPathComponent("Library/Application Support/Mock/Work.db"),
+                size: 500, modified: nil, category: .uninstall,
+                name: "Work.db", detail: "Potential personal data"
+            )
+            let app = InstalledApp(
+                url: home.appendingPathComponent("Applications/Mock.app"),
+                name: "Mock", bundleIdentifier: "com.example.mock", version: nil,
+                size: 100, leftovers: [related]
+            )
+            let snapshot = CleanerSnapshot(candidates: [first, hidden, other], apps: [app], trash: TrashSummary(), notes: [])
+            let picker = CleanerModel(snapshot: snapshot)
+            try expect(picker.includedRelatedPaths.isEmpty, "App support data must not be included by default.")
+            picker.toggleRelated(related)
+            try expect(picker.includedRelatedPaths.contains(related.id), "Explicitly selected related data must be included.")
+            picker.toggleRelated(related)
+            try expect(picker.includedRelatedPaths.isEmpty, "Related-data opt-in must be reversible.")
+            picker.query = "Cache A"
+            picker.setVisible(selected: true)
+            try expect(picker.selectedCandidates.map(\.id) == [first.id], "Bulk select must not pick hidden or other-category results.")
+            picker.query = ""
+            try expect(picker.selectedCandidates.count == 1, "Clearing search must not silently select additional paths.")
+            picker.category = .developerLeftovers
+            try expect(picker.selectedOutsideVisibleCount == 1, "Selection summary must count items outside the current view.")
+            picker.clearVisibleSelection()
+            try expect(picker.selectedCandidates.map(\.id) == [first.id], "Deselecting shown must preserve another category's selection.")
+            picker.setVisible(selected: true)
+            try expect(Set(picker.selectedCandidates.map(\.id)) == Set([first.id, other.id]), "Selecting another category must only add that category.")
+            picker.clearSelection()
+            try expect(picker.selectedCandidates.isEmpty, "Explicit Clear All Selections must clear all categories.")
+        }
+
+
         // Everything the Clean Up screen moves goes through `quarantineRepairs`,
         // which skips the normal cleanup policy on purpose. What keeps that safe
         // is its own three refusals: the root, the home folder, the Quarantine
@@ -1586,16 +1655,16 @@ struct SafetyTests {
         model.clearSelection()
         try expect(model.selectedCandidates.isEmpty, "Clear selection must clear every category.")
         model.requestUninstall(app)
-        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Uninstall must include matched related data by default and disclose its size.")
+        try expect(model.pendingPaths == [app.id] && model.pendingSize == app.size, "Uninstall must preserve related data until the user explicitly includes it.")
         model.cancelPending()
         model.toggleRelated(related)
         model.requestUninstall(app)
-        try expect(model.pendingPaths == [app.id] && model.pendingSize == app.size, "Unchecking related data must preserve it when uninstalling the app.")
+        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Explicitly including related data must show exact paths and combined size.")
         model.cancelPending()
         model.toggleRelated(related)
         model.toggleApp(app)
         model.requestUninstallSelected()
-        try expect(Set(model.pendingPaths) == Set([app.id, related.id]) && model.pendingSize == 230, "Bulk uninstall review must also include matched related files and their size by default.")
+        try expect(model.pendingPaths == [app.id] && model.pendingSize == app.size, "Bulk uninstall must also preserve related data when no item is explicitly selected.")
         model.cancelPending()
         model.query = "ORG.HOUSEKEEPING"
         try expect(model.visibleApps.count == 1, "App search must include bundle identifiers.")

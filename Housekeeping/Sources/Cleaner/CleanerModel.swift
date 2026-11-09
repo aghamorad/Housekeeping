@@ -37,6 +37,7 @@ final class CleanerModel: ObservableObject {
     @Published private(set) var trash = TrashSummary()
     @Published private(set) var notes: [String] = []
     @Published private(set) var progressLine = ""
+    @Published private(set) var workProgress: UninstallProgress?
     @Published private(set) var lastScan: Date?
     @Published private(set) var outcome: String?
     @Published private(set) var failures: [String] = []
@@ -76,6 +77,7 @@ final class CleanerModel: ObservableObject {
     func scan() {
         guard phase != .scanning, phase != .working else { return }
         phase = .scanning
+        workProgress = nil
         wasStopped = false
         completedCategories = []
         candidates = []
@@ -129,9 +131,11 @@ final class CleanerModel: ObservableObject {
         outcome = "Scan stopped. Showing completed categories only; unvisited categories have not been checked."
     }
 
+    /// App support files can contain documents, accounts, saved games, and
+    /// preferences. A path match cannot establish disposability, so new scans
+    /// leave related data unselected. The user opts in per exact path.
     private func defaultRelatedPaths(_ apps: [InstalledApp]) -> Set<String> {
-        let protection = ProtectionList()
-        return Set(apps.flatMap(\.leftovers).filter { !protection.isProtected($0.url) }.map(\.id))
+        []
     }
 
     private func apply(_ snapshot: CleanerSnapshot) {
@@ -172,21 +176,32 @@ final class CleanerModel: ObservableObject {
         }
     }
 
+    /// Bulk selections apply strictly to the CURRENT CATEGORY AND FILTER.
+    /// A row hidden by search or placed on another shelf is never changed.
     func setVisible(selected: Bool) {
-        guard phase != .working, phase != .scanning else { return }
+        guard phase == .ready else { return }
         let ids = Set(visibleCandidates(in: category).map(\.id))
         for index in candidates.indices where ids.contains(candidates[index].id) {
             candidates[index].isSelected = selected
         }
     }
 
+    var selectedOutsideVisibleCount: Int {
+        let visible = Set(visibleCandidates(in: category).map(\.id))
+        return selectedCandidates.filter { !visible.contains($0.id) }.count
+    }
+
+    func clearVisibleSelection() {
+        setVisible(selected: false)
+    }
+
     func toggleRelated(_ candidate: CleanCandidate) {
-        guard phase != .working, !ProtectionList().isProtected(candidate.url) else { return }
+        guard phase == .ready, !ProtectionList().isProtected(candidate.url) else { return }
         if !includedRelatedPaths.insert(candidate.id).inserted { includedRelatedPaths.remove(candidate.id) }
     }
 
     func clearSelection() {
-        guard phase != .working else { return }
+        guard phase == .ready else { return }
         for index in candidates.indices { candidates[index].isSelected = false }
     }
 
@@ -224,12 +239,13 @@ final class CleanerModel: ObservableObject {
     // MARK: - Ticking
 
     func toggle(_ candidate: CleanCandidate) {
-        guard phase != .working, phase != .scanning else { return }
+        guard phase == .ready else { return }
         guard let index = candidates.firstIndex(where: { $0.id == candidate.id }) else { return }
         candidates[index].isSelected.toggle()
     }
 
     func setAll(in category: CleanCategory, selected: Bool) {
+        guard phase == .ready else { return }
         for index in candidates.indices where candidates[index].category == category {
             candidates[index].isSelected = selected
         }
@@ -249,6 +265,7 @@ final class CleanerModel: ObservableObject {
     }
 
     func toggleApp(_ app: InstalledApp) {
+        guard phase == .ready else { return }
         guard let index = apps.firstIndex(where: { $0.id == app.id }) else { return }
         apps[index].isSelected.toggle()
     }
@@ -276,8 +293,8 @@ final class CleanerModel: ObservableObject {
 
     /// Uninstalls everything ticked in one transaction. Open applications are
     /// left out rather than refused, because one open app should not stop the
-    /// other thirty-nine from going. Matched related files are included by
-    /// default; the reader can uncheck anything they want to keep.
+    /// other thirty-nine from going. Related files are left in place unless the
+    /// reader ticks an exact path in the final review.
     func requestUninstallSelected() {
         guard phase == .ready else { return }
         let protection = ProtectionList()
@@ -302,7 +319,9 @@ final class CleanerModel: ObservableObject {
         pendingAction = .uninstall
         pendingTitle = "Move \(ready.count) application\(ready.count == 1 ? "" : "s") to Quarantine?"
         let related = CleanCandidate.nonOverlapping(ready.flatMap(\.leftovers).filter { includedRelatedPaths.contains($0.id) && !protection.isProtected($0.url) })
-        pendingDetail = "The applications and \(related.count) included related items move together. Related files may contain settings and personal app data. Uncheck anything you want to keep before continuing. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+        pendingDetail = related.isEmpty
+            ? "The selected applications move to Quarantine. Their related files and personal data stay where they are unless you tick an exact path in the final review. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+            : "The applications and \(related.count) specifically chosen related item\(related.count == 1 ? "" : "s") move together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
         pendingPaths = paths
         pendingSize = ready.reduce(Int64(0)) { $0 + $1.size } + related.reduce(0) { $0 + $1.size }
         pendingAppName = ready.count == 1 ? ready[0].name : nil
@@ -311,15 +330,6 @@ final class CleanerModel: ObservableObject {
             ? nil
             : "\(running.count) open application\(running.count == 1 ? " is" : "s are") left out: \(running.map(\.name).joined(separator: ", "))."
         failures = []
-    }
-
-    /// Everything on every shelf, not just the one in view. It exists so a big
-    /// cleanup is one decision — and it is safe to offer because a shelf can no
-    /// longer contain an app container, a model library, or anything holding a
-    /// person's files.
-    func selectEverything() {
-        guard phase != .working, phase != .scanning else { return }
-        for index in candidates.indices { candidates[index].isSelected = true }
     }
 
     var allInCategorySelected: Bool {
@@ -339,7 +349,7 @@ final class CleanerModel: ObservableObject {
 
         pendingAction = .clean
         pendingTitle = "Move \(chosen.count) item\(chosen.count == 1 ? "" : "s") to Quarantine?"
-        pendingDetail = "\(size.sizeDescription) from \(categories.joined(separator: ", ")). Everything moved can be put back from Quarantine."
+        pendingDetail = "\(size.sizeDescription) from \(categories.joined(separator: ", ")). These items are MOVED, not deleted. No disk space is recovered while they remain in Quarantine; you can restore them there or review permanent deletion separately."
         pendingPaths = chosen.map(\.url.path)
         pendingSize = size
         pendingAppName = nil
@@ -364,7 +374,9 @@ final class CleanerModel: ObservableObject {
 
         pendingAction = .uninstall
         pendingTitle = "Move \(app.name) to Quarantine?"
-        var detail = "The application and \(related.count) included related items, \(size.sizeDescription) together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+        var detail = related.isEmpty
+            ? "The application, \(size.sizeDescription). Its related files and personal data stay where they are unless you tick an exact path in the final review. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
+            : "The application and \(related.count) specifically chosen related item\(related.count == 1 ? "" : "s"), \(size.sizeDescription) together. Related files may contain settings and personal app data. Everything moved can be put back from Quarantine. macOS may ask for an administrator password."
         if let version = app.version {
             detail += " Version \(version)."
         }
@@ -407,6 +419,7 @@ final class CleanerModel: ObservableObject {
         confirmationText = ""
         confirmationHint = nil
         phase = .working
+        workProgress = UninstallProgress(phase: .preparing, total: pendingPaths.count)
 
         switch action {
         case .clean:
@@ -447,7 +460,9 @@ final class CleanerModel: ObservableObject {
                     self?.uninstallSession?.finish(result: result)
                 } else {
                     result = try await engine.quarantineRepairs(paths: paths, category: "Clean Up",
-                        reason: title, categories: categories, intent: intent)
+                        reason: title, categories: categories, intent: intent) { [weak self] event in
+                            await self?.receiveCleanupProgress(event)
+                        }
                 }
                 self?.absorb(result, title: title, noun: noun)
             } catch {
@@ -458,7 +473,13 @@ final class CleanerModel: ObservableObject {
     }
 
     private func receiveUninstallProgress(_ event: UninstallProgress) {
+        workProgress = event
         uninstallSession?.receive(event)
+    }
+
+    private func receiveCleanupProgress(_ event: UninstallProgress) {
+        guard phase == .working else { return }
+        workProgress = event
     }
 
     func dismissUninstallSession() {
@@ -495,6 +516,7 @@ final class CleanerModel: ObservableObject {
             sentence += " They can be put back from Quarantine."
         }
         outcome = sentence
+        workProgress = nil
         phase = .ready
     }
 
@@ -511,6 +533,7 @@ final class CleanerModel: ObservableObject {
             } else {
                 self?.outcome = "Emptied what it could: \(result.removedCount) item\(result.removedCount == 1 ? "" : "s"), \(result.removedBytes.sizeDescription) freed. \(result.failures.count) could not be removed."
             }
+            self?.workProgress = nil
             self?.phase = .ready
         }
     }
@@ -518,6 +541,7 @@ final class CleanerModel: ObservableObject {
     private func finishWith(error: Error) {
         failures = [error.localizedDescription]
         outcome = "Removal stopped. Review Quarantine for any items already moved before trying again."
+        workProgress = nil
         phase = .ready
     }
 }

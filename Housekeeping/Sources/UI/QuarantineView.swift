@@ -10,10 +10,14 @@ struct QuarantineView: View {
     @State private var selectedIDs: Set<UUID> = []
     @State private var search = ""
     @State private var isWorking = false
+    @State private var workingDescription = ""
     @State private var operationSummary: String?
     /// Which half of the same question the sheet is answering: where is my stuff
     /// now, or what has Housekeeping already done to this Mac.
     @State private var showingHistory = false
+    @State private var isReloading = false
+    @State private var reloadPending = false
+    @State private var lastFocusReload = Date.distantPast
 
     private let engine = CleanupEngine()
 
@@ -30,6 +34,12 @@ struct QuarantineView: View {
                         .foregroundColor(style.secondaryText)
                 }
                 Spacer()
+                ThemeButton(
+                    title: "Refresh",
+                    systemImage: "arrow.clockwise",
+                    isEnabled: !isWorking,
+                    help: "Recheck Quarantine records and files. No items are changed."
+                ) { reload() }
                 ThemeButton(
                     title: "Show Me the Folder",
                     systemImage: "folder",
@@ -55,12 +65,19 @@ struct QuarantineView: View {
             }
 
             switcher
-            if !showingHistory && !entries.isEmpty { selectionBar }
+            if !showingHistory && !entries.isEmpty {
+                Text("Waiting in Quarantine: \(entries.count) items · \(entries.reduce(Int64(0)) { $0 + $1.size }.humanReadable) still occupying disk space. Restoring returns the original location; only permanent deletion can reclaim storage.")
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                selectionBar
+            }
             if isWorking {
-                HStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text("Working on your selection… macOS may ask for permission.").font(style.bodyFont)
-                }
+                TaskProgressCue(
+                    title: "Working through the selected items",
+                    detail: workingDescription,
+                    symbol: "archivebox"
+                )
             }
             if let operationSummary { Text(operationSummary).font(style.bodyFont) }
 
@@ -83,8 +100,15 @@ struct QuarantineView: View {
                             HStack {
                                 Text(batch.entries.first?.appName ?? "Cleanup batch").font(style.labelFont).lineLimit(2)
                                 Spacer()
-                                ThemeButton(title: search.isEmpty ? "Select Batch" : "Select Shown", systemImage: "checkmark.circle") {
-                                    selectedIDs.formUnion(batch.entries.map(\.id))
+                                let allSelected = batch.entries.allSatisfy { selectedIDs.contains($0.id) }
+                                ThemeButton(
+                                    title: allSelected ? "Deselect batch" : "Select batch (\(batch.entries.count))",
+                                    systemImage: allSelected ? "circle" : "checkmark.circle",
+                                    help: "Only items in this batch matching the current search are affected."
+                                ) {
+                                    let ids = Set(batch.entries.map(\.id))
+                                    if allSelected { selectedIDs.subtract(ids) }
+                                    else { selectedIDs.formUnion(ids) }
                                 }
                             }.padding(.top, 8)
                             ForEach(batch.entries) { entry in quarantineRow(entry) }
@@ -117,6 +141,17 @@ struct QuarantineView: View {
         .disabled(isWorking)
         .interactiveDismissDisabled(isWorking)
         .onAppear { reload() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            // One refresh per activation, never a second one while the first is
+            // still reading, and never twice for the same appearance.
+            guard !isWorking, Date().timeIntervalSince(lastFocusReload) > 1.5 else { return }
+            lastFocusReload = Date()
+            reload()
+        }
+        .onChange(of: search) { _ in
+            // Search never leaves invisible targets silently selected.
+            selectedIDs.formIntersection(Set(visibleEntries.map(\.id)))
+        }
         .alert("Delete \(pendingPermanentDeletion.count) item\(pendingPermanentDeletion.count == 1 ? "" : "s") permanently?", isPresented: Binding(
             get: { !pendingPermanentDeletion.isEmpty },
             set: { if !$0 { pendingPermanentDeletion = [] } }
@@ -546,10 +581,27 @@ struct QuarantineView: View {
         }
     }
 
+    /// Reads every manifest and transaction record on a background thread; a
+    /// quarantine with many batches must not stall the window when it regains
+    /// focus. A call made while a read is in flight is replayed once it finishes,
+    /// so a reload asked for after an operation is never silently dropped.
     private func reload() {
-        entries = appState.quarantineEntries()
-        transactions = appState.transactionHistory()
-        selectedIDs.formIntersection(Set(entries.map(\.id)))
+        guard !isReloading else { reloadPending = true; return }
+        isReloading = true
+        Task {
+            let snapshot = await Task.detached(priority: .userInitiated) {
+                let engine = CleanupEngine()
+                return (engine.quarantineEntries(), engine.transactionHistory())
+            }.value
+            entries = snapshot.0
+            transactions = snapshot.1
+            selectedIDs.formIntersection(Set(entries.map(\.id)))
+            isReloading = false
+            if reloadPending {
+                reloadPending = false
+                reload()
+            }
+        }
     }
 
     private struct Batch: Identifiable {
@@ -575,14 +627,19 @@ struct QuarantineView: View {
 
     private var selectionBar: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField("Search by app, original path, or category…", text: $search).textFieldStyle(.roundedBorder)
+            TextField("Find quarantined items by app, path or category", text: $search)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityLabel("Filter quarantined items")
+            Text("Changing the search deselects items it hides, so batch actions affect only visible choices.")
+                .font(style.smallFont)
+                .foregroundColor(style.secondaryText)
             HStack {
                 ThemeButton(title: "Select All Shown", systemImage: "checkmark.circle", isEnabled: !visibleEntries.isEmpty) {
                     selectedIDs.formUnion(visibleEntries.map(\.id))
                 }
                 ThemeButton(title: "Clear Selection", isEnabled: !selectedIDs.isEmpty) { selectedIDs = [] }
                 Spacer()
-                Text("\(selectedEntries.count) selected · \(selectedEntries.reduce(Int64(0)) { $0 + $1.size }.humanReadable)")
+                Text("\(visibleEntries.count) shown · \(selectedEntries.count) selected · \(selectedEntries.reduce(Int64(0)) { $0 + $1.size }.humanReadable)")
                     .font(style.smallFont)
             }
             HStack {
@@ -593,9 +650,13 @@ struct QuarantineView: View {
                     pendingPermanentDeletion = selectedEntries
                 }
                 Spacer()
-                ThemeButton(title: "Empty Quarantine…", systemImage: "trash.fill") { pendingPermanentDeletion = entries }
+                ThemeButton(
+                    title: "Delete ALL waiting items…",
+                    systemImage: "trash.fill",
+                    help: "Includes all \(entries.count) items, even outside the search. Requires another confirmation and cannot be undone."
+                ) { pendingPermanentDeletion = entries }
             }
-            Text("Selections include items hidden by your search. Empty Quarantine includes everything waiting here.")
+            Text("Selected actions affect only visible items. Delete ALL waiting items is a separate, irreversible action across the entire Quarantine.")
                 .font(style.smallFont).foregroundColor(style.secondaryText)
         }
     }
@@ -603,15 +664,19 @@ struct QuarantineView: View {
     private func perform(_ targets: [QuarantineEntry], deleting: Bool) {
         guard !isWorking, !targets.isEmpty else { return }
         isWorking = true
+        workingDescription = deleting
+            ? "Permanently deleting \(targets.count) item\(targets.count == 1 ? "" : "s")… Please keep Housekeeping open."
+            : "Restoring \(targets.count) item\(targets.count == 1 ? "" : "s") to their original paths…"
         operationSummary = nil
         Task {
             let completed: Int
             if deleting { completed = await appState.permanentlyDeleteQuarantineEntries(targets) }
             else { completed = await appState.restoreQuarantineEntries(targets) }
             operationSummary = "\(completed) of \(targets.count) items \(deleting ? "deleted permanently" : "put back")." +
-                (completed < targets.count ? " The remaining items are still in Quarantine; review the details below." : "")
+                (completed < targets.count ? " Some operations failed or were refused. Check the failure details before retrying." : "")
             reload()
             isWorking = false
+            workingDescription = ""
         }
     }
 }
