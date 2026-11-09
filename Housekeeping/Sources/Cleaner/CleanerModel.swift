@@ -172,12 +172,23 @@ final class CleanerModel: ObservableObject {
         }
     }
 
+    /// Bulk selections apply strictly to the CURRENT CATEGORY AND FILTER.
+    /// A row hidden by search or placed on another shelf is never changed.
     func setVisible(selected: Bool) {
-        guard phase != .working, phase != .scanning else { return }
+        guard phase == .ready else { return }
         let ids = Set(visibleCandidates(in: category).map(\.id))
         for index in candidates.indices where ids.contains(candidates[index].id) {
             candidates[index].isSelected = selected
         }
+    }
+
+    var selectedOutsideVisibleCount: Int {
+        let visible = Set(visibleCandidates(in: category).map(\.id))
+        return selectedCandidates.filter { !visible.contains($0.id) }.count
+    }
+
+    func clearVisibleSelection() {
+        setVisible(selected: false)
     }
 
     func toggleRelated(_ candidate: CleanCandidate) {
@@ -186,7 +197,7 @@ final class CleanerModel: ObservableObject {
     }
 
     func clearSelection() {
-        guard phase != .working else { return }
+        guard phase == .ready else { return }
         for index in candidates.indices { candidates[index].isSelected = false }
     }
 
@@ -230,6 +241,7 @@ final class CleanerModel: ObservableObject {
     }
 
     func setAll(in category: CleanCategory, selected: Bool) {
+        guard phase == .ready else { return }
         for index in candidates.indices where candidates[index].category == category {
             candidates[index].isSelected = selected
         }
@@ -313,15 +325,6 @@ final class CleanerModel: ObservableObject {
         failures = []
     }
 
-    /// Everything on every shelf, not just the one in view. It exists so a big
-    /// cleanup is one decision — and it is safe to offer because a shelf can no
-    /// longer contain an app container, a model library, or anything holding a
-    /// person's files.
-    func selectEverything() {
-        guard phase != .working, phase != .scanning else { return }
-        for index in candidates.indices { candidates[index].isSelected = true }
-    }
-
     var allInCategorySelected: Bool {
         let rows = candidates(in: category)
         return !rows.isEmpty && rows.allSatisfy(\.isSelected)
@@ -339,7 +342,7 @@ final class CleanerModel: ObservableObject {
 
         pendingAction = .clean
         pendingTitle = "Move \(chosen.count) item\(chosen.count == 1 ? "" : "s") to Quarantine?"
-        pendingDetail = "\(size.sizeDescription) from \(categories.joined(separator: ", ")). Everything moved can be put back from Quarantine."
+        pendingDetail = "\(size.sizeDescription) from \(categories.joined(separator: ", ")). These items are MOVED, not deleted. No disk space is recovered while they remain in Quarantine; you can restore them there or review permanent deletion separately."
         pendingPaths = chosen.map(\.url.path)
         pendingSize = size
         pendingAppName = nil
