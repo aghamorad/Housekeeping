@@ -129,9 +129,11 @@ final class CleanerModel: ObservableObject {
         outcome = "Scan stopped. Showing completed categories only; unvisited categories have not been checked."
     }
 
+    /// App support files can contain documents, accounts, saved games, and
+    /// preferences. A path match cannot establish disposability, so new scans
+    /// leave related data unselected. The user opts in per exact path.
     private func defaultRelatedPaths(_ apps: [InstalledApp]) -> Set<String> {
-        let protection = ProtectionList()
-        return Set(apps.flatMap(\.leftovers).filter { !protection.isProtected($0.url) }.map(\.id))
+        []
     }
 
     private func apply(_ snapshot: CleanerSnapshot) {
