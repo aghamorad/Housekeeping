@@ -1,3 +1,39 @@
+## 2026-11-10 — Housekeeping 0.28.2 (54) SHIPPED: Codex's canonical octopus in the menu bar
+
+Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.28.2
+Not a prerelease. Tag `v0.28.2` on `16da92766f85aa75f1ba95cd7dfa23e1cc25ab59`; release workflow
+run 42692848331 green; asset Housekeeping-macOS-universal.zip 162818026 bytes, SHA-256
+`1e6c68eaa3cc8460dc6866a9b3c6ec5009e55abd7ace350f94b0c4e4641cb9a7` (matches SHA256SUMS.txt).
+
+Why: Codex's icon work lived in open PR #1 ("Use the canonical maid-octopus template in the
+menu bar") and was never merged, so releases carried the older menu-bar mark. This release
+integrates the canonical icon from that PR directly:
+- `HousekeeperMascot.canonicalMenuBarTemplate` embeds the 144 px alpha-mask PNG (116 base64
+  chunks, 13,868 chars) so no Xcode resource registration or loose file can lose it; the
+  original dark artwork is the tintable foreground and white cap/apron/details are cut-outs.
+- `loadMenuBarTemplate()` returns it first at 18 pt with `isTemplate = true`, then keeps the
+  previous bundle/dev-file fallbacks. Breathing animation, Reduce Motion and the
+  accessibility label are unchanged.
+- PR #1 was closed as superseded with a comment explaining the icon-only integration (its
+  StatusItemController predates the 0.28.x health-alert and streaming changes).
+Verified: embedded base64 decodes in a standalone AppKit probe to a 144×144 template image
+and renders as an 18 pt template; 375 safety + 85 background/MCP assertions, static UI audit,
+warnings-as-errors typecheck and Xcode build pass; universal package verifies (52 universal
+Mach-Os, signature, stamped commit, Bookbind manifest); packaged CLI 0.28.2 (54) on arm64 and
+under Rosetta. Downloaded the published asset fresh, checksum matched, verified and installed
+at /Applications/Housekeeping.app (binary SHA-256
+`e85533d8da43c6fff678c3d719dfe358ef814254435fd0511c004edc4800d625`), launched (PID 18808),
+release published Latest. Previous local test build backed up to
+`/Users/Morad/.Trash/Housekeeping-0.28.2-local-test-before-published-20261110-001143.app`;
+0.28.1 published build remains at
+`/Users/Morad/.Trash/Housekeeping-0.28.1-local-test-before-published-20260911-...` (see Trash).
+Also refreshed LaunchServices registration (`lsregister -f`) and touched the app so Finder and
+the Dock pick up the current bundle icon.
+
+Limits: macOS places status items in the menu-bar overflow when the bar is full (this Mac runs
+several menu-bar apps); the icon is correct and the system decides visibility without expanding
+the overflow chevron. Intel verified through Rosetta only; the build is ad-hoc signed.
+
 ## 2026-11-09 — Housekeeping 0.28.1 (53) SHIPPED: living controls and a smarter, streaming Housekeeper
 
 Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.28.1
