@@ -3,9 +3,8 @@ name: Universal release candidate
 # Branch-only candidate. It never publishes a release, creates tags, or merges
 # changes. Only verified ZIPs are uploaded as short-lived CI artifacts.
 on:
-  push:
-    branches:
-      - release-candidate/universal-ux-20261109
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
