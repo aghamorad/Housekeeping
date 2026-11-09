@@ -1,4 +1,61 @@
-## 2026-11-09 — Release candidate 0.28.0 (52) tested locally; NOT published
+## 2026-11-09 — Housekeeping 0.28.0 (52) SHIPPED: released, verified, installed
+
+Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.28.0
+(Draft created, release workflow built it, assets verified from a fresh download, then
+published with the Latest badge. Not a prerelease.)
+
+Source: PR #5 `release-candidate/universal-ux-20261109` was marked ready and merged as
+`3bbe7dc8e676d368f6ec920e8f9241010087ceea`; tag `v0.28.0` on that commit. The branch
+carried five local fix commits on top of Codex's candidate:
+- `8dc1d54` separate panel/health CPU baselines, honest Refresh Health Status (can clear a
+  stale warning), uninstall copy now says related data starts excluded, Quarantine manifest
+  reads moved off the main thread and once per activation, hidden-selection clearing is
+  announced, scan notes restored on the Clean Up status line, first-party answers match
+  intent (and are not written into model history), accessible menu-bar health label.
+- `09b632f` + `8b3e428` the clearing notice survives typing and reports the cumulative
+  number cleared, not just the last keystroke.
+- `a735dca` CHANGELOG 0.28.0 and RELEASE_NOTES_v0.28.0.md.
+
+Release workflow run 42676285784 succeeded in 10m18s (checkout → target checks → base
+input restore → universal Bookbind runtime build → 373 safety + 85 MCP assertions →
+universal package → ZIP/provider verification → asset upload). GitHub Actions artifact:
+Housekeeping-macOS-universal.zip 162729709 bytes; SHA-256
+4f8cc7a76bd5488a338f86b6569a7375ab665172ae39c2b2a54705490a65fd0e (matches SHA256SUMS.txt
+attached to the release).
+
+Published asset independently downloaded, checksum-checked, extracted, and verified:
+codesign --deep --strict OK; 52 universal Mach-O files with no external absolute
+libraries; stamped `HousekeepingSourceCommit` equals tag commit; Bookbind runtime manifest
+and source comparisons pass; `lipo` x86_64 + arm64; packaged CLI reports 0.28.0 (52) on
+arm64 and under `arch -x86_64`; `where --json` parses; bundled llama-server runs on both
+slices. Installed that exact app at /Applications/Housekeeping.app (binary SHA-256
+`e88abfd7c632c74b2c0645fd15d2db6efb3fe026c01b59fb3a2676fdea50aea1`), launched it
+(PID 87509 at verification), and its UI reads 0.28.0 with "Made by Morad". Previous app
+backed up to
+`/Users/Morad/.Trash/Housekeeping-0.27.1-before-0.28.0-20261109-222405.app`.
+
+GUI acceptance pass run live on macOS 27.2 / M1 Pro before tagging: every sidebar tool and
+the Advanced Tools entries opened their own screen; Clean Up showed a completed scan and
+scoped bulk selection; the review sheet listed exact paths; the uninstaller showed related
+data excluded by default with "0 of 2 related files included" and exact-path review; a
+search that hid selections showed "127 selected apps are hidden by the current search or
+filter and were cleared"; Quarantine refreshed off the main thread; Local Models showed
+model-on-disk versus runtime-resident wording; the assistant returned the tool list for
+"What can you do?" and routed "What can you do about a full disk?" to the model; the
+menu-bar panel opened with the octopus, rooms, processes and the accessibility label
+"Housekeeping menu bar item: no sustained CPU or thermal warning"; quit + reopen produced
+exactly one window.
+
+Known limits recorded in the release notes: Intel verified through Rosetta on Apple
+Silicon only; ad-hoc signature, not notarized; no live Ollama/LM Studio model load/unload
+exercise; a status item's right-click menu is not enumerable by automation before a real
+right-click, so those menu items were not clicked in this pass.
+
+Local build evidence stays under `.build/`: worktree `rc-0.28` (branch + fix commits),
+`dist-0.28-final2` (last local package), `release-v0.28.0` (downloaded assets) and
+`release-v0.28.0-check` (extracted verified bundle). No local service was stopped.
+
+## 2026-11-09 — Release candidate 0.28.0 (52) tested locally; test pass that led to the release above
 
 Codex made the update through GitHub only (PR #5, draft, branch
 `release-candidate/universal-ux-20261109` at `c676e52353e325c5a0bc3c0050241ebb2a160e0a`,
