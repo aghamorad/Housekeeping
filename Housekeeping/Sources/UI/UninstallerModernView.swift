@@ -781,9 +781,28 @@ struct UninstallerModernView: View {
             Divider()
 
             Button {
+                NSWorkspace.shared.open(app.url)
+            } label: {
+                Label("Open \(app.name)", systemImage: "arrow.up.forward.app")
+            }
+
+            Button {
                 NSWorkspace.shared.selectFile(app.url.path, inFileViewerRootedAtPath: app.url.deletingLastPathComponent().path)
             } label: {
                 Label("Reveal in Finder", systemImage: "folder")
+            }
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(app.url.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                _ = ProtectionList().protect(path: app.url.path, kind: "Installed App")
+            } label: {
+                Label("Add to Ignore List (Leave Alone)", systemImage: "eye.slash")
             }
 
             if !app.leftovers.isEmpty {
@@ -939,6 +958,19 @@ struct UninstallerModernView: View {
                             NSWorkspace.shared.activateFileViewerSelecting([leftover.url])
                         } label: {
                             Label("Reveal in Finder", systemImage: "folder")
+                        }
+
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(leftover.url.path, forType: .string)
+                        } label: {
+                            Label("Copy Path", systemImage: "doc.on.doc")
+                        }
+
+                        Button {
+                            _ = ProtectionList().protect(path: leftover.url.path, kind: "Uninstaller Leftovers")
+                        } label: {
+                            Label("Add to Ignore List (Leave Alone)", systemImage: "eye.slash")
                         }
                     }
                 }

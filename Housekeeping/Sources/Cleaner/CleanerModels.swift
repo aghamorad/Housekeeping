@@ -249,8 +249,8 @@ enum FileOrder: String, CaseIterable, Identifiable {
         case .largest: return "Largest"
         case .smallest: return "Smallest"
         case .name: return "Name"
-        case .oldest: return "Oldest"
-        case .newest: return "Newest"
+        case .oldest: return "Last Used (Oldest)"
+        case .newest: return "Last Used (Newest)"
         }
     }
 

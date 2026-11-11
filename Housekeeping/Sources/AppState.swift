@@ -126,6 +126,7 @@ final class AppState: ObservableObject {
     @Published var cleanupHistory: [CleanupRecord] = []
     @Published var currentTheme: Theme
     @Published var lastErrorMessage: String?
+    @Published var lastCleanupReceipt: CleanupResult?
     @Published var inspectedItemID: UUID?
     /// Set at the end of `init`, after any quarantine left in the old hidden
     /// folder has been walked out into the visible one. A property initializer
@@ -691,6 +692,7 @@ final class AppState: ObservableObject {
     func saveCleanupHistory(_ record: CleanupRecord) { cleanupHistory.insert(record, at: 0) }
 
     func recordCleanupResult(_ result: CleanupResult) {
+        lastCleanupReceipt = result
         guard result.successCount > 0 else { return }
         let record = CleanupRecord(
             id: UUID(),
@@ -713,6 +715,7 @@ final class AppState: ObservableObject {
         presentedScreen = nil
         scanTask?.cancel()
         lastErrorMessage = nil
+        lastCleanupReceipt = nil
         // A scan is the moment the disk is read again, so anything the policy
         // worked out about what lives where has to be worked out again too.
         cleanupSafetyPolicy.invalidateWorkingCopyMemo()

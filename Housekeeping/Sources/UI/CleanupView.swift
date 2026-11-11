@@ -99,8 +99,15 @@ struct CleanupView: View {
                     Text("The selection includes projects or personal files. Moving them makes their original paths disappear until restored. Type QUARANTINE to authorize this reversible move.")
                         .font(style.smallFont)
                         .foregroundColor(style.negative)
-                    TextField("Type QUARANTINE", text: $protectedConfirmation)
-                        .textFieldStyle(.roundedBorder)
+                    HStack {
+                        TextField("Type QUARANTINE", text: $protectedConfirmation)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit { if canProceed { runCleanup() } }
+                        if protectedConfirmationMatches {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(style.positive)
+                        }
+                    }
                 }
                 .padding(.horizontal, 12)
             }
@@ -204,11 +211,23 @@ struct CleanupView: View {
                 let engine = CleanupEngine()
                 let result = try await engine.cleanup(
                     items: selectedItems,
-                    allowReviewOnly: !protectedItems.isEmpty
+                    allowReviewOnly: !protectedItems.isEmpty,
+                    skipRunningApps: true
                 )
 
                 appState.recordCleanupResult(result)
+                appState.lastCleanupReceipt = result
                 appState.showCleanupConfirmation = false
+
+                if result.successCount > 0 {
+                    appState.advanceFlow(.summary)
+                    if result.failureCount > 0 {
+                        appState.lastErrorMessage = "\(result.successCount) item\(result.successCount == 1 ? "" : "s") moved to Quarantine. \(result.failureCount) item\(result.failureCount == 1 ? "" : "s") were left alone because their applications are running."
+                    }
+                } else if result.failureCount > 0 {
+                    let runningApps = Set(selectedItems.compactMap(\.primaryApplication?.name)).sorted().joined(separator: ", ")
+                    appState.lastErrorMessage = "No items moved because their applications are currently open: \(runningApps.isEmpty ? "open apps" : runningApps). Quit them and try again."
+                }
             } catch {
                 appState.lastErrorMessage = error.localizedDescription
             }

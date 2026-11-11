@@ -412,22 +412,37 @@ struct CleanerView: View {
         .contentShape(Rectangle())
         .hoverHighlight(cornerRadius: 10, normal: style.rowBackground, hovered: style.groupingBackground, stroke: style.border)
         .contextMenu {
-            Button("Show in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([candidate.url])
-            }
-            Button("Ask the Housekeeper About This…") {
-                askHousekeeper(topic(for: candidate))
-            }
-            Button("Copy Path") {
-                copyToPasteboard(candidate.url.path)
-            }
-            Divider()
-            Button(candidate.isSelected ? "Remove From Selection" : "Select This Item") {
-                model.toggle(candidate)
-            }
-            Divider()
-            Button("Leave This Alone") {
+            Button {
                 leaveAlone(candidate.url, kind: candidate.category.title)
+            } label: {
+                Label("Add to Ignore List (Leave Alone)", systemImage: "eye.slash")
+            }
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([candidate.url])
+            } label: {
+                Label("Show in Finder", systemImage: "folder")
+            }
+            Button {
+                NSWorkspace.shared.open(candidate.url)
+            } label: {
+                Label("Open", systemImage: "arrow.up.forward.app")
+            }
+            Divider()
+            Button {
+                model.toggle(candidate)
+            } label: {
+                Label(candidate.isSelected ? "Remove From Selection" : "Select This Item", systemImage: candidate.isSelected ? "checkmark.square" : "square")
+            }
+            Button {
+                copyToPasteboard(candidate.url.path)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+            Divider()
+            Button {
+                askHousekeeper(topic(for: candidate))
+            } label: {
+                Label("Ask the Housekeeper About This…", systemImage: "bubble.left.and.text.bubble.right")
             }
         }
     }

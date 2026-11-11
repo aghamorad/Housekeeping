@@ -282,7 +282,8 @@ final class CleanupEngine {
     func cleanup(
         items: [FoundItem],
         useTrash: Bool = false,
-        allowReviewOnly: Bool = false
+        allowReviewOnly: Bool = false,
+        skipRunningApps: Bool = true
     ) async throws -> CleanupResult {
         guard !useTrash else {
             throw CleanupError.trashError("Direct Trash cleanup is disabled in this safety release. Use reversible quarantine.")
@@ -300,8 +301,46 @@ final class CleanupEngine {
             fileManager: fileManager
         )
         let runningApps = try await checkRunningApps(approvedItems)
-        guard runningApps.isEmpty else {
+        if !skipRunningApps && !runningApps.isEmpty {
             throw CleanupError.applicationsRunning(runningApps)
+        }
+
+        let runningBundleIDs = Set(runningApps.compactMap(\.bundleIdentifier))
+        let runningNames = Set(runningApps.map(\.name))
+
+        var itemsToQuarantine: [FoundItem] = []
+        var movedItems: [MovedItem] = []
+
+        for item in approvedItems {
+            let isRunning: Bool
+            if let app = item.primaryApplication {
+                if let bid = app.bundleIdentifier, runningBundleIDs.contains(bid) {
+                    isRunning = true
+                } else if runningNames.contains(app.name) {
+                    isRunning = true
+                } else {
+                    isRunning = false
+                }
+            } else {
+                isRunning = false
+            }
+
+            if isRunning {
+                movedItems.append(.failed(item, "\(item.primaryApplication?.name ?? "Application") is running; left in place to avoid file corruption"))
+            } else {
+                itemsToQuarantine.append(item)
+            }
+        }
+
+        guard !itemsToQuarantine.isEmpty else {
+            return CleanupResult(
+                date: Date(),
+                movedItems: movedItems,
+                totalSize: 0,
+                successCount: 0,
+                failureCount: movedItems.count,
+                usedTrash: false
+            )
         }
 
         let recordID = UUID()
@@ -315,7 +354,7 @@ final class CleanupEngine {
             id: recordID,
             date: date,
             createdAtUnixNanoseconds: Int64(date.timeIntervalSince1970 * 1_000_000_000),
-            items: approvedItems.map { item in
+            items: itemsToQuarantine.map { item in
                 let destination = itemsURL
                     .appendingPathComponent(item.id.uuidString, isDirectory: true)
                     .appendingPathComponent(item.path.lastPathComponent, isDirectory: false)
@@ -336,10 +375,9 @@ final class CleanupEngine {
         try save(manifest, to: manifestURL)
         writeQuarantineGuide()
 
-        var movedItems: [MovedItem] = []
         for index in manifest.items.indices {
             try Task.checkCancellation()
-            let item = approvedItems[index]
+            let item = itemsToQuarantine[index]
             let destination = URL(fileURLWithPath: manifest.items[index].quarantinePath)
 
             do {

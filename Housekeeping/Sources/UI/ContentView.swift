@@ -1097,6 +1097,67 @@ private struct FlowDots: View {
     }
 }
 
+// MARK: - Quarantine Receipt Banner
+
+struct CleanupReceiptBanner: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.uiStyle) private var style
+    let receipt: CleanupResult
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: receipt.successCount > 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundColor(receipt.successCount > 0 ? style.positive : style.caution)
+                .font(.system(size: 22))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(receipt.successCount > 0 ? "Quarantine Complete" : "No Items Moved")
+                    .font(style.labelFont.bold())
+                    .foregroundColor(style.text)
+                if receipt.successCount > 0 {
+                    Text("\(receipt.successCount) item\(receipt.successCount == 1 ? "" : "s") (\(receipt.totalSize.sizeDescription)) moved to Quarantine. 0 deleted.")
+                        .font(style.smallFont)
+                        .foregroundColor(style.secondaryText)
+                }
+                if receipt.failureCount > 0 {
+                    Text("\(receipt.failureCount) item\(receipt.failureCount == 1 ? "" : "s") left in place because their application is open.")
+                        .font(style.smallFont)
+                        .foregroundColor(style.caution)
+                }
+            }
+
+            Spacer()
+
+            ThemeButton(title: "View Quarantine", systemImage: "archivebox") {
+                appState.showQuarantineManagement = true
+            }
+
+            ThemeButton(title: "Undo", systemImage: "arrow.uturn.backward") {
+                Task { await appState.undoLastQuarantine() }
+            }
+
+            Button {
+                appState.lastCleanupReceipt = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(style.secondaryText)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+            .help("Dismiss receipt")
+        }
+        .padding(12)
+        .background(style.positive.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(style.positive.opacity(0.4), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+    }
+}
+
 /// The first question, and the only one that is purely good news. It says what
 /// was found in the words a person would use, and asks for exactly one thing:
 /// leave to show the list.
@@ -1139,6 +1200,9 @@ private struct SummaryScreen: View {
     /// nothing about a finished reading is part-way through.
     private var modernBody: some View {
         VStack(spacing: 0) {
+            if let receipt = appState.lastCleanupReceipt {
+                CleanupReceiptBanner(receipt: receipt)
+            }
             ScrollView {
                 VStack(spacing: 20) {
                     HeroMeter(
@@ -1193,6 +1257,9 @@ private struct SummaryScreen: View {
     /// it looks like it arrived later than 1999.
     private var retroBody: some View {
         VStack(spacing: 0) {
+            if let receipt = appState.lastCleanupReceipt {
+                CleanupReceiptBanner(receipt: receipt)
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(headline)
@@ -1790,16 +1857,27 @@ private enum ResultsOrder: String, CaseIterable, Identifiable {
     case kind = "Kind"
     case size = "Largest"
     case smallest = "Smallest"
+    case lastUsed = "Last Used"
     case name = "Name"
 
     var id: String { rawValue }
 
-    var label: String { self == .kind ? "Kind" : "Size" }
+    var label: String {
+        switch self {
+        case .kind: return "Kind"
+        case .size: return "Largest"
+        case .smallest: return "Smallest"
+        case .lastUsed: return "Last Used"
+        case .name: return "Name"
+        }
+    }
+
     var help: String {
         switch self {
         case .kind: return "Group the list by what each item is."
         case .size: return "Put everything in one list, biggest first."
         case .smallest: return "Put everything in one list, smallest first."
+        case .lastUsed: return "Sort by last used date, least recently used / stalest files first."
         case .name: return "Sort the list by filename."
         }
     }
@@ -1839,6 +1917,22 @@ private struct ResultsScreen: View {
             return [FindingGroup(kind: nil, items: visibleItems.sorted { $0.size == $1.size ? $0.path.path < $1.path.path : $0.size > $1.size })]
         case .smallest:
             return visibleItems.isEmpty ? [] : [FindingGroup(kind: nil, items: visibleItems.sorted { $0.size == $1.size ? $0.path.path < $1.path.path : $0.size < $1.size })]
+        case .lastUsed:
+            guard !visibleItems.isEmpty else { return [] }
+            let sorted = visibleItems.sorted { a, b in
+                switch (a.lastUsedDate, b.lastUsedDate) {
+                case let (d1?, d2?):
+                    if d1 == d2 { return a.size > b.size }
+                    return d1 < d2 // oldest accessed/modified first
+                case (.some, .none):
+                    return true
+                case (.none, .some):
+                    return false
+                case (.none, .none):
+                    return a.size > b.size
+                }
+            }
+            return [FindingGroup(kind: nil, items: sorted)]
         case .name:
             return visibleItems.isEmpty ? [] : [FindingGroup(kind: nil, items: visibleItems.sorted { $0.path.lastPathComponent.localizedStandardCompare($1.path.lastPathComponent) == .orderedAscending })]
         }
@@ -1870,6 +1964,9 @@ private struct ResultsScreen: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if let receipt = appState.lastCleanupReceipt {
+                CleanupReceiptBanner(receipt: receipt)
+            }
             HStack(alignment: .firstTextBaseline) {
                 Text(allItems.isEmpty
                      ? "Nothing to clean"
@@ -2110,7 +2207,7 @@ private struct ResultsScreen: View {
                                 if let kind = group.kind {
                                     GroupHeader(kind: kind, items: group.items)
                                 } else {
-                                    SizeHeader(items: group.items)
+                                    SizeHeader(items: group.items, order: order)
                                 }
                             }
                         }
@@ -2199,16 +2296,17 @@ private struct GroupHeader: View {
 private struct SizeHeader: View {
     @Environment(\.uiStyle) private var style
     let items: [FoundItem]
+    var order: ResultsOrder = .size
 
     private var total: Int64 { items.reduce(0) { $0 + $1.size } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
-                Image(systemName: "arrow.up.arrow.down")
+                Image(systemName: iconName)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(style.text)
-                Text("Biggest first")
+                Text(title)
                     .font(style.labelFont)
                     .foregroundStyle(style.text)
                 Text("\(items.count)")
@@ -2219,7 +2317,7 @@ private struct SizeHeader: View {
                     .font(style.labelFont)
                     .foregroundStyle(style.text)
             }
-            Text("Everything found, in one list. Each row still says what it is and whether it can be cleaned.")
+            Text(subtitle)
                 .font(style.smallFont)
                 .foregroundStyle(style.secondaryText)
                 .lineLimit(1)
@@ -2230,6 +2328,36 @@ private struct SizeHeader: View {
         .background(style.groupingBackground)
         .overlay(alignment: .bottom) {
             Rectangle().fill(style.border.opacity(0.45)).frame(height: 1)
+        }
+    }
+
+    private var iconName: String {
+        switch order {
+        case .kind: return "folder"
+        case .size: return "arrow.down.circle"
+        case .smallest: return "arrow.up.circle"
+        case .lastUsed: return "clock.arrow.circlepath"
+        case .name: return "textformat"
+        }
+    }
+
+    private var title: String {
+        switch order {
+        case .kind: return "By kind"
+        case .size: return "Biggest first"
+        case .smallest: return "Smallest first"
+        case .lastUsed: return "Least recently used first"
+        case .name: return "Alphabetical by name"
+        }
+    }
+
+    private var subtitle: String {
+        switch order {
+        case .kind: return "Grouped by category and type."
+        case .size: return "Everything found, in one list, largest first."
+        case .smallest: return "Everything found, smallest first."
+        case .lastUsed: return "Oldest untouched files and forgotten residue at the top, based on access and change dates."
+        case .name: return "Everything found, sorted alphabetically by filename."
         }
     }
 }
@@ -2260,29 +2388,105 @@ private struct FindingRow: View {
     /// the row that is open stays lit, so the two states are the same gesture and
     /// the eye does not have to learn two colours.
     var body: some View {
-        if style.isRetro {
-            row
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isInspected ? style.rowSelection : Color.clear)
-                .contentShape(Rectangle())
-                .onTapGesture { appState.inspectItem(item.id) }
-                .helpIfPresent(item.path.path)
-        } else {
-            row
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .hoverHighlight(
-                    cornerRadius: 7,
-                    normal: isInspected ? style.rowSelection : Color.clear,
-                    hovered: style.rowSelection.opacity(isInspected ? 1 : 0.55)
-                )
-                .contentShape(Rectangle())
-                .onTapGesture { appState.inspectItem(item.id) }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .helpIfPresent(item.path.path)
+        Group {
+            if style.isRetro {
+                row
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(isInspected ? style.rowSelection : Color.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture { appState.inspectItem(item.id) }
+                    .helpIfPresent(item.path.path)
+            } else {
+                row
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .hoverHighlight(
+                        cornerRadius: 7,
+                        normal: isInspected ? style.rowSelection : Color.clear,
+                        hovered: style.rowSelection.opacity(isInspected ? 1 : 0.55)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture { appState.inspectItem(item.id) }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .helpIfPresent(item.path.path)
+            }
         }
+        .contextMenu {
+            Button {
+                appState.protect(item)
+            } label: {
+                Label("Add to Ignore List (Leave Alone)", systemImage: "eye.slash")
+            }
+
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([item.path])
+            } label: {
+                Label("Show in Finder", systemImage: "folder")
+            }
+
+            Button {
+                NSWorkspace.shared.open(item.path)
+            } label: {
+                Label("Open", systemImage: "arrow.up.forward.app")
+            }
+
+            Divider()
+
+            if assessment.canBeSelected {
+                Button {
+                    appState.toggleSelection(for: item.id)
+                } label: {
+                    Label(item.isSelected ? "Untick" : "Tick for Cleanup", systemImage: item.isSelected ? "checkmark.square" : "square")
+                }
+            }
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(item.path.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+
+            Divider()
+
+            Button {
+                appState.inspectedItemID = item.id
+                appState.housekeeperTopic = housekeeperTopic(for: item)
+                WindowOpener.shared.withWindow {
+                    appState.showHousekeeper = true
+                }
+            } label: {
+                Label("Ask the Housekeeper About This…", systemImage: "bubble.left.and.text.bubble.right")
+            }
+        }
+    }
+
+    private func housekeeperTopic(for item: FoundItem) -> HousekeeperTopic {
+        let guide = item.readerGuide
+        let assessment = appState.cleanupAssessment(for: item)
+        var facts: [String] = []
+        facts.append("This is \(item.path.lastPathComponent), located at \(item.path.path).")
+        facts.append("Measured size: \(item.size.sizeDescription).")
+        facts.append("Classification: \(item.findingKind.displayName). \(guide.whatItIs)")
+        facts.append("Why it exists: \(guide.whyItExists)")
+        facts.append("Data necessity: \(guide.necessity)")
+        facts.append("Risk assessment: \(guide.risk.rawValue). \(guide.riskExplanation)")
+        if let lastUsed = item.lastUsedDate {
+            facts.append("Last used: \(item.lastUsedDescription) (\(lastUsed.formatted(date: .abbreviated, time: .shortened))).")
+        } else {
+            facts.append("Last used date was not recorded by macOS.")
+        }
+        facts.append("Housekeeping verdict: \(Verdict.of(assessment.decision).shortLabel). \(assessment.reason)")
+        return HousekeeperTopic(
+            id: "finding-\(item.id.uuidString)",
+            title: item.path.lastPathComponent,
+            label: item.size.sizeDescription,
+            tone: assessment.canBeSelected ? .plain : .caution,
+            facts: facts,
+            opener: "What is this item, is it safe to clean, and what will happen if I quarantine it?"
+        )
     }
 
     private var row: some View {
@@ -2639,6 +2843,9 @@ private struct ConfirmScreen: View {
     var body: some View {
         ScreenChrome(title: "Housekeeping", subtitle: "Before anything moves") {
             VStack(spacing: 0) {
+                if let receipt = appState.lastCleanupReceipt {
+                    CleanupReceiptBanner(receipt: receipt)
+                }
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         // The last screen before anything moves, so the amount moves
@@ -2698,23 +2905,34 @@ private struct ConfirmScreen: View {
                     FlowDots(step: .confirm)
                     Spacer()
 
-                    ThemeButton(
-                        title: "Not yet",
-                        help: "Back to the list to change your mind. Nothing has moved, and nothing will until you say so."
-                    ) { appState.advanceFlow(.review) }
+                    if aboutToMove.isEmpty && appState.lastCleanupReceipt != nil {
+                        ThemeButton(
+                            title: "Done",
+                            systemImage: "checkmark",
+                            isPrimary: true
+                        ) {
+                            appState.advanceFlow(.summary)
+                            appState.lastCleanupReceipt = nil
+                        }
+                    } else {
+                        ThemeButton(
+                            title: "Not yet",
+                            help: "Back to the list to change your mind. Nothing has moved, and nothing will until you say so."
+                        ) { appState.advanceFlow(.review) }
 
-                    ThemeButton(
-                        title: "Yes, tidy up",
-                        systemImage: "checkmark",
-                        isPrimary: true,
-                        isEnabled: !aboutToMove.isEmpty,
-                        help: aboutToMove.isEmpty
-                            ? "There is nothing here Housekeeping would clear on its own. Tick anything you recognise in the list and this becomes available."
-                            : "Move the \(aboutToMove.count) items into Quarantine. You will see the full list once more, and nothing moves until you confirm it there."
-                    ) {
-                        appState.confirmRecommendedCleanup()
+                        ThemeButton(
+                            title: "Yes, tidy up",
+                            systemImage: "checkmark",
+                            isPrimary: true,
+                            isEnabled: !aboutToMove.isEmpty,
+                            help: aboutToMove.isEmpty
+                                ? "There is nothing here Housekeeping would clear on its own. Tick anything you recognise in the list and this becomes available."
+                                : "Move the \(aboutToMove.count) items into Quarantine. You will see the full list once more, and nothing moves until you confirm it there."
+                        ) {
+                            appState.confirmRecommendedCleanup()
+                        }
+                        .keyboardShortcut(.defaultAction)
                     }
-                    .keyboardShortcut(.defaultAction)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)
