@@ -50,58 +50,23 @@ func save(_ image: NSBitmapImageRep, as filename: String) throws {
 }
 
 // Square, unmasked layers: Icon Composer will apply the native rounded mask,
-// depth, glass and appearance treatment. Soft pearl is intentional: glass
-// highlights must not destroy the octopus's strong dark-red silhouette.
+// depth, glass and appearance treatment.
 func paintBackground() {
     let light = NSColor(calibratedRed: 0.99, green: 0.975, blue: 0.95, alpha: 1)
     let mid = NSColor(calibratedRed: 0.945, green: 0.92, blue: 0.92, alpha: 1)
     let lilac = NSColor(calibratedRed: 0.87, green: 0.85, blue: 0.91, alpha: 1)
     NSGradient(colors: [light, mid, lilac])?.draw(in: canvas, angle: -55)
-
-    // Quiet curved reflection, more restrained than adding glossy bubbles.
-    let reflection = NSBezierPath()
-    reflection.move(to: NSPoint(x: 55, y: 790))
-    reflection.curve(to: NSPoint(x: 960, y: 920),
-                     controlPoint1: NSPoint(x: 330, y: 1140),
-                     controlPoint2: NSPoint(x: 710, y: 800))
-    reflection.line(to: NSPoint(x: 1024, y: 1024))
-    reflection.line(to: NSPoint(x: 0, y: 1024))
-    reflection.close()
-    NSColor.white.withAlphaComponent(0.32).setFill()
-    reflection.fill()
 }
 
-let mascotBox: NSRect = {
-    // Keep generous clearance around outer tentacles even at 64px.
-    let fit = min(810 / mascot.size.width, 810 / mascot.size.height)
-    let width = mascot.size.width * fit
-    let height = mascot.size.height * fit
-    return NSRect(x: (1024 - width) / 2, y: (1024 - height) / 2 - 12,
-                  width: width, height: height)
-}()
-
 func paintMascot() {
-    mascot.draw(in: mascotBox, from: .zero, operation: .sourceOver, fraction: 1)
+    mascot.draw(in: canvas, from: .zero, operation: .sourceOver, fraction: 1)
 }
 
 let background = bitmap { paintBackground() }
 let foreground = bitmap { paintMascot() }
 
 let legacy = bitmap {
-    // A traditional .icns preview still needs its own rounded-rectangle mask.
-    // The layer files themselves deliberately remain unmasked.
-    let mask = NSBezierPath(roundedRect: canvas.insetBy(dx: 12, dy: 12),
-                            xRadius: 220, yRadius: 220)
-    mask.addClip()
-    paintBackground()
-    NSGraphicsContext.saveGraphicsState()
-    let shadow = NSShadow()
-    shadow.shadowBlurRadius = 33
-    shadow.shadowOffset = NSSize(width: 0, height: -15)
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.19)
-    shadow.set()
     paintMascot()
-    NSGraphicsContext.restoreGraphicsState()
 }
 
 try save(background, as: "Icon-01-Background.png")
