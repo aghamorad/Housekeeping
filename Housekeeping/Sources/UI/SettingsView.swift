@@ -165,6 +165,23 @@ struct SettingsView: View {
             }
 
             Section("About") {
+                HStack(spacing: 14) {
+                    if let mascot = HousekeeperMascot.loadOriginalMascot() {
+                        Image(nsImage: mascot)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 50, height: 50)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Housekeeping")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Made by Morad · Benign Monster Works")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+
                 LabeledContent("App", value: "Housekeeping")
                 LabeledContent("Version", value: AppState.currentVersion.isEmpty ? "Unknown" : AppState.currentVersion)
                 updateRow

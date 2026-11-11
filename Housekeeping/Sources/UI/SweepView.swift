@@ -210,8 +210,15 @@ private struct SweepResultsScreen: View {
 
     private var masthead: some View {
         VStack(spacing: 8) {
-            OctopusMark(effort: 0.35)
-                .frame(width: 72, height: 72)
+            if let mascot = HousekeeperMascot.loadClutterCleaning() ?? HousekeeperMascot.loadMacCleaning() {
+                Image(nsImage: mascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 72, height: 72)
+            } else {
+                OctopusMark(effort: 0.35)
+                    .frame(width: 72, height: 72)
+            }
 
             Text(headline)
                 .font(style.titleFont)

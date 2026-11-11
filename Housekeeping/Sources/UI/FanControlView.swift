@@ -36,7 +36,13 @@ struct FanControlView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .center, spacing: 16) {
+            if let vacuumMascot = HousekeeperMascot.loadVacuuming() {
+                Image(nsImage: vacuumMascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 52, height: 52)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
                     Image(systemName: "fan.fill")

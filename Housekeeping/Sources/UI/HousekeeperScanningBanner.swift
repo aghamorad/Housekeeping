@@ -31,8 +31,18 @@ struct HousekeeperScanningBanner: View {
                     .scaleEffect(pulseAura ? 1.08 : 0.96)
                     .animation(HousekeepingMotion.breathe, value: pulseAura)
 
-                WorkingOctopus(size: 60, working: true)
-                    .shadow(color: style.accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                if let cleaningMascot = HousekeeperMascot.loadClutterCleaning() ?? HousekeeperMascot.loadMacCleaning() {
+                    Image(nsImage: cleaningMascot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 58, height: 58)
+                        .offset(y: pulseAura ? -3 : 2)
+                        .animation(HousekeepingMotion.breathe, value: pulseAura)
+                        .shadow(color: style.accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                } else {
+                    WorkingOctopus(size: 60, working: true)
+                        .shadow(color: style.accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                }
             }
             .frame(width: 72, height: 72)
 

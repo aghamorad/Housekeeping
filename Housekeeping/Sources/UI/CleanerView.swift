@@ -61,7 +61,13 @@ struct CleanerView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 14) {
+            if let clutterMascot = HousekeeperMascot.loadClutterCleaning() {
+                Image(nsImage: clutterMascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 44, height: 44)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text("Clean Up")
                     .font(style.titleFont)

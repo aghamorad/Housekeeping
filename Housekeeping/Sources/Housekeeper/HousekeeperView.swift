@@ -105,14 +105,18 @@ struct HousekeeperView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            // The same mark as the menu bar, at a size where the eyes read. It
-            // animates on its own clock rather than the app's, so opening the
-            // sheet does not restart the octopus in the menu bar.
-            TimelineView(.periodic(from: .now, by: 1.0 / 12)) { context in
-                OctopusMark(time: context.date.timeIntervalSinceReferenceDate)
-                    .frame(width: 34, height: 34)
+            if let mascot = HousekeeperMascot.loadMacCleaning() ?? HousekeeperMascot.loadOriginalMascot() {
+                Image(nsImage: mascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 38, height: 38)
+            } else {
+                TimelineView(.periodic(from: .now, by: 1.0 / 12)) { context in
+                    OctopusMark(time: context.date.timeIntervalSinceReferenceDate)
+                        .frame(width: 34, height: 34)
+                }
+                .frame(width: 34, height: 34)
             }
-            .frame(width: 34, height: 34)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("The Housekeeper")
@@ -519,8 +523,15 @@ private struct TurnRow: View {
         switch turn.speaker {
         case .housekeeper:
             HStack(alignment: .top, spacing: 10) {
-                OctopusMark()
-                    .frame(width: 22, height: 22)
+                if let mascot = HousekeeperMascot.loadMacCleaning() ?? HousekeeperMascot.loadOriginalMascot() {
+                    Image(nsImage: mascot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
+                } else {
+                    OctopusMark()
+                        .frame(width: 22, height: 22)
+                }
                 ThemePanel(padding: 10) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text((try? AttributedString(markdown: turn.text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(turn.text))

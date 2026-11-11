@@ -74,8 +74,15 @@ struct SelfUpdateView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            IconChip(systemImage: "arrow.triangle.2.circlepath", tint: style.accent, size: 38)
+        HStack(alignment: .top, spacing: 14) {
+            if let maintenanceMascot = HousekeeperMascot.loadMaintenance() {
+                Image(nsImage: maintenanceMascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 48, height: 48)
+            } else {
+                IconChip(systemImage: "arrow.triangle.2.circlepath", tint: style.accent, size: 38)
+            }
 
             VStack(alignment: .leading, spacing: 5) {
                 Text("Housekeeping, updated")

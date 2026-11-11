@@ -101,7 +101,7 @@ struct OverviewView: View {
 
     private var heroBanner: some View {
         HStack(spacing: 18) {
-            if let mascotImage = HousekeeperMascot.loadMascot() ?? loadBenignMonsterMascot() {
+            if let mascotImage = HousekeeperMascot.loadMacCleaning() ?? HousekeeperMascot.loadMascot() ?? loadBenignMonsterMascot() {
                 Image(nsImage: mascotImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)

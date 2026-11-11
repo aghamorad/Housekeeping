@@ -52,9 +52,19 @@ struct BackgroundActivityView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Background Activity").font(.system(size: 28, weight: .bold))
-                Text("Find the apps, widgets and helpers using your Mac. Decide what you still need by checking their purpose and current use.")
-                    .font(.system(size: 16)).foregroundStyle(.secondary)
+                HStack(alignment: .center, spacing: 16) {
+                    if let maintenanceMascot = HousekeeperMascot.loadMaintenance() {
+                        Image(nsImage: maintenanceMascot)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 52, height: 52)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Background Activity").font(.system(size: 28, weight: .bold))
+                        Text("Find the apps, widgets and helpers using your Mac. Decide what you still need by checking their purpose and current use.")
+                            .font(.system(size: 15)).foregroundStyle(.secondary)
+                    }
+                }
                 HStack {
                     Button(busy ? "Reading your Mac…" : "Refresh reading") { refresh() }.disabled(busy)
                     Button("Open Login Items") { openLoginItems() }

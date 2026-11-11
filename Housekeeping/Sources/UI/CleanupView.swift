@@ -31,9 +31,17 @@ struct CleanupView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Review Quarantine")
-                .font(style.titleFont)
-                .foregroundColor(style.text)
+            HStack(spacing: 12) {
+                if let clutterMascot = HousekeeperMascot.loadClutterCleaning() {
+                    Image(nsImage: clutterMascot)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 38, height: 38)
+                }
+                Text("Review Quarantine")
+                    .font(style.titleFont)
+                    .foregroundColor(style.text)
+            }
 
             ThemePanel(padding: 20) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -266,9 +274,17 @@ struct GuidedCleanupView: View {
 
     @ViewBuilder
     private func review(_ item: FoundItem) -> some View {
-        Text("Clean Up Unnecessary Stuff")
-            .font(style.titleFont)
-            .foregroundColor(style.text)
+        HStack(spacing: 12) {
+            if let clutterMascot = HousekeeperMascot.loadClutterCleaning() {
+                Image(nsImage: clutterMascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 38, height: 38)
+            }
+            Text("Clean Up Unnecessary Stuff")
+                .font(style.titleFont)
+                .foregroundColor(style.text)
+        }
 
         Text("Candidate \(currentIndex + 1) of \(items.count)")
             .font(style.smallFont)

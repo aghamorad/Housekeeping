@@ -325,7 +325,14 @@ struct RailButton: View {
     @ViewBuilder
     private var glyph: some View {
         if showsOctopus {
-            if budget.isTicking && onScreen {
+            if let mascot = HousekeeperMascot.loadMacCleaning() ?? HousekeeperMascot.loadOriginalMascot() {
+                Image(nsImage: mascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: diameter * 0.85, height: diameter * 0.85)
+                    .scaleEffect(hovering ? 1.08 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.65), value: hovering)
+            } else if budget.isTicking && onScreen {
                 TimelineView(.periodic(from: .now, by: 1.0 / 20)) { context in
                     mark(at: context.date.timeIntervalSinceReferenceDate)
                 }

@@ -244,29 +244,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     // MARK: - Drawing
 
     private func buildFrames() -> [NSImage] {
-        // Render 24 frames of the canonical vector silhouette with moving arms,
-        // waving tentacles, and natural breathing. The 2-second loop is exact
-        // (frequency = pi) so frame 24 seamlessly joins frame 0 without any seam.
-        // Each frame is an AppKit template image, dynamically tinted by macOS
-        // for light and dark menu bars. MotionBudget stops timer swaps when idle.
-        (0..<Self.frameCount).map { index in
-            let renderer = ImageRenderer(
-                content: OctopusMark(
-                    time: Double(index) * Self.frameInterval,
-                    color: .black,
-                    effort: 0.75,
-                    rendering: .singleColour
-                )
-                .frame(width: Self.markSize, height: Self.markSize)
-            )
-            renderer.scale = 2
-
-            let size = NSSize(width: Self.markSize, height: Self.markSize)
-            let image = renderer.nsImage ?? NSImage(size: size)
-            image.size = size
-            image.isTemplate = true
-            return image
+        // Loads the approved monochrome maid octopus menu bar icon from the new collection.
+        // Rendered as a native macOS AppKit template image with isTemplate = true, so macOS
+        // dynamically tints it for light and dark menu bars, selection states, and system accents.
+        if let template = HousekeeperMascot.loadMenuBarTemplate() {
+            template.size = NSSize(width: Self.markSize, height: Self.markSize)
+            template.isTemplate = true
+            return [template]
         }
+        return []
     }
 
     @objc private func advance() {

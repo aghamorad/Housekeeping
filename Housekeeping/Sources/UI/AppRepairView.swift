@@ -42,7 +42,13 @@ struct AppRepairView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .center, spacing: 14) {
+            if let maintenanceMascot = HousekeeperMascot.loadMaintenance() {
+                Image(nsImage: maintenanceMascot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 48, height: 48)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
                     Image(systemName: "bandage.fill")

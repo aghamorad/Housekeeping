@@ -142,7 +142,7 @@ struct MenuBarPanel: View {
             // the app put together. The mark in the menu bar still breathes, and so
             // does the one in the window; this one is the price the panel is not
             // going to pay.
-            if let mascot = HousekeeperMascot.loadMascot() {
+            if let mascot = HousekeeperMascot.loadMacCleaning() ?? HousekeeperMascot.loadMascot() {
                 Image(nsImage: mascot)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
