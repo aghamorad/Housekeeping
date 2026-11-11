@@ -39,6 +39,7 @@ extension AppState {
         updateStopRequested = false
         updateIsWorking = false
         updateIsReading = true
+        MotionBudget.shared.hold("update-read")
         updateReadDone = 0
         updateReadTotal = 0
 
@@ -98,13 +99,16 @@ extension AppState {
                 }
                 self.updateNotes = inventory.notes
                 self.updateIsReading = false
+                MotionBudget.shared.release("update-read")
                 self.updateRunner = nil
             } catch is CancellationError {
                 self.updateIsReading = false
+                MotionBudget.shared.release("update-read")
                 self.updateRunner = nil
             } catch {
                 self.updateNotes = ["The reading could not be finished: \(error.localizedDescription)"]
                 self.updateIsReading = false
+                MotionBudget.shared.release("update-read")
                 self.updateRunner = nil
             }
         }
@@ -121,6 +125,7 @@ extension AppState {
         updateRunner?.cancel()
         updateRunner = nil
         updateIsReading = false
+        MotionBudget.shared.release("update-read")
     }
 
     // MARK: - Turning what was found into rows
@@ -249,6 +254,7 @@ extension AppState {
         updateSummaryLine = nil
         updateStopRequested = false
         updateIsWorking = true
+        MotionBudget.shared.hold("update-work")
         updateRunDone = 0
         updateRunTotal = 1
         updateRunCurrent = row.name
@@ -298,6 +304,7 @@ extension AppState {
         updateSummaryLine = nil
         updateStopRequested = false
         updateIsWorking = true
+        MotionBudget.shared.hold("update-work")
         updateRunDone = 0
         updateRunTotal = targets.count
         updateRunCurrent = nil
@@ -358,6 +365,7 @@ extension AppState {
             updateSummaryLine = "\(succeeded) of \(outcomes.count) updated."
         }
         updateIsWorking = false
+        MotionBudget.shared.release("update-work")
         updateRunCurrent = nil
         updateRunner = nil
         // The list described the Mac as it was before the updates. It is read

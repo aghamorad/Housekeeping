@@ -80,7 +80,7 @@ struct OctopusMark: View {
                 } else {
                     // Behind everything: the eight tentacles, which pass behind the
                     // dress and behind her arms.
-                    SideTentacles().stroke(
+                    SideTentacles(time: time, effort: effort).stroke(
                         color,
                         style: StrokeStyle(
                             lineWidth: OctopusMark.sideTentacleWidth * ink,
@@ -220,15 +220,13 @@ func rotationAbout(_ point: CGPoint, degrees: Double) -> CGAffineTransform {
 
 /// How far an arm has swung from hanging still, in degrees.
 ///
-/// The two arms are half a cycle apart — one leads, one follows — which is the
-/// difference between waving and marching. That falls out of the sign alone, so the
-/// phase is deliberately absent: adding one on this side *and* a signed multiplier
-/// cancels, and both arms then swim together. At rest she only drifts a couple of
-/// degrees, enough to be alive on screen without looking agitated, and when she is
-/// working it opens out.
+/// The rate matches the 2.0-second loop (24 frames at 12 fps in the status bar)
+/// so the motion is completely seamless without any jump at the loop boundary.
+/// The swing amplitude is tuned so it is clearly and charmingly visible even at 18 pt.
 func armSwing(_ side: CGFloat, time: Double, effort: Double) -> Double {
-    let rate = 1.5 * (1 + 1.2 * effort)
-    return side * sin(time * rate) * (2 + 13 * effort)
+    let rate = Double.pi
+    let amplitude = 14.0 + 14.0 * effort
+    return side * sin(time * rate) * amplitude
 }
 
 /// Where an arm is pinned to her body. Both arms share it, mirrored.
@@ -496,6 +494,9 @@ func addCurl(_ path: inout Path, in l: OctopusLayout,
 /// dress, sweeps away and hooks back on itself; the gap the hook leaves is what tells
 /// the eye it is a curl rather than a lump.
 struct SideTentacles: Shape {
+    var time: Double = 0
+    var effort: Double = 0
+
     /// Where each curl's centre sits, and how tightly it coils.
     ///
     /// A radius of forty-two against a stroke of forty-eight puts the coil's outer edge
@@ -516,25 +517,42 @@ struct SideTentacles: Shape {
         let l = OctopusLayout(rect)
         var half = Path()
 
+        let loopPhase = time * Double.pi
+        let wave0 = sin(loopPhase) * (14.0 + 16.0 * effort)
+        let wave1 = sin(loopPhase + 1.2) * (18.0 + 20.0 * effort)
+        let wave2 = sin(loopPhase + 2.4) * (14.0 + 16.0 * effort)
+
         // The three arms, top to bottom. Each rises from behind her dress and arrives
         // at its curl travelling straight up, which is the tangent a zero-degree
         // entry takes when the sweep runs backwards. That is the whole reason the
         // sweep is negative: it is what makes the arm hang off the outside of the
         // coil instead of lying across it.
         half.move(to: l.p(520, 640))
-        half.addCurve(to: l.p(398, 503), control1: l.p(466, 600), control2: l.p(410, 559))
+        half.addCurve(
+            to: l.p(398 + CGFloat(sin(loopPhase) * 8 * effort), 503),
+            control1: l.p(466, 600),
+            control2: l.p(410, 559)
+        )
         addCurl(&half, in: l, centre: Self.curls[0].centre, radius: Self.curls[0].radius,
-                from: 0, sweep: Self.curls[0].sweep)
+                from: 0, sweep: Self.curls[0].sweep + wave0)
 
         half.move(to: l.p(540, 790))
-        half.addCurve(to: l.p(318, 685), control1: l.p(470, 775), control2: l.p(330, 743))
+        half.addCurve(
+            to: l.p(318 + CGFloat(sin(loopPhase + 1.2) * 10 * effort), 685),
+            control1: l.p(470, 775),
+            control2: l.p(330, 743)
+        )
         addCurl(&half, in: l, centre: Self.curls[1].centre, radius: Self.curls[1].radius,
-                from: 0, sweep: Self.curls[1].sweep)
+                from: 0, sweep: Self.curls[1].sweep + wave1)
 
         half.move(to: l.p(566, 950))
-        half.addCurve(to: l.p(425, 876), control1: l.p(500, 940), control2: l.p(437, 932))
+        half.addCurve(
+            to: l.p(425 + CGFloat(sin(loopPhase + 2.4) * 8 * effort), 876),
+            control1: l.p(500, 940),
+            control2: l.p(437, 932)
+        )
         addCurl(&half, in: l, centre: Self.curls[2].centre, radius: Self.curls[2].radius,
-                from: 0, sweep: Self.curls[2].sweep)
+                from: 0, sweep: Self.curls[2].sweep + wave2)
 
         var p = half
         p.addPath(half, transform: l.mirror)
@@ -625,8 +643,8 @@ struct OctopusSilhouette: Shape {
                 .cgPath
         }
 
-        var solid = stroked(SideTentacles(), width: OctopusMark.sideTentacleWidth)
-        solid = union(solid, stroked(SideTentacles(), width: OctopusMark.sideTentacleWidth, l.mirror))
+        var solid = stroked(SideTentacles(time: time, effort: effort), width: OctopusMark.sideTentacleWidth)
+        solid = union(solid, stroked(SideTentacles(time: time, effort: effort), width: OctopusMark.sideTentacleWidth, l.mirror))
         solid = union(solid, stroked(LegTentacles(), width: OctopusMark.legWidth))
         solid = union(solid, filled(OctopusFeet()))
 

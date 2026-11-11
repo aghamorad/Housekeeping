@@ -90,6 +90,7 @@ final class UninstallerModel: ObservableObject {
     func startScan() {
         guard !isScanning, !isWorking else { return }
         isScanning = true
+        MotionBudget.shared.hold("uninstaller-scan")
         scanNotice = nil
         scanProgress = "Discovering applications…"
         let token = UUID()
@@ -116,6 +117,7 @@ final class UninstallerModel: ObservableObject {
             self.isScanning = false
             self.scanWorker = nil
             self.scanProgress = ""
+            MotionBudget.shared.release("uninstaller-scan")
         }
     }
 
@@ -126,6 +128,7 @@ final class UninstallerModel: ObservableObject {
         scanWorker = nil
         isScanning = false
         scanProgress = ""
+        MotionBudget.shared.release("uninstaller-scan")
         scanNotice = "Scan stopped. Existing complete results are still shown; click Refresh to start again."
     }
 
@@ -199,6 +202,20 @@ final class UninstallerModel: ObservableObject {
         selectionNotice = nil
         clearedSelectionCount = 0
         selectedAppURLs.removeAll()
+    }
+
+    /// One-tap Smart Select for apps with leftover residue (Mole & Purge style).
+    /// Selects all applications that have associated leftover files in ~/Library and marks their leftovers for quarantine.
+    func selectAppsWithLeftovers() {
+        guard !isWorking && !isScanning else { return }
+        selectionNotice = nil
+        clearedSelectionCount = 0
+        filterOption = .withLeftovers
+        for app in apps where !app.leftovers.isEmpty {
+            selectedAppURLs.insert(app.url)
+            setRelatedFiles(app, included: true)
+            expandedAppURLs.insert(app.url)
+        }
     }
 
     var selectedTotalSize: Int64 {
@@ -276,6 +293,7 @@ final class UninstallerModel: ObservableObject {
         })
         pendingUninstallPlan = nil
         isWorking = true
+        MotionBudget.shared.hold("uninstaller-work")
         outcome = nil
         session = UninstallSession(apps: targets)
         let skipped = failures
@@ -299,6 +317,7 @@ final class UninstallerModel: ObservableObject {
                 self?.session?.finish(error: error.localizedDescription)
             }
             self?.isWorking = false
+            MotionBudget.shared.release("uninstaller-work")
             self?.startScan()
         }
     }
@@ -527,6 +546,25 @@ struct UninstallerModernView: View {
 
             // Quick select all / deselect all
             HStack(spacing: 8) {
+                if model.appsWithLeftoversCount > 0 {
+                    Button {
+                        model.selectAppsWithLeftovers()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "sparkles")
+                            Text("Smart Select Leftovers (\(model.appsWithLeftoversCount))")
+                        }
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(style.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(style.accent.opacity(0.35), lineWidth: 1))
+                        .foregroundStyle(style.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Select all apps with leftover files in ~/Library and prepare them for clean removal")
+                }
+
                 Button {
                     model.selectAllFiltered()
                 } label: {
@@ -957,20 +995,14 @@ struct UninstallerModernView: View {
     // MARK: - Scanning & Empty Views
 
     private var scanningView: some View {
-        HStack(spacing: 12) {
-            TaskProgressCue(
-                title: "Finding installed apps",
-                detail: model.scanProgress.isEmpty
-                    ? "Reading apps and related folders. No files are changed."
-                    : model.scanProgress,
-                symbol: "app.badge.magnifyingglass"
-            )
-            ThemeButton(title: "Stop Scan", systemImage: "stop.circle",
-                        help: "Cancel this read without changing apps or related files.") {
-                model.stopScan()
-            }
-        }
-        .padding(12)
+        HousekeeperScanningBanner(
+            title: "Housekeeper is finding installed apps & leftovers…",
+            subtitle: "Reading applications and associated files safely. No files are changed.",
+            currentItem: model.scanProgress.isEmpty ? nil : model.scanProgress,
+            stepCount: model.apps.isEmpty ? nil : "\(model.apps.count) found",
+            onStop: { model.stopScan() }
+        )
+        .padding(.vertical, 8)
     }
 
     private var emptyView: some View {

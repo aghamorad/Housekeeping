@@ -1,3 +1,11 @@
+## 0.28.3 — Mini-animated menu bar octopus, scanning mascot banner & smart select
+
+- Mini-animated menu bar octopus: 24-frame vector rendered sequence with lively 14-28° arm swings and curling tentacles; maintains 0.0% zero-idle-drain when idle.
+- In-app animated scanning banner featuring the Housekeeper octopus mascot across Clean Up, App Uninstaller, and Updater with live path discovery and safety guarantees.
+- Mole & Purge-style 1-click Smart Select: "Smart Select Safe Junk" in Clean Up and "Smart Select Leftovers" in App Uninstaller.
+- Updated high-resolution AppIcon.icns and AppIcon.png rendered directly from Codex's unmasked mascot composition.
+- Version 0.28.3 (55).
+
 ## 0.28.2 — Codex's canonical octopus menu-bar icon
 
 - Integrates the canonical maid-octopus menu-bar mask from Codex's PR #1: exact silhouette,

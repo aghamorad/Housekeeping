@@ -76,6 +76,7 @@ final class CleanerModel: ObservableObject {
 
     func scan() {
         guard phase != .scanning, phase != .working else { return }
+        MotionBudget.shared.hold("cleaner-scan")
         phase = .scanning
         workProgress = nil
         wasStopped = false
@@ -122,6 +123,7 @@ final class CleanerModel: ObservableObject {
 
     func stopScan() {
         guard phase == .scanning else { return }
+        MotionBudget.shared.release("cleaner-scan")
         scanWorker?.cancel()
         scanWorker = nil
         scanID = UUID()
@@ -139,6 +141,7 @@ final class CleanerModel: ObservableObject {
     }
 
     private func apply(_ snapshot: CleanerSnapshot) {
+        MotionBudget.shared.release("cleaner-scan")
         candidates = snapshot.candidates
         apps = snapshot.apps
         includedRelatedPaths = defaultRelatedPaths(snapshot.apps)
@@ -203,6 +206,20 @@ final class CleanerModel: ObservableObject {
     func clearSelection() {
         guard phase == .ready else { return }
         for index in candidates.indices { candidates[index].isSelected = false }
+    }
+
+    /// One-tap Smart Select for safe, rebuildable caches (Mole & Purge style).
+    /// Harmless application caches and temporary residue are selected with one click.
+    func selectSafeCaches() {
+        guard phase == .ready else { return }
+        for index in candidates.indices {
+            let item = candidates[index]
+            if (item.category == .everydayJunk || item.category == .orphans) && !ProtectionList().isProtected(item.url) {
+                candidates[index].isSelected = true
+            } else {
+                candidates[index].isSelected = false
+            }
+        }
     }
 
     func total(in category: CleanCategory) -> Int64 {
@@ -419,6 +436,7 @@ final class CleanerModel: ObservableObject {
         confirmationText = ""
         confirmationHint = nil
         phase = .working
+        MotionBudget.shared.hold("cleaner-work")
         workProgress = UninstallProgress(phase: .preparing, total: pendingPaths.count)
 
         switch action {
@@ -517,6 +535,7 @@ final class CleanerModel: ObservableObject {
         }
         outcome = sentence
         workProgress = nil
+        MotionBudget.shared.release("cleaner-work")
         phase = .ready
     }
 
@@ -534,6 +553,7 @@ final class CleanerModel: ObservableObject {
                 self?.outcome = "Emptied what it could: \(result.removedCount) item\(result.removedCount == 1 ? "" : "s"), \(result.removedBytes.sizeDescription) freed. \(result.failures.count) could not be removed."
             }
             self?.workProgress = nil
+            MotionBudget.shared.release("cleaner-work")
             self?.phase = .ready
         }
     }
@@ -542,6 +562,7 @@ final class CleanerModel: ObservableObject {
         failures = [error.localizedDescription]
         outcome = "Removal stopped. Review Quarantine for any items already moved before trying again."
         workProgress = nil
+        MotionBudget.shared.release("cleaner-work")
         phase = .ready
     }
 }

@@ -244,46 +244,21 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     // MARK: - Drawing
 
     private func buildFrames() -> [NSImage] {
-        if let templateIcon = HousekeeperMascot.loadMenuBarTemplate() {
-            // Preserve the canonical silhouette. Tiny scaling and bobbing give it
-            // a breath without substituting the fallback drawing. Frames are
-            // cached once and MotionBudget stops swaps when nobody is looking.
-            return (0..<Self.frameCount).map { index in
-                let phase = Double(index) * 2 * Double.pi / Double(Self.frameCount)
-                let breath = CGFloat(0.987 + 0.013 * (1 + sin(phase)) / 2)
-                let bob = CGFloat(0.22 * sin(phase))
-                let renderer = ImageRenderer(
-                    content: Image(nsImage: templateIcon)
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: Self.markSize, height: Self.markSize)
-                        .scaleEffect(breath)
-                        .offset(y: bob)
-                        .frame(width: Self.markSize, height: Self.markSize)
-                )
-                renderer.scale = 2
-                let image = renderer.nsImage ?? templateIcon
-                image.size = NSSize(width: Self.markSize, height: Self.markSize)
-                image.isTemplate = true
-                return image
-            }
-        }
-
-        return (0..<Self.frameCount).map { index in
+        // Render 24 frames of the canonical vector silhouette with moving arms,
+        // waving tentacles, and natural breathing. The 2-second loop is exact
+        // (frequency = pi) so frame 24 seamlessly joins frame 0 without any seam.
+        // Each frame is an AppKit template image, dynamically tinted by macOS
+        // for light and dark menu bars. MotionBudget stops timer swaps when idle.
+        (0..<Self.frameCount).map { index in
             let renderer = ImageRenderer(
                 content: OctopusMark(
                     time: Double(index) * Self.frameInterval,
                     color: .black,
-                    // The menu bar gets a template image — one tint, decided by
-                    // whether the bar is light or dark. Anything drawn in a second
-                    // colour would come out as the first, so she is handed over as
-                    // a cut-paper silhouette instead.
+                    effort: 0.75,
                     rendering: .singleColour
                 )
                 .frame(width: Self.markSize, height: Self.markSize)
             )
-            // Two, so the mark is sharp on every Mac this app runs on. The renderer
-            // carries the scale; the status item picks the right representation.
             renderer.scale = 2
 
             let size = NSSize(width: Self.markSize, height: Self.markSize)

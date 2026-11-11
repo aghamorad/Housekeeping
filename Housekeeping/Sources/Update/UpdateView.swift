@@ -541,34 +541,27 @@ struct UpdateView: View {
     // MARK: - Progress & Outcomes
 
     private var runProgressBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ProgressBar(
-                fraction: Double(appState.updateRunDone) / Double(max(appState.updateRunTotal, 1)),
-                caption: "\(appState.updateRunDone) of \(appState.updateRunTotal) Updated",
-                detail: appState.updateRunCurrent.map { "Installing \($0)… Privileged commands prompt automatically via macOS authorization." },
-                height: 8
-            )
-        }
-        .padding(16)
-        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
+        HousekeeperScanningBanner(
+            title: "Housekeeper is installing updates…",
+            subtitle: "Applying updates safely. Privileged operations prompt via standard macOS authorization.",
+            currentItem: appState.updateRunCurrent.map { "Installing \($0)…" } ?? "Applying package updates…",
+            stepCount: "\(appState.updateRunDone) of \(appState.updateRunTotal)",
+            progressFraction: Double(appState.updateRunDone) / Double(max(appState.updateRunTotal, 1)),
+            onStop: { appState.cancelUpdateWork() }
+        )
+        .padding(.vertical, 4)
     }
 
     private var readingState: some View {
-        HStack(spacing: 14) {
-            ProgressView().controlSize(.small)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(appState.updateReadTotal > 0
-                     ? "Checking \(appState.updateReadDone) of \(appState.updateReadTotal) packages…"
-                     : "Querying installed package feeds…")
-                    .font(.system(size: 13, weight: .medium))
-                Text("Reading Homebrew and application version tags asynchronously.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 12))
+        HousekeeperScanningBanner(
+            title: "Housekeeper is checking for app & package updates…",
+            subtitle: "Querying Homebrew bottles, Mac App Store apps, and release feeds safely.",
+            currentItem: appState.updateReadDone > 0 ? "Checking package \(appState.updateReadDone) of \(appState.updateReadTotal)" : "Querying package repositories…",
+            stepCount: appState.updateReadTotal > 0 ? "\(appState.updateReadDone)/\(appState.updateReadTotal)" : nil,
+            progressFraction: appState.updateReadTotal > 0 ? Double(appState.updateReadDone) / Double(appState.updateReadTotal) : nil,
+            onStop: { appState.cancelUpdateWork() }
+        )
+        .padding(.vertical, 4)
     }
 
     private var outcomesPanel: some View {

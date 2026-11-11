@@ -100,30 +100,26 @@ struct CleanerView: View {
 
 
     private var scanProgress: some View {
-        HStack(spacing: 12) {
-            TaskProgressCue(
-                title: "Looking through the Mac",
-                detail: model.progressLine + " · Nothing is being moved.",
-                symbol: "magnifyingglass",
-                completed: model.completedCategories.count,
-                total: CleanCategory.allCases.count
-            )
-            ThemeButton(title: "Stop Scan", systemImage: "stop.fill",
-                        help: "Stop reading; results from categories already checked stay visible.") {
-                model.stopScan()
-            }
-        }
+        HousekeeperScanningBanner(
+            title: "Housekeeper is sweeping through your Mac…",
+            subtitle: "Reading caches, temporary files, logs and developer residue.",
+            currentItem: model.progressLine.isEmpty ? nil : model.progressLine,
+            stepCount: "\(model.completedCategories.count) of \(CleanCategory.allCases.count) categories",
+            progressFraction: Double(model.completedCategories.count) / Double(max(CleanCategory.allCases.count, 1)),
+            onStop: { model.stopScan() }
+        )
     }
 
     private var activeCleanupProgress: some View {
         let progress = model.workProgress
         let current = progress?.path.map { URL(fileURLWithPath: $0).lastPathComponent }
-        return TaskProgressCue(
-            title: model.category == .trash ? "Emptying the Trash" : "Moving your selected items to Quarantine",
-            detail: current.map { "Checking: " + $0 } ?? "Each item is recorded before it moves. Do not quit while this is running.",
-            symbol: "archivebox",
-            completed: progress?.completed,
-            total: progress?.total
+        return HousekeeperScanningBanner(
+            title: model.category == .trash ? "Emptying the Trash…" : "Safely moving selected items to Quarantine…",
+            subtitle: "Every item is recorded before it moves. Safe Quarantine keeps backups for 30 days.",
+            currentItem: current.map { "Checking: " + $0 },
+            stepCount: progress.map { "\($0.completed) of \($0.total)" },
+            progressFraction: progress.map { Double($0.completed) / Double(max($0.total, 1)) },
+            onStop: nil
         )
     }
 
@@ -136,6 +132,27 @@ struct CleanerView: View {
             if !model.query.isEmpty {
                 Button("Clear Search") { model.query = "" }
             }
+
+            if model.phase == .ready && (model.count(in: .everydayJunk) > 0 || model.count(in: .orphans) > 0) {
+                let safeTotal = model.total(in: .everydayJunk) + model.total(in: .orphans)
+                Button {
+                    model.selectSafeCaches()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "sparkles")
+                        Text("Smart Select Safe Junk (\(safeTotal.sizeDescription))")
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(style.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(style.accent.opacity(0.35), lineWidth: 1))
+                    .foregroundStyle(style.accent)
+                }
+                .buttonStyle(.plain)
+                .help("Select all harmless, rebuildable caches with one click (Purge & Mole style).")
+            }
+
             Picker("Sort", selection: $model.order) {
                 ForEach(FileOrder.allCases) { order in
                     Text(order.shortLabel).tag(order).help(order.rawValue)

@@ -42,6 +42,7 @@ mkdir -p "$BUILD_DIR/ModuleCache"
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/CleanupModels.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleanup/SafeCleanupEngine.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerModels.swift" \
+  "$ROOT_DIR/Housekeeping/Sources/UI/Motion.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerModel.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/CleanerScanner.swift" \
   "$ROOT_DIR/Housekeeping/Sources/Cleaner/Uninstaller.swift" \
