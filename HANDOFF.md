@@ -1,3 +1,25 @@
+## 2026-11-11 — Housekeeping 0.28.6 (58) SHIPPED: Approved Octopus Mascot Collection & Monochrome Menu Bar Template
+
+Tag `v0.28.6` on `22dc9b0`; commit pushed to `origin/main` and tag `v0.28.6` pushed to `aghamorad/Housekeeping`.
+Universal bundle packaged (x86_64 and arm64, 52 universal Mach-O binaries, codesign verified).
+Installed and verified running at `/Applications/Housekeeping.app` (0.0% CPU parked).
+Noob's guide delivered to `~/Desktop/Housekeeping — a noob's guide.md`.
+
+What went into it:
+- Official Housekeeper Octopus Icon Collection integrated across all application screens:
+  - Menu Bar: monochrome maid template icon (maid bonnet, round cut-out eyes, curled tentacles, sparkles) with native isTemplate dynamic light/dark tinting and optical padding (18x18pt / 36x36px @2x, 54x54px @3x, multi-res TIFF).
+  - Main Dashboard (`OverviewView`): Mac cleaning octopus (MacBook + feather duster + spray bottle).
+  - Clean Up (`CleanerView`, `CleanupView`): Clutter-cleaning octopus (black rubbish bag with trash symbol).
+  - Background Activity (`BackgroundActivityView`): System maintenance octopus (computer components, gear, broom).
+  - Cooling & Fans (`FanControlView`): Vacuuming octopus beside functional hardware fan controls.
+  - App Updates & Utilities (`SelfUpdateView`, `AppRepairView`): System maintenance octopus.
+  - About Housekeeper (`SettingsView`): Original transparent housekeeper mascot (`mascot.png`).
+  - Menu Bar Popover Header (`MenuBarPanel`): Compact Mac cleaning octopus.
+  - Scanning Banner (`HousekeeperScanningBanner`): Animated floating mascot with reassuring breathing aura.
+- Preserved official full-colour squircle macOS application icon (`AppIcon.icns`).
+- Embedded base64 canonical template into `HousekeeperMascot.swift` for instant zero-IO rendering.
+- Passed typecheck with -warnings-as-errors and all 375 safety test assertions.
+
 ## 2026-11-10 — Housekeeping 0.28.2 (54) SHIPPED: Codex's canonical octopus in the menu bar
 
 Published latest stable: https://github.com/aghamorad/Housekeeping/releases/tag/v0.28.2
