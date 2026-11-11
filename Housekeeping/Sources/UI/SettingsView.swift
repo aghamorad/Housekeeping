@@ -173,7 +173,7 @@ struct SettingsView: View {
                             .frame(width: 50, height: 50)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Housekeeping")
+                        Text("Housekeeper")
                             .font(.system(size: 16, weight: .bold))
                         Text("Made by Morad · Benign Monster Works")
                             .font(.system(size: 12))
@@ -182,7 +182,7 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 4)
 
-                LabeledContent("App", value: "Housekeeping")
+                LabeledContent("App", value: "Housekeeper")
                 LabeledContent("Version", value: AppState.currentVersion.isEmpty ? "Unknown" : AppState.currentVersion)
                 updateRow
                 LabeledContent("Apps it knows", value: "\(RuleEngine.shared.applications.count)")

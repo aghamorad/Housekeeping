@@ -71,7 +71,7 @@ struct ContentView: View {
 
         Group {
             if let workspace = appState.workspace {
-                ScreenChrome(title: "Housekeeping") {
+                ScreenChrome(title: "Housekeeper") {
                     sheetBody(workspace)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -1183,7 +1183,7 @@ private struct SummaryScreen: View {
     }
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Done") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Done") {
             if style.isRetro {
                 retroBody
             } else {
@@ -1371,11 +1371,11 @@ private struct WelcomeScreen: View {
     /// start it, what it will look at. Classic 9 keeps the left-aligned column it
     /// has always had, because a Platinum window does not centre its type.
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Overview") { OverviewView() }
+        ScreenChrome(title: "Housekeeper", subtitle: "Overview") { OverviewView() }
     }
 
     private var legacyBody: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Safety-first cleanup") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Safety-first cleanup") {
             ScrollView {
                 VStack(alignment: style.isRetro ? .leading : .center, spacing: 16) {
                     masthead
@@ -1406,7 +1406,7 @@ private struct WelcomeScreen: View {
             // untouched screen would claim work that has not started.
             WorkingOctopus(size: style.isRetro ? 60 : 68, working: false)
                 .padding(.bottom, 2)
-            Text("Housekeeping")
+            Text("Housekeeper")
                 .font(style.titleFont)
                 .foregroundStyle(style.text)
             Text("Finds the storage your Mac is holding on to, explains what each thing actually is, and moves nothing until you say so.")
@@ -1739,7 +1739,7 @@ private struct ScanningScreen: View {
     private var progress: Float { appState.scanProgress.progressValue }
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Scanning") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Scanning") {
             if style.isRetro {
                 retroBody
             } else {
@@ -1941,7 +1941,7 @@ private struct ResultsScreen: View {
     private var totalSize: Int64 { allItems.reduce(0) { $0 + $1.size } }
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Findings") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Findings") {
             VStack(spacing: 0) {
                 header
                 Rectangle().fill(style.border.opacity(0.5)).frame(height: 1)
@@ -2841,7 +2841,7 @@ private struct ConfirmScreen: View {
     private var wasChosenByHand: Bool { !ticked.isEmpty }
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Before anything moves") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Before anything moves") {
             VStack(spacing: 0) {
                 if let receipt = appState.lastCleanupReceipt {
                     CleanupReceiptBanner(receipt: receipt)
@@ -3038,7 +3038,7 @@ private struct ErrorScreen: View {
     @Environment(\.uiStyle) private var style
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Problem") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Problem") {
             VStack(alignment: .leading, spacing: 14) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 32))

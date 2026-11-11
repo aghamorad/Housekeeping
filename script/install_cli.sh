@@ -48,24 +48,32 @@ set -euo pipefail
 # somewhere unusual.
 if [[ -n "${HOUSEKEEPING_APP:-}" ]]; then
   candidate="$HOUSEKEEPING_APP"
-  [[ -x "$candidate/Contents/MacOS/Housekeeping" ]] || {
-    echo "housekeeping: there is no app at $candidate" >&2
-    exit 1
-  }
-  exec "$candidate/Contents/MacOS/Housekeeping" "$@"
+  for bin in "$candidate/Contents/MacOS/Housekeeper" "$candidate/Contents/MacOS/Housekeeping"; do
+    if [[ -x "$bin" ]]; then exec "$bin" "$@"; fi
+  done
+  echo "housekeeping: there is no app at $candidate" >&2
+  exit 1
 fi
 
 BEST=""
 BEST_TIME=-1
 for candidate in \
+  "/Applications/Housekeeper.app" \
   "/Applications/Housekeeping.app" \
+  "$HOME/Applications/Housekeeper.app" \
   "$HOME/Applications/Housekeeping.app" \
+  "$HOME/Downloads/Housekeeper.app" \
   "$HOME/Downloads/Housekeeping.app" \
+  "@REPO_ROOT@/dist/Housekeeper.app" \
   "@REPO_ROOT@/dist/Housekeeping.app" \
+  "@REPO_ROOT@/.build/DerivedData/Build/Products/Debug/Housekeeper.app" \
   "@REPO_ROOT@/.build/DerivedData/Build/Products/Debug/Housekeeping.app"
 do
-  binary="$candidate/Contents/MacOS/Housekeeping"
-  [[ -x "$binary" ]] || continue
+  binary=""
+  for b in "$candidate/Contents/MacOS/Housekeeper" "$candidate/Contents/MacOS/Housekeeping"; do
+    if [[ -x "$b" ]]; then binary="$b"; break; fi
+  done
+  [[ -n "$binary" ]] || continue
   stamp="$(stat -f %m "$binary" 2>/dev/null || echo 0)"
   if (( stamp > BEST_TIME )); then
     BEST_TIME=$stamp

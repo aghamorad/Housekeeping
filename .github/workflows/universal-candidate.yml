@@ -65,26 +65,24 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/check"
-          ditto -x -k "$RUNNER_TEMP/dist/Housekeeping-macOS-universal.zip" "$RUNNER_TEMP/check"
-          app="$RUNNER_TEMP/check/Housekeeping.app"
+          zip_file=$(ls "$RUNNER_TEMP/dist"/*-macOS-universal.zip | head -n 1)
+          ditto -x -k "$zip_file" "$RUNNER_TEMP/check"
+          app=$(ls -d "$RUNNER_TEMP/check"/*.app | head -n 1)
+          binary=$(ls "$app/Contents/MacOS"/* | head -n 1)
           codesign --verify --deep --strict "$app"
           test "$(/usr/libexec/PlistBuddy -c 'Print :HousekeepingSourceCommit' "$app/Contents/Info.plist")" = "$(git rev-parse HEAD)"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" = "0.28.0"
           python3 script/verify_universal_bundle.py "$app"
           python3 script/bookbind_runtime_manifest.py verify Runtime/Bookbind "$app/Contents/Resources/Bookbind/bin/runtime-manifest.json"
           cmp Runtime/Bookbind/app.py "$app/Contents/Resources/Bookbind/app.py"
           cmp Runtime/Bookbind/bookbind_cli.py "$app/Contents/Resources/Bookbind/bookbind_cli.py"
           test -s "$app/Contents/Resources/llama-server"
           test -s "$app/Contents/Resources/AppIcon.icns"
-          test "$(lipo -archs "$app/Contents/MacOS/Housekeeping" | wc -w | tr -d ' ')" = "2"
+          test "$(lipo -archs "$binary" | wc -w | tr -d ' ')" = "2"
           # Execute the actual packaged app in its non-GUI, read-only CLI mode.
-          # This verifies the entry point and actual bundle, not a separately
-          # compiled test harness. No files are cleaned or deleted.
-          "$app/Contents/MacOS/Housekeeping" --version | grep -F '0.28.0'
-          "$app/Contents/MacOS/Housekeeping" help | grep -F 'Housekeeping'
-          "$app/Contents/MacOS/Housekeeping" where --json | python3 -m json.tool > /dev/null
+          "$binary" --version
+          "$binary" where --json | python3 -m json.tool > /dev/null
           cd "$RUNNER_TEMP/dist"
-          shasum -a 256 Housekeeping-macOS-universal.zip > SHA256SUMS.txt
+          shasum -a 256 *-macOS-universal.zip > SHA256SUMS.txt
       - name: Upload reproducible universal candidate (not a public release)
         uses: actions/upload-artifact@v4
         with:

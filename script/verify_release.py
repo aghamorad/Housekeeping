@@ -35,7 +35,7 @@ def sha(path):
 
 
 run('/usr/bin/ditto', '-x', '-k', archive, checks)
-app = checks / 'Housekeeping.app'
+app = checks / 'Housekeeper.app' if (checks / 'Housekeeper.app').exists() else checks / 'Housekeeping.app'
 info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
 source_info = plistlib.loads((root / 'Housekeeping/Info.plist').read_bytes())
 commit = run('git', '-C', root, 'rev-parse', tag + '^{commit}')
@@ -64,8 +64,9 @@ assert manifest['source_files'] == source_files(root / 'Runtime/Bookbind'), 'Sta
 for name, checksum in manifest['source_files'].items():
     assert sha(engine_root / name) == checksum, f'Wrong bundled source: {name}'
 versions = {}
+binary = (app / 'Contents/MacOS/Housekeeper') if (app / 'Contents/MacOS/Housekeeper').exists() else (app / 'Contents/MacOS/Housekeeping')
 for architecture in ['arm64', 'x86_64']:
-    version = run('/usr/bin/arch', '-' + architecture, app / 'Contents/MacOS/Housekeeping', '--version')
+    version = run('/usr/bin/arch', '-' + architecture, binary, '--version')
     assert info['CFBundleShortVersionString'] in version and info['CFBundleVersion'] in version, version
     versions[architecture] = version
 run(sys.executable, root / 'script/test_bookbind_runtime.py', engine_root / 'bin', checks / 'audio-fixtures', timeout=240)

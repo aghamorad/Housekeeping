@@ -220,7 +220,8 @@ final class SelfUpdateEngine {
             currentDirectory: tree,
             timeout: 1800
         )
-        let newBundle = staging.appendingPathComponent("Housekeeping.app")
+        let housekeeperCandidate = staging.appendingPathComponent("Housekeeper.app")
+        let newBundle = FileManager.default.fileExists(atPath: housekeeperCandidate.path) ? housekeeperCandidate : staging.appendingPathComponent("Housekeeping.app")
         guard built.succeeded else {
             throw SelfUpdateFailure.commandFailed(step: .build, message: message(from: built))
         }
@@ -229,7 +230,9 @@ final class SelfUpdateEngine {
         // 5. Verify before anything is believed about it. A copy that is not
         //    signed, or has no executable inside, is not a copy worth swapping in.
         progress(.verify, .running)
-        guard FileManager.default.fileExists(atPath: newBundle.appendingPathComponent("Contents/MacOS/Housekeeping").path) else {
+        let hasExecutable = FileManager.default.fileExists(atPath: newBundle.appendingPathComponent("Contents/MacOS/Housekeeper").path)
+            || FileManager.default.fileExists(atPath: newBundle.appendingPathComponent("Contents/MacOS/Housekeeping").path)
+        guard hasExecutable else {
             throw SelfUpdateFailure.buildProducedNothing(path: newBundle.path)
         }
         let verified = try await runner.run(

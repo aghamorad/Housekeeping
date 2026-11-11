@@ -44,14 +44,14 @@ struct HousekeepingApp: App {
             // "Housekeeping Help" is the stock item, and with no help book behind
             // it it is a menu entry that does nothing. These three do something.
             CommandGroup(replacing: .help) {
-                Button("How Housekeeping Works") {
-                    if let url = URL(string: "https://github.com/aghamorad/Housekeeping#readme") {
+                Button("How Housekeeper Works") {
+                    if let url = URL(string: "https://github.com/aghamorad/Housekeeper#readme") {
                         NSWorkspace.shared.open(url)
                     }
                 }
 
                 Button("Report a Problem or Ask a Question") {
-                    if let url = URL(string: "https://github.com/aghamorad/Housekeeping/issues/new") {
+                    if let url = URL(string: "https://github.com/aghamorad/Housekeeper/issues/new") {
                         NSWorkspace.shared.open(url)
                     }
                 }

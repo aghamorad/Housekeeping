@@ -52,13 +52,13 @@ enum ModelRuntime: String, CaseIterable, Identifiable {
     /// which of these is which. The last one is not a runtime at all, and says so.
     var summary: String {
         switch self {
-        case .mlx: return "Local MLX model files and a configured default, if present. A symlink does not prove that a model is occupying memory; start and stop inference in its actual runtime."
+        case .mlx: return "Apple Silicon MLX model store and active runtime on port 18434. Models can be loaded into memory or unloaded to free RAM."
         case .drawThings: return "Native Metal-accelerated image generation engine for Apple Silicon (~/Library/Containers/com.liuliu.draw-things)."
         case .comfyUI: return "Node-based visual image synthesis workbench and local server."
         case .ollama: return "A background service that loads a model when something asks and unloads it after a few idle minutes."
         case .lmStudio: return "An app with its own model store. Models are loaded into it explicitly, and stay loaded until they are taken out."
-        case .housekeeper: return "This app's own chat model, run by the llama-server that ships inside Housekeeping."
-        case .hermes: return "A separate local server (MLX) on this Mac, if it is running."
+        case .housekeeper: return "This app's own chat model, run by the llama-server that ships inside Housekeeper."
+        case .hermes: return "Resident MLX local lane on port 18434. Models can be loaded into memory or unloaded on demand."
         case .huggingFace: return "Downloaded files, not a runtime. Nothing here can be loaded from this screen — it is shown because it is where the disk goes."
         }
     }
@@ -226,6 +226,29 @@ final class LocalModelInventory: ObservableObject {
         let currentLink = home + "/.mlx-lm/models/current"
         let currentTarget = URL(fileURLWithPath: currentLink).resolvingSymlinksInPath().path
 
+        // Check live MLX server on port 18434
+        let serverMetrics = await getJSON(hermesBase.appendingPathComponent("v1/metrics"))
+        let serverModels = await getJSON(hermesBase.appendingPathComponent("v1/models"))
+        let isServerRunning = (serverMetrics != nil || serverModels != nil)
+
+        let serverInfo = serverMetrics?["server"] as? [String: Any]
+        let loadedModelPath = serverInfo?["loaded_model"] as? String
+        let latestMetrics = serverMetrics?["latest"] as? [String: Any]
+        let peakMemoryGB = (latestMetrics?["peak_memory_gb"] as? NSNumber)?.doubleValue
+        let residentBytes = peakMemoryGB != nil ? Int64(peakMemoryGB! * 1_073_741_824) : nil
+
+        var loadedIDs = Set<String>()
+        if let data = serverModels?["data"] as? [[String: Any]] {
+            for item in data where (item["loaded"] as? Bool) == true {
+                if let id = item["id"] as? String {
+                    loadedIDs.insert(id)
+                }
+            }
+        }
+        if let loadedModelPath, !loadedModelPath.isEmpty {
+            loadedIDs.insert(loadedModelPath)
+        }
+
         var models: [LocalModel] = []
         var seenPaths = Set<String>()
 
@@ -241,11 +264,22 @@ final class LocalModelInventory: ObservableObject {
                 let bytes = await Task.detached(priority: .utility) { Self.directorySize(resolved) }.value
                 let isCurrent = (currentTarget == resolved.path) || (currentTarget == entry.path)
 
+                let isLoaded = isServerRunning && (
+                    (isCurrent && (loadedIDs.contains("/Users/Morad/.mlx-lm/models/current") || loadedIDs.contains(currentLink)))
+                    || loadedIDs.contains(resolved.path)
+                    || loadedIDs.contains(entry.path)
+                    || (loadedModelPath != nil && (loadedModelPath == resolved.path || loadedModelPath == entry.path))
+                )
+
                 var facts: [String] = ["MLX Metal", "LLM"]
+                if isLoaded { facts.append("IN MEMORY") }
                 if name.lowercased().contains("4bit") { facts.append("4-bit") }
                 if name.lowercased().contains("8bit") { facts.append("8-bit") }
                 if isCurrent { facts.append("Active Default") }
                 if bytes > 0 { facts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+                if isLoaded, let residentBytes {
+                    facts.append(ByteCountFormatter.string(fromByteCount: residentBytes, countStyle: .memory))
+                }
 
                 models.append(LocalModel(
                     id: "mlx:\(entry.path)",
@@ -253,11 +287,12 @@ final class LocalModelInventory: ObservableObject {
                     name: Self.formatMLXModelName(name),
                     facts: facts,
                     bytes: bytes,
-                    loaded: false,
+                    loaded: isLoaded,
+                    residentBytes: isLoaded ? residentBytes : nil,
                     path: resolved.path,
-                    control: .none,
+                    control: .loadAndUnload,
                     reference: entry.path,
-                    note: isCurrent ? "Configured default, not proof of a running model. Start or unload it in the MLX app or server that owns the process." : "Stored MLX weights. Housekeeping cannot load arbitrary MLX models into memory by changing a symlink."
+                    note: isLoaded ? "Currently resident in memory on port 18434. Click Unload to release RAM." : (isCurrent ? "Active default symlink in ~/.mlx-lm/models/current. Click Load to warm it into memory." : "Stored MLX weights. Click Load to switch active model and load into RAM.")
                 ))
             }
         }
@@ -277,6 +312,14 @@ final class LocalModelInventory: ObservableObject {
 
                 let bytes = await Task.detached(priority: .utility) { Self.directorySize(resolved) }.value
                 let isCurrent = (currentTarget == resolved.path)
+                let isLLM = (category == "llm")
+
+                let isLoaded = isServerRunning && isLLM && (
+                    (isCurrent && (loadedIDs.contains("/Users/Morad/.mlx-lm/models/current") || loadedIDs.contains(currentLink)))
+                    || loadedIDs.contains(resolved.path)
+                    || loadedIDs.contains(entry.path)
+                    || (loadedModelPath != nil && (loadedModelPath == resolved.path || loadedModelPath == entry.path))
+                )
 
                 var facts: [String] = []
                 switch category {
@@ -287,12 +330,25 @@ final class LocalModelInventory: ObservableObject {
                 default: facts.append(category.uppercased())
                 }
 
+                if isLoaded { facts.append("IN MEMORY") }
                 if name.lowercased().contains("mlx") || resolved.path.contains("mlx") { facts.append("MLX Metal") }
                 if name.lowercased().contains("4bit") { facts.append("4-bit") }
                 if name.lowercased().contains("8bit") { facts.append("8-bit") }
                 if name.lowercased().contains("onnx") { facts.append("ONNX") }
                 if isCurrent { facts.append("Active Default") }
                 if bytes > 0 { facts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+                if isLoaded, let residentBytes {
+                    facts.append(ByteCountFormatter.string(fromByteCount: residentBytes, countStyle: .memory))
+                }
+
+                let note: String
+                if isLoaded {
+                    note = "Currently resident in memory on port 18434. Click Unload to release RAM."
+                } else if isLLM {
+                    note = isCurrent ? "Active default symlink in ~/.mlx-lm/models/current. Click Load to warm it into memory." : "Stored MLX weights. Click Load to switch active model and load into RAM."
+                } else {
+                    note = "Stored in ~/Models/\(category)/. Loaded on demand by \(category) workflows."
+                }
 
                 models.append(LocalModel(
                     id: "registry:\(entry.path)",
@@ -300,11 +356,12 @@ final class LocalModelInventory: ObservableObject {
                     name: Self.formatRegistryModelName(name),
                     facts: facts,
                     bytes: bytes,
-                    loaded: false,
+                    loaded: isLoaded,
+                    residentBytes: isLoaded ? residentBytes : nil,
                     path: resolved.path,
-                    control: .none,
+                    control: isLLM ? .loadAndUnload : .none,
                     reference: entry.path,
-                    note: "Stored in ~/Models/\(category)/. Configuration is not a live memory reading; use the owning runtime to load or unload."
+                    note: note
                 ))
             }
         }
@@ -316,8 +373,15 @@ final class LocalModelInventory: ObservableObject {
 
         if group.models.isEmpty {
             group.hint = "No models detected in ~/Models or ~/.mlx-lm/models."
+        } else if isServerRunning {
+            let loadedCount = group.models.filter(\.loaded).count
+            if loadedCount > 0 {
+                group.hint = "MLX server is active on port 18434 with \(loadedCount) model loaded in RAM. Models can be loaded and unloaded directly."
+            } else {
+                group.hint = "MLX server is active on port 18434 (idle, no model in RAM). Click Load on any model to load it into memory."
+            }
         } else {
-            group.hint = "Found \(group.models.count) model\(group.models.count == 1 ? "" : "s") on disk. MLX has no universal process-level load/unload API; a selected default is not shown as loaded RAM."
+            group.hint = "Found \(group.models.count) model\(group.models.count == 1 ? "" : "s") on disk. Click Load on any model to start the MLX server and load it into RAM."
         }
 
         return group
@@ -666,25 +730,43 @@ final class LocalModelInventory: ObservableObject {
               let list = answer["data"] as? [[String: Any]], !list.isEmpty else {
             return group
         }
-        group.hint = "Hermes offers \(list.count) model\(list.count == 1 ? "" : "s"), but /v1/models does not establish which one is resident in RAM. Per-model load/unload is unavailable until the runtime provides verified state."
+
+        let serverMetrics = await getJSON(hermesBase.appendingPathComponent("v1/metrics"))
+        let latestMetrics = serverMetrics?["latest"] as? [String: Any]
+        let peakMemoryGB = (latestMetrics?["peak_memory_gb"] as? NSNumber)?.doubleValue
+        let residentBytes = peakMemoryGB != nil ? Int64(peakMemoryGB! * 1_073_741_824) : nil
+
+        group.hint = "Hermes local server is active on port 18434. Models can be loaded into memory or unloaded on demand."
         group.models = list.compactMap { (entry: [String: Any]) -> LocalModel? in
             guard let id = entry["id"] as? String else { return nil }
+            let isLoaded = (entry["loaded"] as? Bool) == true
             let eval = Self.evaluateNecessity(
                 runtime: .hermes,
                 name: id,
                 path: nil,
                 bytes: nil,
-                isLoaded: false,
+                isLoaded: isLoaded,
                 isCurrentMLX: false
             )
+            var facts: [String] = []
+            if isLoaded {
+                facts.append("IN MEMORY (port 18434)")
+                if let residentBytes {
+                    facts.append(ByteCountFormatter.string(fromByteCount: residentBytes, countStyle: .memory))
+                }
+            } else {
+                facts.append("served on port 18434")
+            }
             return LocalModel(
                 id: "hermes:\(id)",
                 runtime: .hermes,
-                name: id,
-                facts: ["offered by the server; residency unknown"],
-                loaded: false,
-                control: .none,
+                name: id.replacingOccurrences(of: "/Users/Morad/.mlx-lm/models/", with: ""),
+                facts: facts,
+                loaded: isLoaded,
+                residentBytes: isLoaded ? residentBytes : nil,
+                control: .loadAndUnload,
                 reference: id,
+                note: isLoaded ? "Currently resident in memory on port 18434. Click Unload to release RAM." : "Available on local Hermes server. Click Load to warm it into memory.",
                 necessity: eval.status,
                 intersections: eval.intersections,
                 intersectionExplanation: eval.explanation
@@ -695,6 +777,74 @@ final class LocalModelInventory: ObservableObject {
 
     private func unloadHermes() async {
         _ = await postJSON(hermesBase.appendingPathComponent("unload"), [:])
+    }
+
+    private func loadInMLX(_ model: LocalModel) async {
+        // Unload any current model from RAM first to prevent exceeding memory
+        await unloadHermes()
+
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let currentLink = home + "/.mlx-lm/models/current"
+
+        if let path = model.path, FileManager.default.fileExists(atPath: path) {
+            try? FileManager.default.removeItem(atPath: currentLink)
+            try? FileManager.default.createSymbolicLink(atPath: currentLink, withDestinationPath: path)
+        }
+
+        let target = model.path ?? currentLink
+        let status = await postJSON(
+            hermesBase.appendingPathComponent("v1/chat/completions"),
+            [
+                "model": target,
+                "messages": [["role": "user", "content": "hi"]],
+                "max_tokens": 1
+            ]
+        )
+        if status != 200 {
+            let fallbackStatus = await postJSON(
+                hermesBase.appendingPathComponent("chat/completions"),
+                [
+                    "model": target,
+                    "messages": [["role": "user", "content": "hi"]],
+                    "max_tokens": 1
+                ]
+            )
+            if status != 200 && fallbackStatus != 200 {
+                _ = await run("/bin/launchctl", ["kickstart", "-k", "gui/\(getuid())/com.morad.mlx-vlm-server"])
+                try? await Task.sleep(for: .seconds(2))
+                _ = await postJSON(
+                    hermesBase.appendingPathComponent("v1/chat/completions"),
+                    [
+                        "model": "/Users/Morad/.mlx-lm/models/current",
+                        "messages": [["role": "user", "content": "hi"]],
+                        "max_tokens": 1
+                    ]
+                )
+            }
+        }
+    }
+
+    private func loadInHermes(_ model: LocalModel) async {
+        await unloadHermes()
+        let target = model.reference ?? model.name
+        let status = await postJSON(
+            hermesBase.appendingPathComponent("v1/chat/completions"),
+            [
+                "model": target,
+                "messages": [["role": "user", "content": "hi"]],
+                "max_tokens": 1
+            ]
+        )
+        if status != 200 {
+            _ = await postJSON(
+                hermesBase.appendingPathComponent("chat/completions"),
+                [
+                    "model": target,
+                    "messages": [["role": "user", "content": "hi"]],
+                    "max_tokens": 1
+                ]
+            )
+        }
     }
 
     // MARK: Hugging Face cache
@@ -988,7 +1138,8 @@ final class LocalModelInventory: ObservableObject {
         note = "Loading \(model.name)…"
 
         switch model.runtime {
-        case .mlx: break // A filesystem alias cannot load an MLX model.
+        case .mlx: await loadInMLX(model)
+        case .hermes: await loadInHermes(model)
         case .ollama: await loadInOllama(model)
         case .lmStudio: await loadInLMStudio(model)
         case .housekeeper:
@@ -1006,7 +1157,7 @@ final class LocalModelInventory: ObservableObject {
                     try? await Task.sleep(for: .milliseconds(250))
                 }
             }
-        case .hermes, .huggingFace, .drawThings, .comfyUI: break
+        case .huggingFace, .drawThings, .comfyUI: break
         }
 
         busy = nil
@@ -1024,7 +1175,7 @@ final class LocalModelInventory: ObservableObject {
         note = "Unloading \(model.name)…"
 
         switch model.runtime {
-        case .mlx: break // No arbitrary MLX process is owned by Housekeeping.
+        case .mlx, .hermes: await unloadHermes()
         case .ollama: await unloadFromOllama(model)
         case .lmStudio: await unloadFromLMStudio(model)
         case .housekeeper:
@@ -1039,7 +1190,6 @@ final class LocalModelInventory: ObservableObject {
             } else {
                 problem = "The Housekeeper runtime has not confirmed that it stopped yet. Check again before loading another large model."
             }
-        case .hermes: await unloadHermes()
         case .huggingFace, .drawThings, .comfyUI: break
         }
 

@@ -43,7 +43,7 @@ private struct SweepWorkingScreen: View {
     @Environment(\.uiStyle) private var style
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "The housekeeper is looking around") {
+        ScreenChrome(title: "Housekeeper", subtitle: "The housekeeper is looking around") {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 18) {
@@ -189,7 +189,7 @@ private struct SweepResultsScreen: View {
     @Environment(\.uiStyle) private var style
 
     var body: some View {
-        ScreenChrome(title: "Housekeeping", subtitle: "Everything the housekeeper found") {
+        ScreenChrome(title: "Housekeeper", subtitle: "Everything the housekeeper found") {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 16) {

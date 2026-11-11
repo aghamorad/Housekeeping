@@ -12,10 +12,10 @@ import Foundation
 // one — but it answers with a 403 rather than an error body when the request
 // carries no `User-Agent`, so that header is not optional.
 
-/// Reads the published commit history for Housekeeping's repository.
+/// Reads the published commit history for Housekeeper's repository.
 final class SelfUpdateChecker {
     static let owner = "aghamorad"
-    static let repo = "Housekeeping"
+    static let repo = "Housekeeper"
     static let branch = "main"
     static let slug = "\(owner)/\(repo)"
     static let repositoryURL = URL(string: "https://github.com/\(owner)/\(repo)")!

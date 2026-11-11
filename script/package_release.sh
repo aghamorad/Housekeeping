@@ -13,7 +13,7 @@ else
 fi
 SWIFTC="$XCODE_APP/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
 SDK="$XCODE_APP/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-APP_NAME="Housekeeping"
+APP_NAME="Housekeeper"
 MIN_MACOS="13.0"
 
 if [[ ! -x "$SWIFTC" || ! -d "$SDK" ]]; then

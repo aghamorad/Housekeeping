@@ -1,3 +1,39 @@
+## 2026-11-11 — Housekeeper: Official App & GitHub Rename, MLX & Hermes Live Load/Unload Overhaul
+
+Repository and Application renamed to **Housekeeper** across GitHub, bundle metadata, and interface.
+Live GitHub repo renamed to `aghamorad/Housekeeper`; git remote updated to `https://github.com/aghamorad/Housekeeper.git`.
+Local symlink `/Users/Morad/C3PO/Housekeeper` created in working tree.
+Universal bundle packaged (x86_64 and arm64, 52 universal Mach-O binaries, codesign verified).
+Installed and verified running at `/Applications/Housekeeper.app` (0.0% CPU parked; PID 43728).
+Old `/Applications/Housekeeping.app` moved to `~/.Trash`.
+Noob's guide delivered to `~/Desktop/Housekeeper — a noob's guide.md`.
+
+What went into it:
+1. **Official App & GitHub Rename to Housekeeper**:
+   - Renamed GitHub repository `aghamorad/Housekeeping` -> `aghamorad/Housekeeper` via GitHub API with automatic redirection.
+   - Updated git remote `origin` to `https://github.com/aghamorad/Housekeeper.git`.
+   - Updated `CFBundleDisplayName`, `CFBundleName`, and `CFBundleExecutable` to `Housekeeper` in `Info.plist`.
+   - Updated `package_release.sh` to package `Housekeeper.app` and `Housekeeper-macOS-universal.zip`.
+   - Updated `SelfUpdateChecker` (`repo = "Housekeeper"`, `slug = "aghamorad/Housekeeper"`, URL `https://github.com/aghamorad/Housekeeper`) and `SelfUpdateEngine` to verify and stage `Housekeeper.app` / `Housekeeper`.
+   - Updated `HousekeepingCLI.swift` `--version` and `help` commands to output `Housekeeper`.
+   - Updated window chrome titles (`ScreenChrome(title: "Housekeeper")`), Overview/Dashboard headers, and Settings/About view to `Housekeeper`.
+   - Updated GitHub Actions workflows (`release.yml`, `universal-candidate.yml`).
+
+2. **Local Models Section Overhaul (MLX & Hermes Live Load / Unload)**:
+   - Eradicated false claim that "MLX has no universal process-level load/unload API".
+   - Integrated live communication with MLX server on port 18434 (`mlx_vlm.server` / `com.morad.mlx-vlm-server` LaunchAgent):
+     - `GET /v1/models` and `GET /v1/metrics`: detects active loaded model (`"loaded": true`) and memory residency (`peak_memory_gb`).
+     - `POST /unload`: directly releases active model from Metal buffer RAM on demand.
+     - `POST /v1/chat/completions`: automatically warms and loads selected models into GPU RAM.
+   - For MLX LLMs (`~/.mlx-lm/models` and `~/Models/llm`):
+     - Loaded model displays `IN MEMORY` badge, memory footprint, and an active `Unload` button.
+     - Unloaded models feature an active `Load` button that safely unloads any current model (protecting against OOM on 16 GB machines), updates `~/.mlx-lm/models/current`, and triggers server warmup.
+   - For Hermes (MLX) local models:
+     - Shows live loaded/unloaded residency status and direct `Load` / `Unload` buttons.
+   - For non-LLM models (speech, voice, image):
+     - Replaced misleading "Not loadable" labels with informative "On demand" and "Cached files" badges explaining their respective runtimes (VoiceStudio, DeepSeek Harness, Draw Things).
+   - Passed typecheck with `-warnings-as-errors` and all 375 safety assertions.
+
 ## 2026-11-11 — Housekeeping 0.28.6 (58) SHIPPED: Approved Octopus Mascot Collection & Monochrome Menu Bar Template
 
 Tag `v0.28.6` on `22dc9b0`; commit pushed to `origin/main` and tag `v0.28.6` pushed to `aghamorad/Housekeeping`.

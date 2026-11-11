@@ -505,10 +505,10 @@ struct ModelsView: View {
             .frame(width: 140, alignment: .trailing)
         } else if entry.control == .loadAndUnload {
             ThemeButton(
-                title: entry.runtime == .mlx ? "Set Default" : "Load",
-                systemImage: entry.runtime == .mlx ? "checkmark.circle" : "arrow.down.circle",
+                title: "Load",
+                systemImage: "arrow.down.circle",
                 isEnabled: refusal == nil && !blocked,
-                help: refusal ?? (entry.runtime == .mlx ? "Sets \(entry.name) as current default model in ~/.mlx-lm/models/current." : "Puts \(entry.name) into memory so it is ready to answer at once. It stays until it is unloaded or the runtime drops it.")
+                help: refusal ?? "Puts \(entry.name) into memory so it is ready to answer at once. It stays until it is unloaded or the runtime drops it."
             ) {
                 Task { await model.load(entry) }
             }
@@ -524,7 +524,7 @@ struct ModelsView: View {
             }
             .frame(width: 140, alignment: .trailing)
         } else {
-            Text("Not loadable")
+            Text(entry.loaded ? "In memory" : (entry.runtime == .huggingFace ? "Cached files" : "On demand"))
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
                 .frame(width: 140, alignment: .trailing)

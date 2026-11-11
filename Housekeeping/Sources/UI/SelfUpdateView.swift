@@ -613,10 +613,10 @@ struct SelfUpdateView: View {
 
     private func sourceExplanation(_ source: SelfUpdateSource) -> String {
         if !source.remoteMatches {
-            return "This folder's git remote is not aghamorad/Housekeeping. Updating would pull from whatever it does point at, which is not the published history — check the remote before using this."
+            return "This folder's git remote is not aghamorad/Housekeeper. Updating would pull from whatever it does point at, which is not the published history — check the remote before using this."
         }
         if !source.canWriteDestination {
-            return "Housekeeping cannot write next to \(source.destination.path), so it can build the new copy but not put it in place. It will tell you where the built copy is."
+            return "Housekeeper cannot write next to \(source.destination.path), so it can build the new copy but not put it in place. It will tell you where the built copy is."
         }
         return "Fast-forwards from origin/\(SelfUpdateChecker.branch), then replaces \(source.destination.lastPathComponent). The copy in use now is moved to Application Support, not deleted."
     }

@@ -96,33 +96,33 @@ enum HousekeepingCLI {
 
     private static func help() -> Int32 {
         say("""
-        Housekeeping — the app's own command line.
+        Housekeeper — the app's own command line.
 
         Look through a Mac, explain a folder in plain words, or see what is being
         held. Nothing here removes anything: the verbs that clean are in the app,
         where somebody can look at what is about to go.
 
-          housekeeping scan [--quick] [--json]
-              Look through this Mac and list what it found, with Housekeeping's
+          housekeeper scan [--quick] [--json]
+              Look through this Mac and list what it found, with Housekeeper's
               own verdict on each thing.
 
-          housekeeping clean [--json]
+          housekeeper clean [--json]
               What Clean Up would offer, shelf by shelf — read only. Each item
               says whether removing it frees space for good or only moves the
               download to later, which on a throttled line is the whole question.
 
-          housekeeping explain <path> [--json]
-              Everything Housekeeping knows about one file or folder — what it is,
+          housekeeper explain <path> [--json]
+              Everything Housekeeper knows about one file or folder — what it is,
               why it is there, whether it is needed, and what it would cost you.
 
-          housekeeping quarantine [list|restore] [--json]
+          housekeeper quarantine [list|restore] [--json]
               What is being held, and putting things back. `restore` needs --yes.
 
-          housekeeping where [--json]
-              Where Housekeeping keeps what it keeps.
+          housekeeper where [--json]
+              Where Housekeeper keeps what it keeps.
 
-          housekeeping version
-          housekeeping help
+          housekeeper version
+          housekeeper help
 
         Options
 
@@ -226,9 +226,9 @@ enum HousekeepingCLI {
         let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         if json {
-            printJSON(["name": "Housekeeping", "version": short, "build": build])
+            printJSON(["name": "Housekeeper", "version": short, "build": build])
         } else {
-            say("Housekeeping \(short) (build \(build))")
+            say("Housekeeper \(short) (build \(build))")
         }
         return 0
     }
