@@ -44,6 +44,7 @@ extension VPNProvider {
 enum ProviderRegistry {
     static let all: [any VPNProvider] = [
         WindscribeProvider(),
+        SurfsharkProvider(),
         ExpressVPNProvider(),
     ]
 
@@ -165,15 +166,19 @@ struct WindscribeProvider: VPNProvider {
         }
 
         let fields = CLIOutput.keyValuePairs(text)
-        let login = fields["login state"] ?? "Unknown"
-        let connect = fields["connect state"] ?? "Unknown"
-        let internet = fields["internet connectivity"] ?? ""
-        let ip = fields["public ip"]
+        let login = fields["login"] ?? fields["login state"] ?? ""
+        let connect = fields["connection"] ?? fields["connect state"] ?? fields["status"] ?? "Unknown"
+        let internet = fields["internet"] ?? fields["internet connectivity"] ?? ""
+        let rawIP = fields["ip"] ?? fields["public ip"]
+        let ip = rawIP?.components(separatedBy: " ").first
+
+        let isLoggedIn = login.lowercased().contains("logged in")
+            || (text.lowercased().contains("logged in") && !text.lowercased().contains("not logged in"))
 
         return ProviderStatus(
             cliPath: path,
             installed: true,
-            loggedIn: login.lowercased().contains("logged in"),
+            loggedIn: isLoggedIn,
             detail: [connect, internet.isEmpty ? nil : internet]
                 .compactMap { $0 }
                 .joined(separator: " · "),
@@ -185,12 +190,16 @@ struct WindscribeProvider: VPNProvider {
     func tunnelState() async -> TunnelState {
         guard let text = try? await run(["status"], timeout: 15) else { return .unknown }
         let fields = CLIOutput.keyValuePairs(text)
-        return TunnelState.parse(fields["connect state"] ?? "")
+        let connect = fields["connection"] ?? fields["connect state"] ?? fields["status"] ?? ""
+        return TunnelState.parse(connect)
     }
 
     func publicIP() async -> String? {
         guard let text = try? await run(["status"], timeout: 15) else { return nil }
-        return CLIOutput.keyValuePairs(text)["public ip"]
+        let fields = CLIOutput.keyValuePairs(text)
+        let rawIP = fields["ip"] ?? fields["public ip"]
+        let ip = rawIP?.components(separatedBy: " ").first
+        return (ip?.isEmpty == false && ip?.lowercased() != "unknown") ? ip : nil
     }
 
     // MARK: - Protocols
@@ -233,11 +242,21 @@ struct WindscribeProvider: VPNProvider {
     /// list comes from the bundled file — the same dataset the public status
     /// endpoint serves — with a user refresh layered over it.
     func loadLocations() async -> [VPNLocation] {
-        let file = FileManager.default.fileExists(atPath: RoutePaths.cachedLocations.path)
-            ? RoutePaths.cachedLocations
-            : RoutePaths.bundledLocations
-        guard let file else { return [] }
-        return Self.parseLocations(at: file)
+        if FileManager.default.fileExists(atPath: RoutePaths.cachedLocations.path) {
+            let locs = Self.parseLocations(at: RoutePaths.cachedLocations)
+            if !locs.isEmpty { return locs }
+        }
+        if let file = RoutePaths.bundledLocations {
+            let locs = Self.parseLocations(at: file)
+            if !locs.isEmpty {
+                try? FileManager.default.copyItem(at: file, to: RoutePaths.cachedLocations)
+                return locs
+            }
+        }
+        if let count = try? await Self.refreshLocations(), count > 0 {
+            return Self.parseLocations(at: RoutePaths.cachedLocations)
+        }
+        return []
     }
 
     static func parseLocations(at url: URL) -> [VPNLocation] {
@@ -344,6 +363,159 @@ struct WindscribeProvider: VPNProvider {
         return text.split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .first { !$0.isEmpty && $0.count < 200 }
+    }
+}
+
+// MARK: - Surfshark
+
+struct SurfsharkProvider: VPNProvider {
+
+    let kind: ProviderKind = .surfshark
+    let displayName = "Surfshark"
+
+    private static let protocols: [(id: String, title: String, note: String)] = [
+        ("wireguard", "WireGuard",
+         "Surfshark's default and fastest protocol. Modern, lightweight and highly responsive."),
+        ("openvpnudp", "OpenVPN UDP",
+         "OpenVPN over UDP. Fast and versatile across high-speed connections."),
+        ("openvpntcp", "OpenVPN TCP",
+         "OpenVPN over TCP port 443. Ideal for restricted or filtered networks."),
+    ]
+
+    private static let serviceName = "Surfshark. WireGuard®"
+
+    // MARK: - Locating the client
+
+    static func cliPath() -> String? {
+        if FileManager.default.fileExists(atPath: "/Applications/Surfshark.app") {
+            return "/Applications/Surfshark.app"
+        }
+        if let found = RouteProcess.which("surfshark") { return found }
+        return nil
+    }
+
+    // MARK: - Status
+
+    func probeStatus() async -> ProviderStatus {
+        guard let path = Self.cliPath() else { return .unavailable }
+
+        let scutilOutput = try? await RouteProcess.run("/usr/sbin/scutil", ["--nc", "status", Self.serviceName], timeout: 10)
+        let rawStatus = scutilOutput?.stdout.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespaces) ?? ""
+
+        let isConnected = rawStatus.lowercased().contains("connected") && !rawStatus.lowercased().contains("disconnected")
+        let isConnecting = rawStatus.lowercased().contains("connecting")
+        let isDisconnecting = rawStatus.lowercased().contains("disconnecting")
+        let tunnel: TunnelState = isConnected ? .connected : (isConnecting ? .connecting : (isDisconnecting ? .disconnecting : .disconnected))
+
+        let publicIP = isConnected ? await fetchExitIP() : nil
+
+        return ProviderStatus(
+            cliPath: path,
+            installed: true,
+            loggedIn: true,
+            detail: isConnected ? "Connected" : (isConnecting ? "Connecting" : "Ready"),
+            tunnel: tunnel,
+            publicIP: publicIP
+        )
+    }
+
+    func tunnelState() async -> TunnelState {
+        guard let output = try? await RouteProcess.run("/usr/sbin/scutil", ["--nc", "status", Self.serviceName], timeout: 8) else {
+            return .unknown
+        }
+        let line = output.stdout.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespaces) ?? ""
+        if line.lowercased().contains("connected") && !line.lowercased().contains("disconnected") {
+            return .connected
+        }
+        if line.lowercased().contains("connecting") { return .connecting }
+        if line.lowercased().contains("disconnecting") { return .disconnecting }
+        if line.lowercased().contains("disconnected") { return .disconnected }
+        return .unknown
+    }
+
+    func publicIP() async -> String? {
+        let state = await tunnelState()
+        guard state == .connected else { return nil }
+        return await fetchExitIP()
+    }
+
+    private func fetchExitIP() async -> String? {
+        guard let curl = RouteProcess.which("/usr/bin/curl") ?? RouteProcess.which("curl"),
+              let out = try? await RouteProcess.run(curl, ["-sS", "--max-time", "5", "https://api.ipify.org"], timeout: 7) else {
+            return nil
+        }
+        let val = out.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return val.isEmpty ? nil : val
+    }
+
+    // MARK: - Protocols
+
+    func protocolOptions() async -> [ProtocolOption] {
+        Self.protocols.map {
+            ProtocolOption(id: $0.id, title: $0.title, note: $0.note, ports: [])
+        }
+    }
+
+    // MARK: - Locations
+
+    func loadLocations() async -> [VPNLocation] {
+        if FileManager.default.fileExists(atPath: RoutePaths.cachedSurfsharkLocations.path) {
+            let locs = Self.parseClusters(at: RoutePaths.cachedSurfsharkLocations)
+            if !locs.isEmpty { return locs }
+        }
+        if let file = RoutePaths.bundledSurfsharkLocations {
+            let locs = Self.parseClusters(at: file)
+            if !locs.isEmpty {
+                try? FileManager.default.copyItem(at: file, to: RoutePaths.cachedSurfsharkLocations)
+                return locs
+            }
+        }
+        return []
+    }
+
+    static func parseClusters(at url: URL) -> [VPNLocation] {
+        guard let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return []
+        }
+
+        var out: [VPNLocation] = []
+        for cluster in json {
+            let country = (cluster["country"] as? String)?.trimmingCharacters(in: .whitespaces) ?? "Unknown"
+            let countryCode = (cluster["countryCode"] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+            let location = (cluster["location"] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+            let connectionName = (cluster["connectionName"] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+            let region = (cluster["region"] as? String) ?? ""
+
+            guard !country.isEmpty, !connectionName.isEmpty else { continue }
+
+            out.append(VPNLocation(
+                id: connectionName,
+                city: location.isEmpty ? connectionName : location,
+                node: connectionName,
+                country: country,
+                countryCode: countryCode,
+                continent: region,
+                isPremium: false
+            ))
+        }
+
+        return out.sorted {
+            ($0.country, $0.city, $0.node) < ($1.country, $1.city, $1.node)
+        }
+    }
+
+    // MARK: - Connecting
+
+    func beginConnect(_ target: RouteTarget) async throws {
+        let output = try await RouteProcess.run("/usr/sbin/scutil", ["--nc", "start", Self.serviceName], timeout: 15)
+        if output.exitCode != 0 && !output.stderr.isEmpty {
+            _ = try? await RouteProcess.run("/usr/bin/open", ["-g", "-a", "Surfshark"], timeout: 5)
+        }
+    }
+
+    func disconnect() async {
+        _ = try? await RouteProcess.run("/usr/sbin/scutil", ["--nc", "stop", Self.serviceName], timeout: 10)
     }
 }
 

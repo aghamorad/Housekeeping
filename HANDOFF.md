@@ -1,3 +1,28 @@
+## 2026-11-13 — Housekeeper 0.29.1 (60) SHIPPED: Route Sweeper Tri-Provider (Windscribe, Surfshark & ExpressVPN) Overhaul
+
+Universal bundle packaged (x86_64 and arm64, 52 universal Mach-O binaries, codesign verified).
+Installed and verified running at `/Applications/Housekeeper.app` (0.0% CPU parked; PID 17630).
+Old `/Applications/Housekeeper.app` moved to `~/.Trash`.
+Noob's guide delivered to `~/Desktop/Housekeeper — a noob's guide.md`.
+
+What went into it:
+1. **Fixed Windscribe Route Sweeper Visibility & Login State**:
+   - Resolved key lookup bug in `WindscribeProvider`: `windscribe-cli status` output uses keys `Login:` ("login"), `Connection:` ("connection"), `IP:` ("ip"), and `Internet:` ("internet"). Prior code looked for `login state`, `connect state`, and `public ip`, causing logged-in clients to falsely report as "signed out" and disabling route tests.
+   - Fixed `tunnelState()` and `publicIP()` parsing to properly extract the current connection state and active public IP.
+2. **Bundled & Multi-Tier Location Fallbacks**:
+   - Fixed `script/package_release.sh` to stage `locations.json` into the universal application bundle (`Contents/Resources/locations.json`).
+   - Enhanced `RoutePaths.bundledLocations` and `WindscribeProvider.loadLocations()` with multi-tier fallback resolution (Application Support cache, app bundle resource, and project fallback), auto-seeding `~/Library/Application Support/Housekeeping/locations.json` on initial launch.
+3. **First-Class Surfshark Route Sweeper Integration**:
+   - Added `ProviderKind.surfshark` to `RouteModels.swift` and implemented `SurfsharkProvider` in `RouteProviders.swift`.
+   - Bundled 178+ global datacenter clusters (`surfshark_clusters.json`) across 100 countries.
+   - Added native WireGuard, OpenVPN UDP, and OpenVPN TCP protocol options.
+   - Added macOS `scutil --nc` network service probing and tunnel control for Surfshark ("Surfshark. WireGuard®").
+4. **Client Selector in Simple Mode**:
+   - Added Step 1: "Which VPN client?" segmented selector directly in Simple Mode alongside Advanced Mode so users can select between Windscribe, Surfshark, and ExpressVPN with one click.
+   - Updated step badges (Step 1: Client, Step 2: Locations, Step 3: Depth, Step 4: Run).
+5. **Unified List Update**:
+   - Generalised the "Update List" button across providers so datacenter lists and country chips can be refreshed on demand.
+
 ## 2026-11-13 — Housekeeper 0.29.0 (59) SHIPPED: Unified Studios, Permissions Doctor, Route Export & Senior Ergonomics
 
 Universal bundle packaged (x86_64 and arm64, 52 universal Mach-O binaries, codesign verified).

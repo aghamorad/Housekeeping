@@ -445,6 +445,17 @@ final class RoutesModel: ObservableObject {
 
     // MARK: - Refreshing the server list
 
+    func refreshLocations() {
+        switch providerKind {
+        case .windscribe:
+            refreshWindscribeLocations()
+        case .surfshark:
+            refreshSurfsharkLocations()
+        case .expressvpn:
+            Task { await refreshAll() }
+        }
+    }
+
     func refreshWindscribeLocations() {
         guard providerKind == .windscribe else { return }
         isRefreshing = true
@@ -454,9 +465,21 @@ final class RoutesModel: ObservableObject {
                 let count = try await WindscribeProvider.refreshLocations()
                 locations = await WindscribeProvider().loadLocations()
                 banner = "Server list refreshed: \(count) datacenters."
+                prepareSimpleMode()
             } catch {
                 banner = (error as? LocalizedError)?.errorDescription ?? "\(error)"
             }
+        }
+    }
+
+    func refreshSurfsharkLocations() {
+        guard providerKind == .surfshark else { return }
+        isRefreshing = true
+        Task {
+            defer { isRefreshing = false }
+            locations = await SurfsharkProvider().loadLocations()
+            banner = "Server list refreshed: \(locations.count) servers."
+            prepareSimpleMode()
         }
     }
 

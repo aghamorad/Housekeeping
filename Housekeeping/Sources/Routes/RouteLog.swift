@@ -20,7 +20,55 @@ enum RoutePaths {
 
     /// The copy shipped inside the .app, used when no refresh has been run.
     static var bundledLocations: URL? {
-        Bundle.main.url(forResource: "locations", withExtension: "json")
+        if let url = Bundle.main.url(forResource: "locations", withExtension: "json"),
+           FileManager.default.fileExists(atPath: url.path) {
+            return url
+        }
+        let appBundleResource = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/locations.json")
+        if FileManager.default.fileExists(atPath: appBundleResource.path) {
+            return appBundleResource
+        }
+        let candidates = [
+            "/Applications/Housekeeper.app/Contents/Resources/locations.json",
+            "/Applications/Housekeeping.app/Contents/Resources/locations.json",
+            "/Users/Morad/C3PO/Housekeeping/Housekeeping/Resources/locations.json",
+            "/Users/Morad/C3PO/.work/hkfix/Housekeeping/Housekeeping/Resources/locations.json"
+        ]
+        for candidate in candidates {
+            if FileManager.default.fileExists(atPath: candidate) {
+                return URL(fileURLWithPath: candidate)
+            }
+        }
+        return nil
+    }
+
+    /// Surfshark locations / server clusters
+    static var cachedSurfsharkLocations: URL {
+        supportDirectory.appendingPathComponent("surfshark_clusters.json")
+    }
+
+    static var bundledSurfsharkLocations: URL? {
+        if let url = Bundle.main.url(forResource: "surfshark_clusters", withExtension: "json"),
+           FileManager.default.fileExists(atPath: url.path) {
+            return url
+        }
+        let appBundleResource = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/surfshark_clusters.json")
+        if FileManager.default.fileExists(atPath: appBundleResource.path) {
+            return appBundleResource
+        }
+        let candidates = [
+            "/Applications/Surfshark.app/Contents/Resources/clusters.json",
+            "/Applications/Housekeeper.app/Contents/Resources/surfshark_clusters.json",
+            "/Applications/Housekeeping.app/Contents/Resources/surfshark_clusters.json",
+            "/Users/Morad/C3PO/Housekeeping/Housekeeping/Resources/surfshark_clusters.json",
+            "/Users/Morad/C3PO/.work/hkfix/Housekeeping/Housekeeping/Resources/surfshark_clusters.json"
+        ]
+        for candidate in candidates {
+            if FileManager.default.fileExists(atPath: candidate) {
+                return URL(fileURLWithPath: candidate)
+            }
+        }
+        return nil
     }
 
     /// ~/Documents/Housekeeping — kept out of Application Support on purpose,

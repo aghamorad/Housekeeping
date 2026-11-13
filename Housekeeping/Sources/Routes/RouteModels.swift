@@ -4,6 +4,7 @@ import Foundation
 
 enum ProviderKind: String, CaseIterable, Identifiable, Codable, Sendable {
     case windscribe
+    case surfshark
     case expressvpn
 
     var id: String { rawValue }
@@ -11,6 +12,7 @@ enum ProviderKind: String, CaseIterable, Identifiable, Codable, Sendable {
     var displayName: String {
         switch self {
         case .windscribe: return "Windscribe"
+        case .surfshark: return "Surfshark"
         case .expressvpn: return "ExpressVPN"
         }
     }
@@ -18,6 +20,7 @@ enum ProviderKind: String, CaseIterable, Identifiable, Codable, Sendable {
     var supportsPorts: Bool {
         switch self {
         case .windscribe: return true
+        case .surfshark: return false
         case .expressvpn: return false
         }
     }

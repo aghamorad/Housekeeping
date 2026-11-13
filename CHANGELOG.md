@@ -1,3 +1,12 @@
+## 0.29.1 — Route Sweeper: Restore Windscribe & Add Surfshark & ExpressVPN Tri-Provider Support
+
+- **Fixed Windscribe Detection**: Corrected field key parsing in `WindscribeProvider` (`login`, `connection`, `ip`, `internet`) so the client accurately reflects "Logged in" / "Ready" status and active public IP instead of falsely showing "signed out".
+- **Bundled & Seeded Location Lists**: Fixed missing `locations.json` in packaged releases and added robust multi-tier fallback resolution across application bundle resources, user application support caching, and project assets.
+- **Surfshark Provider Integration**: Added first-class `Surfshark` provider to Route Sweeper (`ProviderKind.surfshark`) reading all 178+ datacenter clusters from bundled `surfshark_clusters.json`, with native WireGuard and OpenVPN protocols and `scutil` tunnel management.
+- **Client Selector in Simple Mode**: Added a prominent 1-tap "Which VPN client?" segmented selector directly in Simple Mode alongside Advanced Mode so users can switch seamlessly between Windscribe, Surfshark, and ExpressVPN.
+- **Unified List Refresh**: Made "Update List" available across providers with automated simple-mode country chip refresh.
+- Version 0.29.1 (60).
+
 ## 0.29.0 — Unified Studios, Permissions Doctor, Route Export & Senior Ergonomics
 
 - **Coalesced & Unified Experience**: Eliminated nested window containers and inner sub-sidebars. RouteSweep, Bookbind, and MediaDock now integrate seamlessly as native primary workspace screens without restrictive boundaries.

@@ -97,14 +97,12 @@ struct RoutesView: View {
                 Task { await model.refreshAll() }
             }
 
-            if model.providerKind == .windscribe {
-                ThemeButton(
-                    title: "Update List",
-                    isEnabled: !model.engine.isRunning && !model.isRefreshing,
-                    help: "Fetch a fresh server list from the client's public endpoint."
-                ) {
-                    model.refreshWindscribeLocations()
-                }
+            ThemeButton(
+                title: "Update List",
+                isEnabled: !model.engine.isRunning && !model.isRefreshing,
+                help: "Fetch or reload the server list from the client."
+            ) {
+                model.refreshLocations()
             }
 
             ThemeButton(
@@ -299,15 +297,39 @@ struct RoutesView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
 
+        simpleClientSection
         simpleStepOne
         simpleStepTwo
         simpleStepThree
     }
 
+    private var simpleClientSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                StepBadge(number: 1, title: "Which VPN client?")
+                Spacer()
+                Circle()
+                    .fill(model.status.isDrivable ? style.positive : style.secondaryText.opacity(0.5))
+                    .frame(width: 7, height: 7)
+                Text(statusWording)
+                    .font(style.smallFont)
+                    .foregroundColor(style.secondaryText)
+            }
+            Picker("", selection: $model.providerKind) {
+                ForEach(ProviderKind.allCases) { kind in
+                    Text(kind.displayName).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(model.engine.isRunning)
+        }
+    }
+
     private var simpleStepOne: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                StepBadge(number: 1, title: "Where should your traffic come out?")
+                StepBadge(number: 2, title: "Where should your traffic come out?")
                 Text(model.simpleCountries.isEmpty ? "none picked" : "\(model.simpleCountries.count) picked")
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
@@ -354,7 +376,7 @@ struct RoutesView: View {
 
     private var simpleStepTwo: some View {
         VStack(alignment: .leading, spacing: 8) {
-            StepBadge(number: 2, title: "How hard should it look?")
+            StepBadge(number: 3, title: "How hard should it look?")
             Picker("", selection: $model.simpleDepth) {
                 ForEach(RouteDepth.allCases) { depth in
                     Text(depth.title).tag(depth)
@@ -372,7 +394,7 @@ struct RoutesView: View {
 
     private var simpleStepThree: some View {
         VStack(alignment: .leading, spacing: 8) {
-            StepBadge(number: 3, title: "Run it")
+            StepBadge(number: 4, title: "Run it")
             Text(targetCountWording)
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)

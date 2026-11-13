@@ -157,6 +157,12 @@ stage() {
   if [[ -d "$ROOT_DIR/Housekeeping/Resources/BenignMonster" ]]; then
     ditto "$ROOT_DIR/Housekeeping/Resources/BenignMonster" "$app/Contents/Resources/BenignMonster"
   fi
+  if [[ -f "$ROOT_DIR/Housekeeping/Resources/locations.json" ]]; then
+    cp "$ROOT_DIR/Housekeeping/Resources/locations.json" "$app/Contents/Resources/locations.json"
+  fi
+  if [[ -f "$ROOT_DIR/Housekeeping/Resources/surfshark_clusters.json" ]]; then
+    cp "$ROOT_DIR/Housekeeping/Resources/surfshark_clusters.json" "$app/Contents/Resources/surfshark_clusters.json"
+  fi
 
   # The housekeeper's runtime travels inside the bundle. It is a single static
   # binary that links nothing but system frameworks — which is the whole reason a

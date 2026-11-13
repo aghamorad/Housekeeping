@@ -1,0 +1,5896 @@
+[
+  {
+    "connectionName": "al-tia.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.3275,
+      "longitude": 19.8188889
+    },
+    "country": "Albania",
+    "countryCode": "AL",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AL.png",
+    "id": "4c333aa2-d08b-4d11-9073-61c351ce1c1e",
+    "info": [
+      {
+        "createdAt": "2026-06-17T08:06:49+00:00",
+        "entry": {
+          "value": "U2FsdGVkX190bDxTcfoXxVYfcs22s5R/317j1rp6zkg="
+        },
+        "id": "019ed49e-615c-7185-bcdb-842aae40aa28",
+        "updatedAt": "2026-10-19T06:12:27+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Tirana",
+    "pubKey": "l8EOWPyzt/njrb74CADY4VOhns/TbUN6KFTbytHcFQw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:29+00:00"
+  },
+  {
+    "connectionName": "dz-alg.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 36.7,
+      "longitude": 3.216667
+    },
+    "country": "Algeria",
+    "countryCode": "DZ",
+    "createdAt": "2021-09-22T10:32:53+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DZ.png",
+    "id": "f8aa8d00-b011-4fd6-9e3b-22ab65ef23fb",
+    "info": [
+      {
+        "createdAt": "2024-10-16T13:59:41+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/cCBlQ96PsAd2bfU6hANepZwqx+txh0Ho="
+        },
+        "id": "019295a0-93d4-71e5-8462-0bd8f0988112",
+        "updatedAt": "2026-10-19T06:08:38+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Algiers",
+    "pubKey": "KyFFiO8bY3wZGpxJf7aqEH3TrG+Jj4ZfNOyh2oS7ICU=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:08+00:00"
+  },
+  {
+    "connectionName": "ad-leu.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 42.5063,
+      "longitude": 1.5218
+    },
+    "country": "Andorra",
+    "countryCode": "AD",
+    "createdAt": "2022-03-30T12:29:55+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AD.png",
+    "id": "9794c127-9d95-4071-b53f-e0bcb3a7ec49",
+    "info": [
+      {
+        "createdAt": "2026-01-29T11:18:46+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/zIuasejuIqcut1jLJQKEU/w0NHHpDUyk="
+        },
+        "id": "019c097a-2762-705d-8307-ee422261ea41",
+        "updatedAt": "2026-10-19T06:11:37+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Andorra la Vella",
+    "pubKey": "alv2SqjLM8Aw5yz/7pGZydfALPfYzgwDquAe5dWX12s=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:37+00:00"
+  },
+  {
+    "connectionName": "ar-bua.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -34.6076,
+      "longitude": -58.4371
+    },
+    "country": "Argentina",
+    "countryCode": "AR",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AR.png",
+    "id": "97d3a4d6-d96c-4e95-8c95-244a1a4a1a0b",
+    "info": [
+      {
+        "createdAt": "2024-12-04T08:18:37+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+s36Jj0VSU2xXJd1S9btTB/Wec4T80JrM="
+        },
+        "id": "019390bf-ec17-70a8-b2bd-e4fb8f243abb",
+        "updatedAt": "2026-10-19T06:08:46+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Buenos Aires",
+    "pubKey": "JeHzAD4ZNXnFw4TdG37pi8bHPy6CQQqeRXK09pMHVyU=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:17+00:00"
+  },
+  {
+    "connectionName": "am-evn.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.17762,
+      "longitude": 44.51262
+    },
+    "country": "Armenia",
+    "countryCode": "AM",
+    "createdAt": "2022-03-25T10:14:11+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AM.png",
+    "id": "d99e1618-1c5f-473d-b4a2-3346b22408d5",
+    "info": [
+      {
+        "createdAt": "2024-04-12T12:42:32+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18fPOvm0Vc/jqiEswuLzGfzDJJL88D77YA="
+        },
+        "id": "eaf3b13d-90d2-4068-a280-5fa8857ccd78",
+        "updatedAt": "2026-10-19T06:07:35+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Yerevan",
+    "pubKey": "B+aSYrw7JSq7b60uK0nrMQGCiJ48QwiUp/aoRpYX2lU=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:35+00:00"
+  },
+  {
+    "connectionName": "au-adl.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -34.92123,
+      "longitude": 138.599503
+    },
+    "country": "Australia",
+    "countryCode": "AU",
+    "createdAt": "2019-04-24T09:45:38+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AU.png",
+    "id": "ad720fbf-cf4b-4a99-880a-3b904804fb93",
+    "info": [
+      {
+        "createdAt": "2025-11-18T08:56:40+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+O+AEBShikZzB0ugBWJU0eMEsSd/fAQHU="
+        },
+        "id": "019a962e-2f56-7164-bcbb-e9738c3c0915",
+        "updatedAt": "2026-10-19T06:10:29+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Adelaide",
+    "pubKey": "J7N3UrHc71+LJkn8gsI9Ja8YcpTXT8fV789LLKnIXAY=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:31+00:00"
+  },
+  {
+    "connectionName": "au-bne.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -27.470125,
+      "longitude": 153.021072
+    },
+    "country": "Australia",
+    "countryCode": "AU",
+    "createdAt": "2019-06-25T12:49:58+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AU.png",
+    "id": "e4ecb2a4-44f5-4b71-8f4e-96c554bc1fd0",
+    "info": [
+      {
+        "createdAt": "2026-02-05T13:37:09+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/imBS2/nYNxEIcljeSX3/FsM+NgOGiYIc="
+        },
+        "id": "019c2e05-5d53-702f-9e46-0626b3146884",
+        "updatedAt": "2026-10-19T06:11:39+00:00"
+      }
+    ],
+    "load": 31,
+    "location": "Brisbane",
+    "pubKey": "Jo+U6dj+eAf8zdtoMqyYPmrJNVQj82mipH0mEDyfUXo=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:02+00:00"
+  },
+  {
+    "connectionName": "au-mel.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -37.813938,
+      "longitude": 144.963425
+    },
+    "country": "Australia",
+    "countryCode": "AU",
+    "createdAt": "2018-12-05T11:27:12+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AU.png",
+    "id": "567e1a38-23a8-4a7a-8fe3-2bc15a7942a7",
+    "info": [
+      {
+        "createdAt": "2025-11-27T17:14:21+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19OoVF2Ye1kmmCnvfQgBmYVN8wYy4yM+b0="
+        },
+        "id": "019ac64f-0e39-73b4-8cb4-cece66dd7fd9",
+        "updatedAt": "2026-10-19T06:10:39+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Melbourne",
+    "pubKey": "yYX9yLjHOSWVAsaujcIVWAxF9wYMmHupG1RtJk+u21o=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:15+00:00"
+  },
+  {
+    "connectionName": "au-per.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -31.953512,
+      "longitude": 115.857048
+    },
+    "country": "Australia",
+    "countryCode": "AU",
+    "createdAt": "2019-04-17T11:43:35+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AU.png",
+    "id": "2af934db-9c9b-47c8-85c6-343ff136073c",
+    "info": [
+      {
+        "createdAt": "2023-01-09T16:34:08+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19MJBFaTLnuU75tcNjgDZ+GnYZBvxYWXYU="
+        },
+        "id": "e284c38f-305b-486e-9cbc-37c49220c7ac",
+        "updatedAt": "2026-10-19T06:15:41+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Perth",
+    "pubKey": "oD0TqnE/ETIpvMO8DZObjdLVRf3jhzG7qV5GtM8/Yik=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:23+00:00"
+  },
+  {
+    "connectionName": "au-syd.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -33.861481,
+      "longitude": 151.205475
+    },
+    "country": "Australia",
+    "countryCode": "AU",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AU.png",
+    "id": "e8a483a0-67a4-4eba-b170-65b4d308818e",
+    "info": [
+      {
+        "createdAt": "2024-01-16T16:43:52+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/bufc3yxKWRV4xJCFgzVweOJODO5L+VpI="
+        },
+        "id": "e3c593f7-2b84-48af-a370-247025f68425",
+        "updatedAt": "2026-10-19T06:17:27+00:00"
+      }
+    ],
+    "load": 34,
+    "location": "Sydney",
+    "pubKey": "Y5KM9kHdM0upMsIJWUQquOY1RgkWX69AHw/Dl5KyIk4=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:27+00:00"
+  },
+  {
+    "connectionName": "at-vie.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 48.2,
+      "longitude": 16.366667
+    },
+    "country": "Austria",
+    "countryCode": "AT",
+    "createdAt": "2018-10-16T12:09:18+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AT.png",
+    "id": "3bb90d5c-5190-41a2-8aa0-2c9975df9a39",
+    "info": [
+      {
+        "createdAt": "2020-10-28T19:24:55+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+X7Al9Z/Ycqmo4fJduwystDqU99kedVoY="
+        },
+        "id": "3adfcd2c-b39e-4fb2-bfd1-1d9d6d93b045",
+        "updatedAt": "2026-10-19T06:12:02+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Vienna",
+    "pubKey": "dPZe8Jq3Hu0k07MDk+Y4+AS2XHSLYalyg91TSFXRYEA=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:22+00:00"
+  },
+  {
+    "connectionName": "az-bak.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.409264,
+      "longitude": 49.867092
+    },
+    "country": "Azerbaijan",
+    "countryCode": "AZ",
+    "createdAt": "2019-12-09T08:31:44+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AZ.png",
+    "id": "1cb7c85c-cc35-420e-bb76-43f057d8c7b6",
+    "info": [
+      {
+        "createdAt": "2026-07-01T13:55:45+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/6Xs1EvRFOSj4SAIUaNtpqLvTQiWTUlv4="
+        },
+        "id": "019f1df6-de95-7173-a572-8b0915c3fe7c",
+        "updatedAt": "2026-10-19T06:12:35+00:00"
+      }
+    ],
+    "load": 11,
+    "location": "Baku",
+    "pubKey": "pvWYTFxIpqo25NGTertIIWnccS/sUQ6fIkqd8XJYzEI=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:35+00:00"
+  },
+  {
+    "connectionName": "bs-nas.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 24.77365,
+      "longitude": -78.0001
+    },
+    "country": "Bahamas",
+    "countryCode": "BS",
+    "createdAt": "2022-03-24T10:15:10+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BS.png",
+    "id": "568e8d38-7a63-49db-9863-d17412f2ae0d",
+    "info": [
+      {
+        "createdAt": "2024-12-13T12:57:30+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18mn3/gk8jqxxpzJ75nrkJBB4n108fjtMQ="
+        },
+        "id": "0193c018-7cd1-72ac-b91c-5ad6cad0e0d3",
+        "updatedAt": "2026-10-19T06:08:47+00:00"
+      }
+    ],
+    "load": 26,
+    "location": "Bahamas",
+    "pubKey": "uM3cUZiQ46nRLALqOQfBz2cqg+RyR/OIHH0Xvwf9wHY=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:47+00:00"
+  },
+  {
+    "connectionName": "bd-dac.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 23.685,
+      "longitude": 90.3563
+    },
+    "country": "Bangladesh",
+    "countryCode": "BD",
+    "createdAt": "2022-04-14T12:08:37+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BD.png",
+    "id": "42a1af1f-bb4b-4f26-a430-64da46bee911",
+    "info": [
+      {
+        "createdAt": "2026-05-27T15:59:43+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19f4UVpbwVkKdYj1gTQo60tnWa1c/vJbvM="
+        },
+        "id": "019e6a29-c631-71cf-a595-26d499561685",
+        "updatedAt": "2026-10-19T06:12:18+00:00"
+      }
+    ],
+    "load": 6,
+    "location": "Dhaka",
+    "pubKey": "6tOduT4iNbZyqKNzsSgDe/ckziO6101NPZwrnY5WpTk=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:18+00:00"
+  },
+  {
+    "connectionName": "be-anr.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.2601,
+      "longitude": 4.4027
+    },
+    "country": "Belgium",
+    "countryCode": "BE",
+    "createdAt": "2021-08-23T07:04:51+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BE.png",
+    "id": "b1d97afb-f9eb-424e-be43-cc8ec621978f",
+    "info": [
+      {
+        "createdAt": "2022-09-16T08:03:58+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18f5sTkk7HKch6dfALvK/Nbd02FRv1GgvY="
+        },
+        "id": "a9eeb4dd-a193-4b55-94ab-aca45143bfb3",
+        "updatedAt": "2026-10-19T06:14:46+00:00"
+      }
+    ],
+    "load": 21,
+    "location": "Antwerp",
+    "pubKey": "cTDaqf4qOaNGUbzt/qMRUCcOzL9wknQtG00po/bBt3Y=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:00+00:00"
+  },
+  {
+    "connectionName": "be-bru.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.833333,
+      "longitude": 4.333333
+    },
+    "country": "Belgium",
+    "countryCode": "BE",
+    "createdAt": "2018-12-05T11:27:12+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BE.png",
+    "id": "49389ca5-403f-4b4b-a18d-67acf4ff4036",
+    "info": [
+      {
+        "createdAt": "2024-06-19T12:30:49+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/xK1zgv/ogCjVl2t43eT8a0btPJcpQhuo="
+        },
+        "id": "0190307a-7460-7029-b1b0-c60aba6d72e4",
+        "updatedAt": "2026-10-19T06:08:05+00:00"
+      }
+    ],
+    "load": 18,
+    "location": "Brussels",
+    "pubKey": "9wZOjtwuKEc0GBcvc3xJQ4Kjo8G3EMXu6zJRzbanOjc=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:01+00:00"
+  },
+  {
+    "connectionName": "bz-blp.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 17.25,
+      "longitude": -88.76667
+    },
+    "country": "Belize",
+    "countryCode": "BZ",
+    "createdAt": "2022-04-20T12:15:47+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BZ.png",
+    "id": "7e5836d8-3660-400c-8b27-4470cda80028",
+    "info": [
+      {
+        "createdAt": "2024-04-26T15:36:25+00:00",
+        "entry": {
+          "value": "U2FsdGVkX183MDZ6wtitktDj1xq1iLt6qTjBugTuUH0="
+        },
+        "id": "018f1b0c-f619-703e-90c5-962ae5c9b404",
+        "updatedAt": "2026-10-19T06:07:44+00:00"
+      }
+    ],
+    "load": 39,
+    "location": "Belmopan",
+    "pubKey": "zcxA9gW+ism40rUoF5B4UPV655FLymJ1n4t0WogtZkU=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:44+00:00"
+  },
+  {
+    "connectionName": "bt-pbh.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 27.47135,
+      "longitude": 89.63367
+    },
+    "country": "Bhutan",
+    "countryCode": "BT",
+    "createdAt": "2022-04-14T10:17:05+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BT.png",
+    "id": "a032eb17-4a94-43ab-b828-e93c835e611a",
+    "info": [
+      {
+        "createdAt": "2024-07-25T13:19:36+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+O9YOXXsuJZ2BOohqukneo631Wo7/cAMA="
+        },
+        "id": "0190ea0c-0c50-73d5-ae29-50743938f51a",
+        "updatedAt": "2026-10-19T06:08:20+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Thimphu",
+    "pubKey": "R/lGzro0Z8nbQWDVRJbfscimcUvbSrc/raIvXwfDoV4=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:20+00:00"
+  },
+  {
+    "connectionName": "bo-sre.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -19.0353,
+      "longitude": -65.2592
+    },
+    "country": "Bolivia",
+    "countryCode": "BO",
+    "createdAt": "2021-12-20T10:22:55+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BO.png",
+    "id": "5cf9b988-64ec-4271-8efa-f02eff08f331",
+    "info": [
+      {
+        "createdAt": "2025-07-16T10:00:04+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/9+6B9ltNa4kWgpHDFDMXkiKmFQWTWq54="
+        },
+        "id": "019812ad-4d12-73ee-a9f6-239311467f91",
+        "updatedAt": "2026-10-19T06:09:41+00:00"
+      }
+    ],
+    "load": 11,
+    "location": "Sucre",
+    "pubKey": "YTVk+CUVWELH18qftzEURb8JJfLHfmIMewcx0p8hkT0=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:09:59+00:00"
+  },
+  {
+    "connectionName": "ba-sjj.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 43.85643,
+      "longitude": 18.413029
+    },
+    "country": "Bosnia and Herzegovina",
+    "countryCode": "BA",
+    "createdAt": "2019-08-29T15:54:42+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BA.png",
+    "id": "f067fd1b-e9af-4e17-8ed3-3e44ddb6bed7",
+    "info": [
+      {
+        "createdAt": "2026-06-26T11:44:55+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+5Hlsf9oq57+DN2Enjhne/2j5KE5tU+mM="
+        },
+        "id": "019f03bf-48ce-71f5-a076-603a25e8fcc2",
+        "updatedAt": "2026-10-19T06:12:31+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Sarajevo",
+    "pubKey": "hsm/ps/uxcsVNzT3OmV/l7ZWv+TRIS+IM+N6/nTymkw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:31+00:00"
+  },
+  {
+    "connectionName": "br-sao.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -23.533333,
+      "longitude": -46.616667
+    },
+    "country": "Brazil",
+    "countryCode": "BR",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BR.png",
+    "id": "e1ff80e5-11b8-41ec-9fc8-82205776114c",
+    "info": [
+      {
+        "createdAt": "2022-02-04T23:07:25+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+ziLAu+vMIVOkaylUwvj75uMHjTFf8t4o="
+        },
+        "id": "0f32e74b-20f7-469d-b446-3e9f0d07308e",
+        "updatedAt": "2026-10-19T06:13:04+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Sao Paulo",
+    "pubKey": "IFTVXxhLEqVgZI/JGOPRtmrNUQW1DNljeBe8Ys7v90A=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:04+00:00"
+  },
+  {
+    "connectionName": "bn-bwn.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 4.9031,
+      "longitude": 114.9398
+    },
+    "country": "Brunei",
+    "countryCode": "BN",
+    "createdAt": "2022-04-11T10:07:07+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BN.png",
+    "id": "04487529-6b6b-474d-bdfe-8cb32a64815b",
+    "info": [
+      {
+        "createdAt": "2024-07-25T14:01:48+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19M28K3UsXCtDru2Qdw0rRgiKY7rmRUIkE="
+        },
+        "id": "0190ea32-acfa-7318-b862-d9198dea8407",
+        "updatedAt": "2026-10-19T06:08:21+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Begawan",
+    "pubKey": "QE7hpHqVYWqohTmOnmYtKjUv4b6Bb8S2b9AF0EFl638=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:21+00:00"
+  },
+  {
+    "connectionName": "bg-sof.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 42.6833333,
+      "longitude": 23.3166667
+    },
+    "country": "Bulgaria",
+    "countryCode": "BG",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/BG.png",
+    "id": "8bbed35e-957d-4c54-80bb-485965fee883",
+    "info": [
+      {
+        "createdAt": "2025-03-18T13:34:21+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+6HRZN/IPwEGzA76bxJl0Fe9AwcRwbmeo="
+        },
+        "id": "0195a976-5be7-7195-88e4-70cd393e9212",
+        "updatedAt": "2026-10-19T06:08:58+00:00"
+      }
+    ],
+    "load": 20,
+    "location": "Sofia",
+    "pubKey": "LQFiCiZcPEoYasKRLbCfXp2fYYsj8wiMr/L9u6hYqSo=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:48+00:00"
+  },
+  {
+    "connectionName": "kh-pnh.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 11.56827,
+      "longitude": 104.9224
+    },
+    "country": "Cambodia",
+    "countryCode": "KH",
+    "createdAt": "2022-04-14T12:04:06+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/KH.png",
+    "id": "ec9fa570-2238-4123-a135-5287f88f81aa",
+    "info": [
+      {
+        "createdAt": "2026-03-31T14:41:37+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18JNcGmXEwpvwYjCpSYqiISlBCFzgVpIJE="
+        },
+        "id": "019d4457-c9b1-72bc-927a-12dd7d6431fa",
+        "updatedAt": "2026-10-19T06:11:50+00:00"
+      }
+    ],
+    "load": 8,
+    "location": "Phnom Penh",
+    "pubKey": "z2Ik8BG6XgosyYE/O4Vz4kiPTZyoWSlJvZtFeFlNclI=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:50+00:00"
+  },
+  {
+    "connectionName": "ca-mon.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 45.5,
+      "longitude": -73.583333
+    },
+    "country": "Canada",
+    "countryCode": "CA",
+    "createdAt": "2018-10-19T11:24:12+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CA.png",
+    "id": "2254fcfe-b98d-44bd-9afe-66a1c36e8a9b",
+    "info": [
+      {
+        "createdAt": "2025-05-26T08:43:06+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18uZ78yoCj921uIhJ+FsRdC4bMVWDvEUaU="
+        },
+        "id": "01970bc2-81c3-725f-bf65-da989a3fde2a",
+        "updatedAt": "2026-10-19T06:09:18+00:00"
+      }
+    ],
+    "load": 23,
+    "location": "Montreal",
+    "pubKey": "pB//7qgQ/TQyIMQWKO9GvUfJNYCfVZYwjF2nXPGIEX8=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:15+00:00"
+  },
+  {
+    "connectionName": "ca-tor.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 43.666667,
+      "longitude": -79.416667
+    },
+    "country": "Canada",
+    "countryCode": "CA",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CA.png",
+    "id": "8386cf40-b99c-4973-a894-c33fb53c2476",
+    "info": [
+      {
+        "createdAt": "2021-04-30T13:55:44+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19Z9BP2nIvnfqVOGpwUyohgFOSM/h7zomM="
+        },
+        "id": "98dd34be-e7a9-404c-bb36-a28af668216b",
+        "updatedAt": "2026-10-19T06:12:41+00:00"
+      }
+    ],
+    "load": 25,
+    "location": "Toronto",
+    "pubKey": "W9bzkcL3fiV64vDpB4pbrz8QafNn3y5P9Yc/kQvy4TA=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:19+00:00"
+  },
+  {
+    "connectionName": "ca-van.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 49.25,
+      "longitude": -123.133333
+    },
+    "country": "Canada",
+    "countryCode": "CA",
+    "createdAt": "2018-12-18T10:58:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CA.png",
+    "id": "de979796-5fc7-492c-a1e3-92b2dfe9ee81",
+    "info": [
+      {
+        "createdAt": "2024-09-30T14:18:23+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/UCWEbMyUVQkpVhzjf1YDAv7vNyoIPRzg="
+        },
+        "id": "0192434b-f1d8-714b-b0e8-c52ca63f668e",
+        "updatedAt": "2026-10-19T06:08:28+00:00"
+      }
+    ],
+    "load": 31,
+    "location": "Vancouver",
+    "pubKey": "o4HezxSsbNqJFJZj+VBw/QXFLpfNo7PZu8xe7H2hTw0=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:18+00:00"
+  },
+  {
+    "connectionName": "cl-san.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -33.45,
+      "longitude": -70.666667
+    },
+    "country": "Chile",
+    "countryCode": "CL",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CL.png",
+    "id": "1b3ac04d-8df9-4787-9a3d-ba357ced5f27",
+    "info": [
+      {
+        "createdAt": "2024-03-18T18:45:09+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1//1nL3bX2ddqgHqiQGnmKCj70NCMuBd2Q="
+        },
+        "id": "32470dae-2371-420f-bf82-e0fb7bf2e855",
+        "updatedAt": "2026-10-19T06:07:28+00:00"
+      }
+    ],
+    "load": 20,
+    "location": "Santiago",
+    "pubKey": "FdTRnh0g+FYFPj5UURQIcDbygd+2gMRrslErfmZxdDo=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:01+00:00"
+  },
+  {
+    "connectionName": "co-bog.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 4.624335,
+      "longitude": -74.063644
+    },
+    "country": "Colombia",
+    "countryCode": "CO",
+    "createdAt": "2020-02-06T13:49:50+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CO.png",
+    "id": "4c7c4a47-736e-4fbf-8c28-12861f8f7699",
+    "info": [
+      {
+        "createdAt": "2024-09-30T14:43:15+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/qnNtRFqeUNhFdf4Da1mfAXFgaNZvYTNg="
+        },
+        "id": "01924362-b4ca-7250-9a00-e8418ad320e7",
+        "updatedAt": "2026-10-19T06:08:32+00:00"
+      }
+    ],
+    "load": 24,
+    "location": "Bogota",
+    "pubKey": "lLqqxZuCTtIpBjgZJYWzPQn/7st24iVpJN+/xS7jogs=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:32+00:00"
+  },
+  {
+    "connectionName": "cr-sjn.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 9.893385,
+      "longitude": -84.105407
+    },
+    "country": "Costa Rica",
+    "countryCode": "CR",
+    "createdAt": "2018-10-16T12:09:22+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CR.png",
+    "id": "75363cd7-6eb4-4577-a8b7-c2599b90fdd6",
+    "info": [
+      {
+        "createdAt": "2024-05-13T12:12:26+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19sAZO/gK1aoLqzZCwIFBOnVrTPfd0p41o="
+        },
+        "id": "018f71de-5188-7093-a7e2-b8bef75964c6",
+        "updatedAt": "2026-10-19T06:07:54+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "San Jose",
+    "pubKey": "HPggZ80tXf9TpiZzy8xih7PIWjexg4Kyg3lzUGXoDHU=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:54+00:00"
+  },
+  {
+    "connectionName": "hr-zag.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 45.8,
+      "longitude": 16
+    },
+    "country": "Croatia",
+    "countryCode": "HR",
+    "createdAt": "2018-10-16T12:09:22+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/HR.png",
+    "id": "d74192de-f09e-4194-9491-931e224c19fd",
+    "info": [
+      {
+        "createdAt": "2023-09-26T10:05:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19n0+1XV3Y1/oPcnGbroby4oqKaoPAKaN8="
+        },
+        "id": "cc03a205-059a-435d-a16e-75166cc606f6",
+        "updatedAt": "2026-10-19T06:17:03+00:00"
+      }
+    ],
+    "load": 29,
+    "location": "Zagreb",
+    "pubKey": "nIQmC5T4H0HX4yA2u/Z5rrbLQDAOLA+kFCdt8S94xXg=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:03+00:00"
+  },
+  {
+    "connectionName": "cy-nic.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.1666667,
+      "longitude": 33.3666667
+    },
+    "country": "Cyprus",
+    "countryCode": "CY",
+    "createdAt": "2019-02-25T14:48:32+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CY.png",
+    "id": "da9e1fca-4bc5-4b32-8366-193be66e42c9",
+    "info": [
+      {
+        "createdAt": "2026-10-07T13:26:19+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/lQOuEyUbkI13kYL+rkVtm8hTsUlBMaIc="
+        },
+        "id": "01a1168b-22f9-72fc-8766-59b4802e4be3",
+        "updatedAt": "2026-10-19T06:13:24+00:00"
+      }
+    ],
+    "load": 27,
+    "location": "Nicosia",
+    "pubKey": "kEAQgNChxGgrzoKPpCPFJKh0L1/5rXIq08KSY4g26zY=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:25+00:00"
+  },
+  {
+    "connectionName": "cz-prg.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.083333,
+      "longitude": 14.466667
+    },
+    "country": "Czech Republic",
+    "countryCode": "CZ",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CZ.png",
+    "id": "5368a311-1893-41d9-be0f-e31694066f7c",
+    "info": [
+      {
+        "createdAt": "2020-09-29T13:10:08+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18IkDWXRc3WbkJMuo9ftZ3qQXwGtwfUSPw="
+        },
+        "id": "78086bd8-8181-4bb9-a94b-f336267118e2",
+        "updatedAt": "2026-10-19T06:11:53+00:00"
+      }
+    ],
+    "load": 25,
+    "location": "Prague",
+    "pubKey": "c1bfP+OBTj6WUe8NDH8d6nDTwpQicopfdkHFx3BIaSk=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:19+00:00"
+  },
+  {
+    "connectionName": "dk-cph.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 55.666667,
+      "longitude": 12.583333
+    },
+    "country": "Denmark",
+    "countryCode": "DK",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DK.png",
+    "id": "dc31e710-476b-4be2-bc5f-8ee65e9cc0f9",
+    "info": [
+      {
+        "createdAt": "2022-06-01T14:44:03+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/2Pl1+tDOZ/vt+JGJqJtvNwydiN5SJMlw="
+        },
+        "id": "e0d9a20b-9ee3-4594-b11b-9f8a7dff3f7f",
+        "updatedAt": "2026-10-19T06:14:03+00:00"
+      }
+    ],
+    "load": 16,
+    "location": "Copenhagen",
+    "pubKey": "peDjRPEdHHmo0hGootZ9f+MQCEXmziFkLhMTl2PeXRM=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:09+00:00"
+  },
+  {
+    "connectionName": "ec-uio.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -0.1807,
+      "longitude": -78.4678
+    },
+    "country": "Ecuador",
+    "countryCode": "EC",
+    "createdAt": "2021-12-20T10:28:38+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/EC.png",
+    "id": "68ade781-16fe-470b-a523-181a754b16f2",
+    "info": [
+      {
+        "createdAt": "2024-05-15T09:43:15+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19nyTzMEEBS5JI4l+480S9bKAYnV/s9Ur8="
+        },
+        "id": "018f7ba2-75d1-7305-9d3b-7295a20434ce",
+        "updatedAt": "2026-10-19T06:07:54+00:00"
+      }
+    ],
+    "load": 9,
+    "location": "Quito",
+    "pubKey": "LErFIOc3YBK1khnmwV+a6fBbYff2OS3h+wnIuOKZQTY=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:54+00:00"
+  },
+  {
+    "connectionName": "eg-cai.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 30.04439,
+      "longitude": 31.23573
+    },
+    "country": "Egypt",
+    "countryCode": "EG",
+    "createdAt": "2022-03-30T12:39:01+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/EG.png",
+    "id": "684b79ea-e9c9-42d7-8cca-f7ce54570091",
+    "info": [
+      {
+        "createdAt": "2024-04-26T12:36:04+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/PLCE5j1cdiOVxZbTDWuSLcE57iFUaWng="
+        },
+        "id": "018f1a67-d8d1-734f-aef1-412ec2527ff0",
+        "updatedAt": "2026-10-19T06:07:43+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Cairo",
+    "pubKey": "EKaIyCUV8aqCtRkV6jfkU1IicE5ZaU2RC4VKAdgjOyA=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:43+00:00"
+  },
+  {
+    "connectionName": "ee-tll.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 59.4338889,
+      "longitude": 24.7280556
+    },
+    "country": "Estonia",
+    "countryCode": "EE",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/EE.png",
+    "id": "3dd1e05b-e911-4434-a8c8-ab9c72936b12",
+    "info": [
+      {
+        "createdAt": "2023-03-14T11:56:14+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+bTBdZwtQvX4sxuAww8b3MyrYXOi52gwQ="
+        },
+        "id": "31d3d958-e921-46c2-91fd-610310843d57",
+        "updatedAt": "2026-10-19T06:16:11+00:00"
+      }
+    ],
+    "load": 6,
+    "location": "Tallinn",
+    "pubKey": "CsdrT+WfcMRPhrOWgZeHj9DQiQtJfYFci94K5ztjr2E=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:12+00:00"
+  },
+  {
+    "connectionName": "fi-hel.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 60.175556,
+      "longitude": 24.934167
+    },
+    "country": "Finland",
+    "countryCode": "FI",
+    "createdAt": "2018-10-16T12:09:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/FI.png",
+    "id": "7cf12c2a-76c0-424c-9aba-82b61219178a",
+    "info": [
+      {
+        "createdAt": "2023-01-09T13:39:31+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19royrKL1GJ/pUInExBgyGyouhbEjPVMfk="
+        },
+        "id": "1349c82b-e58b-43d9-bd1f-b8286aea04f4",
+        "updatedAt": "2026-10-19T06:15:41+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Helsinki",
+    "pubKey": "+nv/Z8I2VS0eRdZwkpQW3U9RmsboTz2MUF94jVg5w10=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:46+00:00"
+  },
+  {
+    "connectionName": "fr-bod.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 44.836151,
+      "longitude": -0.580816
+    },
+    "country": "France",
+    "countryCode": "FR",
+    "createdAt": "2019-10-10T13:26:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/FR.png",
+    "id": "6c3b785a-130f-40ca-9c22-5fe40275f9e2",
+    "info": [
+      {
+        "createdAt": "2026-01-13T15:47:53+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18c3TK4hRzSetMwczhB8hOUdnj9vd/uPGM="
+        },
+        "id": "019bb80a-c891-7336-9adf-c2811e0d891b",
+        "updatedAt": "2026-10-19T06:11:25+00:00"
+      }
+    ],
+    "load": 12,
+    "location": "Bordeaux",
+    "pubKey": "ArE5eVIEOPellzFlGK/oOcHCGnB+AAv0Un4C100COmw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:08+00:00"
+  },
+  {
+    "connectionName": "fr-mrs.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 43.300792,
+      "longitude": 5.410692
+    },
+    "country": "France",
+    "countryCode": "FR",
+    "createdAt": "2019-08-22T16:12:48+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/FR.png",
+    "id": "0654e0c8-97b5-44b7-aec4-1c1b71264b47",
+    "info": [
+      {
+        "createdAt": "2021-02-25T15:31:28+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19W9fvwhEvD8QFvggIdGZ2uiAIxm7NQ5bY="
+        },
+        "id": "1c97b404-b3ae-4d2d-b641-cba022353588",
+        "updatedAt": "2026-10-19T06:12:21+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Marseille",
+    "pubKey": "QYa3ZFLwWAHKiJzOcbM73K7KBE0tdJYuirbGb+uH0H0=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:22+00:00"
+  },
+  {
+    "connectionName": "fr-par.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 48.866667,
+      "longitude": 2.333333
+    },
+    "country": "France",
+    "countryCode": "FR",
+    "createdAt": "2018-10-16T12:09:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/FR.png",
+    "id": "b0aaa11d-557e-4f4b-b04b-2fdc739c6bf8",
+    "info": [
+      {
+        "createdAt": "2024-06-18T12:00:56+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18tpA+BY1qBGQPrgDaovonu0JZHFsHfymg="
+        },
+        "id": "01902b38-b8fa-716c-b208-b2b959844729",
+        "updatedAt": "2026-10-19T06:08:05+00:00"
+      }
+    ],
+    "load": 24,
+    "location": "Paris",
+    "pubKey": "AsvLuvKKADdc67aA/vHA3vb61S6YnGGx2Pd4aP4wal8=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:16+00:00"
+  },
+  {
+    "connectionName": "ge-tbs.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.69346,
+      "longitude": 44.80145
+    },
+    "country": "Georgia",
+    "countryCode": "GE",
+    "createdAt": "2021-07-16T08:27:00+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GE.png",
+    "id": "9b7b27d8-f03d-423b-bfd5-1c17ab4f9f2f",
+    "info": [
+      {
+        "createdAt": "2024-05-20T09:10:01+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/2j39p0zfCqBdrE9m7aXC8OCOBNjSA01w="
+        },
+        "id": "018f9543-d534-72cf-a9d7-9fa764d765b6",
+        "updatedAt": "2026-10-19T06:07:55+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Tbilisi",
+    "pubKey": "L79E4IoaVZBXOyoMM82TvUIbiKlloRbUnT8R2Cl3PVM=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:55+00:00"
+  },
+  {
+    "connectionName": "de-ber.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 52.520008,
+      "longitude": 13.404954
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2019-07-31T07:51:48+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "32bf891c-3290-48f0-ba20-e87c70e9c492",
+    "info": [
+      {
+        "createdAt": "2025-07-18T12:56:39+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19q9EXAw3kAlC8HlzPVUFRZck3Nxc2+peQ="
+        },
+        "id": "01981d9b-afa2-711e-989d-9322d918916c",
+        "updatedAt": "2026-10-19T06:09:43+00:00"
+      }
+    ],
+    "load": 20,
+    "location": "Berlin",
+    "pubKey": "d3ldwEjnFcbLwD1o8uC5xC3DaSNek8DGeTpOb/h/IE4=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:08+00:00"
+  },
+  {
+    "connectionName": "de-fra.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.116667,
+      "longitude": 8.683333
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2018-10-16T12:09:14+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "cd2a0e6c-b33f-4bbe-b4b2-35984b45fd02",
+    "info": [
+      {
+        "createdAt": "2024-06-12T16:13:30+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18dq5rTXcR3yvGmBJDiURHkr+Utlq4ewCo="
+        },
+        "id": "01900d39-ceba-7180-af9c-e86d2ee07430",
+        "updatedAt": "2026-10-19T06:08:02+00:00"
+      }
+    ],
+    "load": 21,
+    "location": "Frankfurt am Main",
+    "pubKey": "fJDA+OA6jzQxfRcoHfC27xz7m3C8/590fRjpntzSpGo=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:40+00:00"
+  },
+  {
+    "connectionName": "de-fra-st003.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2019-08-30T10:02:13+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "cbe683a7-035e-46bd-9c93-16873229f494",
+    "info": [
+      {
+        "createdAt": "2024-08-28T08:48:58+00:00",
+        "entry": {
+          "value": "U2FsdGVkX182/WC6Qu+Ac/Xn8HMZ/+YMduwxvUl7G+A="
+        },
+        "id": "0191982c-7e01-70f1-9d40-220d0b4395c1",
+        "updatedAt": "2026-10-19T06:08:24+00:00"
+      }
+    ],
+    "load": 17,
+    "location": "Frankfurt am Main",
+    "pubKey": "OkHRRG05U3WOYWL5x4+6SGHCQlHH0NxkJyi9aM2gDSo=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:00:59+00:00"
+  },
+  {
+    "connectionName": "de-fra-st005.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2020-11-25T07:11:45+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "10fe4eca-2691-4fb6-9f7f-8bbc31051d73",
+    "info": [
+      {
+        "createdAt": "2025-09-17T15:29:59+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18RIAsZiBq4VEshj31DlXvp4fpM93fZyFQ="
+        },
+        "id": "0199584b-fe88-72f6-a002-4f412e27f3d7",
+        "updatedAt": "2026-10-19T06:10:06+00:00"
+      }
+    ],
+    "load": 30,
+    "location": "Frankfurt am Main",
+    "pubKey": "CbBv1dSpGADT0Lo23noLP3VNCe+U4C/NzcG/HSdDtwg=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:10:06+00:00"
+  },
+  {
+    "connectionName": "de-fra-st007.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2022-06-28T10:11:05+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "9f34e50f-a0b0-46be-b27e-898e11d4da5b",
+    "info": [
+      {
+        "createdAt": "2023-02-22T07:39:05+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+7RAyXu4bPgzn5+WxYj096+ENpi6ix5xc="
+        },
+        "id": "f4de7c1b-88ed-4b19-a27f-535c302063bd",
+        "updatedAt": "2026-10-19T06:16:02+00:00"
+      }
+    ],
+    "load": 17,
+    "location": "Frankfurt am Main",
+    "pubKey": "cyiOxJryKyqB3cdwXjL7ILCUy3KVBPrOXSbFtasEeF8=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:16:02+00:00"
+  },
+  {
+    "connectionName": "de-fra-st006.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2022-06-28T10:09:30+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "2216fc6d-b4ab-4d51-b345-88f9dc727570",
+    "info": [
+      {
+        "createdAt": "2022-06-29T12:01:23+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19p/mDTZoq6t5AhDLJI2NkfBYtMu1QUYeA="
+        },
+        "id": "4b91a942-711b-4ec8-8259-7de2091138dd",
+        "updatedAt": "2026-10-19T06:14:15+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Frankfurt am Main",
+    "pubKey": "es0zPcbI1T5Vqrzjxl8QdaEKYVE7GDfV8ayR8jmvpRM=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:14:15+00:00"
+  },
+  {
+    "connectionName": "de-fra-st002.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2019-08-30T10:01:39+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "65572e5b-81e6-4887-b48c-116ab073c773",
+    "info": [
+      {
+        "createdAt": "2024-08-28T08:47:42+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19oAgAUxuFKyBAFkVTQJ5jPh1PHLnYxR/k="
+        },
+        "id": "0191982b-5453-73f6-8fe5-cd304122f7b0",
+        "updatedAt": "2026-10-19T06:08:24+00:00"
+      }
+    ],
+    "load": 24,
+    "location": "Frankfurt am Main",
+    "pubKey": "HnYgO+mu04A2VjWiJiPh5TXFHJpWdcnmzCA1ExC991g=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:08:24+00:00"
+  },
+  {
+    "connectionName": "de-fra-st001.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2024-08-26T14:24:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "01918f12-c28e-7228-98ae-e1d5281a9a23",
+    "info": [
+      {
+        "createdAt": "2024-08-28T08:43:15+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/qw84GWc7QJXV2sjEhiwMeU/l/xegpxcE="
+        },
+        "id": "01919827-4262-71e7-9133-707d25e8654e",
+        "updatedAt": "2026-10-19T06:08:24+00:00"
+      }
+    ],
+    "load": 24,
+    "location": "Frankfurt am Main",
+    "pubKey": "kj90Cy2gkEYrHn487636hOfto2EBWEddUngRdrziylM=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:08:24+00:00"
+  },
+  {
+    "connectionName": "de-fra-st004.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.110924,
+      "longitude": 8.682127
+    },
+    "country": "Germany",
+    "countryCode": "DE",
+    "createdAt": "2020-11-25T07:11:42+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/DE.png",
+    "id": "e958bb97-fb57-4a96-b850-993f8dcc95cf",
+    "info": [
+      {
+        "createdAt": "2025-09-17T15:29:59+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19wt8YE7LL6TSGvINdgqbb3GRxEHCA+hfM="
+        },
+        "id": "0199584b-ff62-701c-96bb-9a269dee7eec",
+        "updatedAt": "2026-10-19T06:10:07+00:00"
+      }
+    ],
+    "load": 33,
+    "location": "Frankfurt am Main",
+    "pubKey": "0e0/gpN0k62p3s9SxSWL8PRhLx3PJZqNxMsK9OfTk0M=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:10:07+00:00"
+  },
+  {
+    "connectionName": "gh-acc.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 5.6037,
+      "longitude": -0.187
+    },
+    "country": "Ghana",
+    "countryCode": "GH",
+    "createdAt": "2022-08-31T07:07:42+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GH.png",
+    "id": "1041fad9-37ab-4625-b132-2182d6ed68a5",
+    "info": [
+      {
+        "createdAt": "2026-04-30T12:31:58+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19xKgNoWm1bT046YDhjFLU2vHppLVWkIAg="
+        },
+        "id": "019dde5f-df3b-73cf-8930-f80d4de6e5d0",
+        "updatedAt": "2026-10-19T06:11:53+00:00"
+      }
+    ],
+    "load": 10,
+    "location": "Accra",
+    "pubKey": "UH3qS1ysggFDEBP8Hzgz19Sw0T+SKxFldkatHRKMqBY=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:53+00:00"
+  },
+  {
+    "connectionName": "gr-ath.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 37.9833333,
+      "longitude": 23.7333333
+    },
+    "country": "Greece",
+    "countryCode": "GR",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GR.png",
+    "id": "414451db-1fb4-475c-a25f-16ee524945f3",
+    "info": [
+      {
+        "createdAt": "2025-11-26T13:27:13+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19U+0hEH7dCpKXHazw4kK1/aZr4U4HVPIU="
+        },
+        "id": "019ac058-c26c-738a-8c6b-ffbe7b839d19",
+        "updatedAt": "2026-10-19T06:10:34+00:00"
+      }
+    ],
+    "load": 23,
+    "location": "Athens",
+    "pubKey": "bXnjQGLhuauvBMg51YIAhwX40YqNL2ImyEub5DpHaBk=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:04+00:00"
+  },
+  {
+    "connectionName": "gl-goh.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 64.17513,
+      "longitude": -51.73341
+    },
+    "country": "Greenland",
+    "countryCode": "GL",
+    "createdAt": "2022-03-31T10:26:53+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GL.png",
+    "id": "0be11bb5-0915-4996-9c8f-3f5f41d54b76",
+    "info": [
+      {
+        "createdAt": "2024-06-18T08:20:47+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19E37ry7YtKtutgLUHsoG7JZ+s3gBIjwXg="
+        },
+        "id": "01902a6f-2b87-710b-b1a1-ba16238af178",
+        "updatedAt": "2026-10-19T06:08:04+00:00"
+      }
+    ],
+    "load": 9,
+    "location": "Nuuk",
+    "pubKey": "zPg3ZJ7OsztQ0CRSSvH5o2KVL1DYgDGW65DFwLsYwyw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:04+00:00"
+  },
+  {
+    "connectionName": "hk-hkg.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 22.2833333,
+      "longitude": 114.15
+    },
+    "country": "Hong Kong",
+    "countryCode": "HK",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/HK.png",
+    "id": "7a03b517-2dc4-4baa-a6f9-8423229129e8",
+    "info": [
+      {
+        "createdAt": "2026-05-06T10:07:48+00:00",
+        "entry": {
+          "value": "U2FsdGVkX187ygZ//aNz7T4sVAloUhal6FPGHussdbE="
+        },
+        "id": "019dfcc2-0aaf-71bd-8357-a741f6f6ae8c",
+        "updatedAt": "2026-10-19T06:12:00+00:00"
+      }
+    ],
+    "load": 33,
+    "location": "Hong Kong",
+    "pubKey": "JYHdktdtuM7inbtsxRKSDpnBVTWQ5+QLZ/cWWmf4VRg=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:24+00:00"
+  },
+  {
+    "connectionName": "hu-bud.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 47.5,
+      "longitude": 19.083333
+    },
+    "country": "Hungary",
+    "countryCode": "HU",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/HU.png",
+    "id": "d7ad5304-e8d5-4dbb-a063-6c0557eb2f74",
+    "info": [
+      {
+        "createdAt": "2025-05-26T12:56:45+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19TqUqhDM4/FIjRlOBIm6xGDdbviYL1Wh8="
+        },
+        "id": "01970caa-bd27-723a-950e-b39a68987247",
+        "updatedAt": "2026-10-19T06:09:19+00:00"
+      }
+    ],
+    "load": 21,
+    "location": "Budapest",
+    "pubKey": "Pk3+iZNP0uWkDTSmEHlUeSA3WyiFXLXgYgAQ5wNyIBk=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:53+00:00"
+  },
+  {
+    "connectionName": "is-rkv.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 64.15,
+      "longitude": -21.95
+    },
+    "country": "Iceland",
+    "countryCode": "IS",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IS.png",
+    "id": "e76367ed-53e9-4797-9b52-51dfd89fad6d",
+    "info": [
+      {
+        "createdAt": "2026-02-19T10:57:58+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+oWIGlRSBjHOT+MyxLIYIXKVgInrZgf0o="
+        },
+        "id": "019c758c-aa92-707a-a3a9-58a39a54e255",
+        "updatedAt": "2026-10-19T06:11:40+00:00"
+      }
+    ],
+    "load": 20,
+    "location": "Reykjavik",
+    "pubKey": "d0m2sIa0JGcxCBvoWDU77SjmPoiWI/oKoX1TL2f2fTA=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:07+00:00"
+  },
+  {
+    "connectionName": "in-del.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 28.6448,
+      "longitude": 77.2167
+    },
+    "country": "India",
+    "countryCode": "IN",
+    "createdAt": "2022-09-21T13:07:53+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IN.png",
+    "id": "23f330f6-cd9a-4072-bf06-1dd116595097",
+    "info": [
+      {
+        "createdAt": "2024-01-11T11:00:53+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+yKlSjJxLhR1dmass6NOLyKEPLqranOoY="
+        },
+        "id": "65d1ca62-23bf-4138-bdc4-cb97d0c3aea8",
+        "updatedAt": "2026-10-19T06:17:26+00:00"
+      }
+    ],
+    "load": 21,
+    "location": "Delhi",
+    "pubKey": "+dmGrWPM9NI3vQkZ9E7hMRKAJKYzd3YMXGq10sjbN0A=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:26+00:00"
+  },
+  {
+    "connectionName": "in-mum.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 18.975,
+      "longitude": 72.825833
+    },
+    "country": "India",
+    "countryCode": "IN",
+    "createdAt": "2019-02-04T10:18:27+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IN.png",
+    "id": "b69d484e-f195-46ee-973e-063c9debfaf2",
+    "info": [
+      {
+        "createdAt": "2026-10-03T11:14:19+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19ECv6r1h1Bs/uhWxwYJaYKbouGBGtkzzw="
+        },
+        "id": "01a10178-d6f8-716e-a863-2aee661806fb",
+        "updatedAt": "2026-10-19T06:13:19+00:00"
+      }
+    ],
+    "load": 18,
+    "location": "Mumbai",
+    "pubKey": "nZBv1nNW6HSvjybgCO9TNHI1pkX+C6GjyAHUtkJRjRI=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:24+00:00"
+  },
+  {
+    "connectionName": "id-jak.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -6.21462,
+      "longitude": 106.84513
+    },
+    "country": "Indonesia",
+    "countryCode": "ID",
+    "createdAt": "2019-04-24T09:53:39+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/ID.png",
+    "id": "a1d56ccd-1b6e-4a7e-b3f3-2397194f3774",
+    "info": [
+      {
+        "createdAt": "2025-10-21T09:24:03+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18KiJPCSwrt7wmeZxn6+6XwPUOaS1cTfto="
+        },
+        "id": "019a0615-331a-7086-856b-51a3cbcfe2d7",
+        "updatedAt": "2026-10-19T06:02:39+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Jakarta",
+    "pubKey": "qyghLDfpfyparp0M52OVcmhKckayOvbRO2DDLkgJqyk=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p",
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:56+00:00"
+  },
+  {
+    "connectionName": "ie-dub.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 53.3330556,
+      "longitude": -6.2488889
+    },
+    "country": "Ireland",
+    "countryCode": "IE",
+    "createdAt": "2018-10-16T12:09:23+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IE.png",
+    "id": "20be2e60-081f-4c19-b576-f906e63fca8f",
+    "info": [
+      {
+        "createdAt": "2024-11-28T11:31:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18FYSXLqbLbi0EkNUXOcYqrOdS9Cq3mkNE="
+        },
+        "id": "0193728a-2cc5-733d-b43b-6f519f70a57e",
+        "updatedAt": "2026-10-19T06:08:43+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Dublin",
+    "pubKey": "TjYxodFNdGlefxnWqe9vWWJHnz3meYWWhiIJyU8rgg8=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:08+00:00"
+  },
+  {
+    "connectionName": "im-iom.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 54.14977,
+      "longitude": -4.4779
+    },
+    "country": "Isle of Man",
+    "countryCode": "IM",
+    "createdAt": "2022-03-30T12:08:47+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IM.png",
+    "id": "ec865bb4-0643-4062-8893-bffda349da94",
+    "info": [
+      {
+        "createdAt": "2024-04-11T07:52:44+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+Y9f6nxBa+xYs1Q8/uE2ev/XhKbIM8q64="
+        },
+        "id": "33c4ce20-3609-465e-b2b3-b99754147a4a",
+        "updatedAt": "2026-10-19T06:07:33+00:00"
+      }
+    ],
+    "load": 4,
+    "location": "Douglas",
+    "pubKey": "PQKiTkyLs9+rvDkmhnHYBKUZAZwBpZYIZ7/mefvYKko=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:33+00:00"
+  },
+  {
+    "connectionName": "il-tlv.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 32.066667,
+      "longitude": 34.766667
+    },
+    "country": "Israel",
+    "countryCode": "IL",
+    "createdAt": "2018-10-16T12:09:18+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IL.png",
+    "id": "2b8eb568-c97a-4232-b575-6dc819d26ed6",
+    "info": [
+      {
+        "createdAt": "2022-06-13T15:36:36+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/gHbbV6E6yq5QigsblcBNvvRK/KjAFKIs="
+        },
+        "id": "fd1f62a7-37b3-459b-978d-a5ead7704d5d",
+        "updatedAt": "2026-10-19T06:14:12+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Tel Aviv",
+    "pubKey": "ZEG2fUrtohnVePblUlDM6wyyeTobzsABnMjTTFmqNUE=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "p2p",
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:42+00:00"
+  },
+  {
+    "connectionName": "it-mil.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 45.466667,
+      "longitude": 9.2
+    },
+    "country": "Italy",
+    "countryCode": "IT",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IT.png",
+    "id": "7979b502-cbe7-411b-b849-42b5eb036713",
+    "info": [
+      {
+        "createdAt": "2022-01-26T04:30:42+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18XYCDeAQcn6/b2VBg0scRfAk9F0C8JrVI="
+        },
+        "id": "32e34216-6305-483d-970b-2e00800e2520",
+        "updatedAt": "2026-10-19T06:13:04+00:00"
+      }
+    ],
+    "load": 12,
+    "location": "Milan",
+    "pubKey": "vIMHzH5FHdVkrhOOc0u/FySVhumaLC3XUk39Wk34LnE=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:56+00:00"
+  },
+  {
+    "connectionName": "it-rom.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.9028,
+      "longitude": 12.4964
+    },
+    "country": "Italy",
+    "countryCode": "IT",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/IT.png",
+    "id": "06772a51-5b8f-40fe-b573-6d413cb2ec92",
+    "info": [
+      {
+        "createdAt": "2025-08-26T12:14:20+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/GOo++f19yeR+iK75ZUwZy5Be8goSYJqE="
+        },
+        "id": "0198e64c-f63f-7312-b044-0eb7e377061e",
+        "updatedAt": "2026-10-19T06:10:05+00:00"
+      }
+    ],
+    "load": 16,
+    "location": "Rome",
+    "pubKey": "fqxSeDr7n249iywruwLMwkV3r36svPT1tLf9TJOTFAw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:54+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st014.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-09T12:07:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "4506e45b-61e4-4f84-8612-58ef10f76c3a",
+    "info": [
+      {
+        "createdAt": "2022-04-29T14:40:26+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+XmBTtbEdQgyQ8njMH1ojsTqeXkaOSqJU="
+        },
+        "id": "15306389-e8e4-470e-9be6-e5279cf51692",
+        "updatedAt": "2026-10-19T06:13:47+00:00"
+      }
+    ],
+    "load": 35,
+    "location": "Tokyo",
+    "pubKey": "YAi7pHzk1O+kVP2dmXTht/qj5kZ/M04N8EbNYG3vw2I=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:47+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st015.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-10T08:13:12+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "c31b6493-b141-482f-8734-953d80aefdf5",
+    "info": [
+      {
+        "createdAt": "2022-03-11T10:08:12+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+Pc2dBnU6eqkiaWTyCu6JAbcLBiX9ssOM="
+        },
+        "id": "658f9596-b214-4756-b6f4-e57703e1d791",
+        "updatedAt": "2026-10-19T06:13:08+00:00"
+      }
+    ],
+    "load": 37,
+    "location": "Tokyo",
+    "pubKey": "nRaQb3Sa6SPDMW6QC0C6mC949iSTfKY4uytfyfZm8n0=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:08+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st024.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:47:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "92313bf4-6633-4ae0-8b4a-7c6acd6a126c",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:05:59+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+kigHzTM3czuv/IPDOBYvYcV0M7zMPBM8="
+        },
+        "id": "7c0b54e3-21b9-46db-9370-2063ea09d60e",
+        "updatedAt": "2026-10-19T06:13:10+00:00"
+      }
+    ],
+    "load": 39,
+    "location": "Tokyo",
+    "pubKey": "4wdPRcmcFo2/pRi4zaXSKFZkR4rE54dCvgFDnomsEAs=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:03:09+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st025.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:47:58+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "5e7ee1a3-53e5-4d60-985e-78c81d5771a1",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:05:59+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18q+a/jMRAG201Z7eF+x2mdoOxsuoLbdqQ="
+        },
+        "id": "c9d4ce57-75bb-444b-8a53-4d88661ddce9",
+        "updatedAt": "2026-10-19T06:13:10+00:00"
+      }
+    ],
+    "load": 42,
+    "location": "Tokyo",
+    "pubKey": "IpGp7fS8+qpTPq24EN9NqOdvAjOTfyC/cI8DB5kndFY=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:10+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st021.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:45:54+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "a6319463-75f5-419b-a9fc-f7dc30afa018",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:35:13+00:00",
+        "entry": {
+          "value": "U2FsdGVkX193bShyjwjud8IzUTknoOtRqhwXju2HWfo="
+        },
+        "id": "8be70445-7e03-459c-86f1-f659aded63d3",
+        "updatedAt": "2026-10-19T06:13:12+00:00"
+      }
+    ],
+    "load": 45,
+    "location": "Tokyo",
+    "pubKey": "821FvIHfdxW+gFPj8QNtEe2BgzSb5ryQxTNeRP+I6WE=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:12+00:00"
+  },
+  {
+    "connectionName": "jp-tok.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.685,
+      "longitude": 139.751389
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "2de120af-f185-44b6-a2b3-4c1554e6b248",
+    "info": [
+      {
+        "createdAt": "2024-01-17T08:55:49+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/cdGWOApZk1ryqhek32OpLMDp1dKabAXE="
+        },
+        "id": "bf62851d-36ef-4053-ac25-2bf58496c318",
+        "updatedAt": "2026-10-19T06:07:21+00:00"
+      }
+    ],
+    "load": 48,
+    "location": "Tokyo",
+    "pubKey": "YJSjrc/WWOjQUyUi4iYcHb7LsWWoCY+2fK8/8VtC/BY=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:25+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st023.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:46:38+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "28ce35f3-ffd0-4411-8027-bd9492b74d6d",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:05:41+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19gZqzYiAonuZ3jj+ZXHlfkQ62tXXxzDKk="
+        },
+        "id": "cfff6fed-d0ca-4f33-a0a0-b2a4c6cc3163",
+        "updatedAt": "2026-10-19T06:13:10+00:00"
+      }
+    ],
+    "load": 48,
+    "location": "Tokyo",
+    "pubKey": "cwEDkT+qAO1+yQJGe8r7ajc69oXqUYGbMHp1L+lHkHM=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:10+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st022.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:46:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "ac688998-7a93-4f66-aff7-237d0b9f9938",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:05:41+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/21/48O0HzcAcjQp0WbfbdiFvzMVLF46Y="
+        },
+        "id": "95481dbf-d7f5-4d20-ab1e-864e21c260d8",
+        "updatedAt": "2026-10-19T06:13:10+00:00"
+      }
+    ],
+    "load": 49,
+    "location": "Tokyo",
+    "pubKey": "nOobAMCxM7p0filChMAW6abz3BWDGzUFDB1Xyza0nCc=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:10+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st016.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:33:51+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "ea225865-6953-4326-a3bc-df66abb89c69",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:06:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+axLxHbcCbckHXISPZlquAsOCbwVEGI2M="
+        },
+        "id": "251b6d96-5ae5-4aef-88cd-ae220be87467",
+        "updatedAt": "2026-10-19T06:13:11+00:00"
+      }
+    ],
+    "load": 51,
+    "location": "Tokyo",
+    "pubKey": "2Fn9Do6+JKXV8mDZpB3DfWmaJHZwDXE/3GpckVKGzC8=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:11+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st019.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:45:01+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "a341165c-1249-4d50-bef6-8406c26f0181",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:04:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX181zFk+8WW8CUDaCStJUQO0q4gw4i3AV+g="
+        },
+        "id": "073968aa-bf37-4500-958b-be9da50502b6",
+        "updatedAt": "2026-10-19T06:13:10+00:00"
+      }
+    ],
+    "load": 52,
+    "location": "Tokyo",
+    "pubKey": "RV46b4hNW5tn2I+REE4kJ36rKf5+nDVNE/SYM16XqDw=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:10+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st018.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:44:27+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "1ece22fc-42ea-4312-8ef5-7dc60a03672b",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:04:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18SUR8HTfcMgwKqpWO0E24lGioC/Br6TRE="
+        },
+        "id": "703206c0-5e57-42a4-aff4-5719b0fd3d5a",
+        "updatedAt": "2026-10-19T06:13:10+00:00"
+      }
+    ],
+    "load": 64,
+    "location": "Tokyo",
+    "pubKey": "kRIGOWrV9eCe0FmFIFwtawoRjzZVCaQs+7FDfPRoAkU=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:10+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st020.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:45:25+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "bfd219a3-9ddc-48d3-b884-a35bb06a52ba",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:35:12+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+q7+Q6sqEYc7KVMljgh6rq2y9LeRYLGfU="
+        },
+        "id": "455affda-e2fa-4df4-9b08-34f48e1ea513",
+        "updatedAt": "2026-10-19T06:13:12+00:00"
+      }
+    ],
+    "load": 70,
+    "location": "Tokyo",
+    "pubKey": "vEPOb23yMjJ37NF/KSXPKCL56LZO4UCulS3XbP+TKFs=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:12+00:00"
+  },
+  {
+    "connectionName": "jp-tok-st017.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.652832,
+      "longitude": 139.839478
+    },
+    "country": "Japan",
+    "countryCode": "JP",
+    "createdAt": "2022-03-11T10:35:28+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/JP.png",
+    "id": "5e33b9ef-fd9c-40ba-81d6-955574841f50",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:06:19+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19T9sfugyn3RDFw8dTkQqUFBeXrWcsWwUY="
+        },
+        "id": "8e14139b-1cb3-4a64-9059-fb41986372d5",
+        "updatedAt": "2026-10-19T06:13:11+00:00"
+      }
+    ],
+    "load": 75,
+    "location": "Tokyo",
+    "pubKey": "T5aWKn3n64TkxqGqOv0ynTxY/w4ktVjc8AePLkDIM2Q=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:11+00:00"
+  },
+  {
+    "connectionName": "kz-ura.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.2,
+      "longitude": 51.2
+    },
+    "country": "Kazakhstan",
+    "countryCode": "KZ",
+    "createdAt": "2019-09-30T08:54:00+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/KZ.png",
+    "id": "98f28aba-7c42-41ed-859d-ec7b65f10841",
+    "info": [
+      {
+        "createdAt": "2024-06-27T13:59:20+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/LvnMWJl3PDQHIokJYx2j4OvS563zSteo="
+        },
+        "id": "019059fe-5ba5-734e-ab17-26321e08913d",
+        "updatedAt": "2026-10-19T06:08:14+00:00"
+      }
+    ],
+    "load": 28,
+    "location": "Oral",
+    "pubKey": "c8SPrUWVMjSm3xdZRF4eg57sdEo2TFmBDVKP+A+quHM=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:14+00:00"
+  },
+  {
+    "connectionName": "la-vte.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 17.9641,
+      "longitude": 102.6134
+    },
+    "country": "Laos",
+    "countryCode": "LA",
+    "createdAt": "2022-04-15T09:35:30+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/LA.png",
+    "id": "d6d7519a-8e41-4815-9350-cd425056d845",
+    "info": [
+      {
+        "createdAt": "2024-07-10T13:29:25+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+EaNdYHFpA+09O2TJf5pDbJweJyo+HR3Q="
+        },
+        "id": "01909cd5-a588-7204-8a38-67a1aba71fbc",
+        "updatedAt": "2026-10-19T06:08:15+00:00"
+      }
+    ],
+    "load": 4,
+    "location": "Vientiane",
+    "pubKey": "yIlpSftvkSE2+T0uqxWl9HeQSrmPg+HkyvGLi55UqG0=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:15+00:00"
+  },
+  {
+    "connectionName": "lv-rig.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 56.95,
+      "longitude": 24.1
+    },
+    "country": "Latvia",
+    "countryCode": "LV",
+    "createdAt": "2018-10-16T12:09:22+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/LV.png",
+    "id": "aeb76405-7249-442c-9f0c-2f78f4a1d019",
+    "info": [
+      {
+        "createdAt": "2022-04-25T16:20:47+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/v/FeN/jqK81Wng92SCHhi+Es1YsAQuRo="
+        },
+        "id": "f384d5b6-edff-431f-accc-4c9c23bfafc9",
+        "updatedAt": "2026-10-19T06:13:44+00:00"
+      }
+    ],
+    "load": 10,
+    "location": "Riga",
+    "pubKey": "EmghYf9rIpwOQ0uIjIxgCXs/WwHJthNvPIv5iKseE3A=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:59+00:00"
+  },
+  {
+    "connectionName": "li-qvu.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 47.166,
+      "longitude": 9.5554
+    },
+    "country": "Liechtenstein",
+    "countryCode": "LI",
+    "createdAt": "2022-03-30T12:11:58+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/LI.png",
+    "id": "37c17074-4953-45d9-bb98-f52903b18ae6",
+    "info": [
+      {
+        "createdAt": "2024-04-25T11:16:47+00:00",
+        "entry": {
+          "value": "U2FsdGVkX194d2ZuCG80SNuxYj/2MKDGwZDCgfgrVv4="
+        },
+        "id": "018f14f8-e7eb-72ef-8523-9b43ea5c0a04",
+        "updatedAt": "2026-10-19T06:07:41+00:00"
+      }
+    ],
+    "load": 3,
+    "location": "Vaduz",
+    "pubKey": "ZSCz5PqrLnu+Eu9wjiMDLscEHTBcfD0H3CGz0i8pXxc=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:41+00:00"
+  },
+  {
+    "connectionName": "lt-vno.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 54.68705,
+      "longitude": 25.28291
+    },
+    "country": "Lithuania",
+    "countryCode": "LT",
+    "createdAt": "2022-03-24T12:49:59+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/LT.png",
+    "id": "f9f33c83-dbf7-4383-99d4-18b071191bea",
+    "info": [
+      {
+        "createdAt": "2025-07-28T14:49:31+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18y+ob1MKgCpCRbbDsnhN4wg1WXLbQLXTo="
+        },
+        "id": "01985182-9fc2-70b5-97cf-1a68f06bc4a6",
+        "updatedAt": "2026-10-19T06:09:47+00:00"
+      }
+    ],
+    "load": 26,
+    "location": "Vilnius",
+    "pubKey": "pC7xJD56uFFJ7qHpe3XvXXhjwZcoMco09ySHOg4h+iA=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:09:48+00:00"
+  },
+  {
+    "connectionName": "lu-ste.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 49.6769444,
+      "longitude": 6.1238889
+    },
+    "country": "Luxembourg",
+    "countryCode": "LU",
+    "createdAt": "2018-10-16T12:09:18+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/LU.png",
+    "id": "78cae191-54d4-4358-8f31-9c67c1b85299",
+    "info": [
+      {
+        "createdAt": "2022-11-17T08:00:00+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18lvNQp3wTGCLh/jYUV4roMQbc2tWUtR6U="
+        },
+        "id": "e5a9f053-a6f3-4ebf-9ae8-16cc5e9db240",
+        "updatedAt": "2026-10-19T06:15:18+00:00"
+      }
+    ],
+    "load": 12,
+    "location": "Luxembourg",
+    "pubKey": "68JVBL/M2AYQ9gYHtcpmZ6Pl+ayhJjTL2sr6Ej1VEFg=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:19+00:00"
+  },
+  {
+    "connectionName": "mo-mfm.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 22.1987,
+      "longitude": 113.5439
+    },
+    "country": "Macau",
+    "countryCode": "MO",
+    "createdAt": "2022-03-24T10:10:34+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MO.png",
+    "id": "4dec2a24-2d80-4340-9908-f9714bfad482",
+    "info": [
+      {
+        "createdAt": "2025-11-07T16:55:32+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+fI5MySWo8AEwetgNI0dWKas23ZL/KbZo="
+        },
+        "id": "019a5f3e-a4ac-7288-8bce-6e5cd32000b3",
+        "updatedAt": "2026-10-19T06:10:20+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Macao",
+    "pubKey": "uMD8IFggqtF0ZbviJJFMQFhR3R52mVqhoJmKPt+aACs=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:48+00:00"
+  },
+  {
+    "connectionName": "my-kul.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 3.166667,
+      "longitude": 101.7
+    },
+    "country": "Malaysia",
+    "countryCode": "MY",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MY.png",
+    "id": "2c3d04ea-59a6-420f-aeb3-e9242b3cc32a",
+    "info": [
+      {
+        "createdAt": "2025-11-28T16:25:37+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18tfMT0RdpmSA/xD6y+AgWjDocQzxSzKBc="
+        },
+        "id": "019acb48-ce1e-7224-a2e6-8c803e4a634d",
+        "updatedAt": "2026-10-19T06:10:43+00:00"
+      }
+    ],
+    "load": 20,
+    "location": "Kuala Lumpur",
+    "pubKey": "AS84LXlJfgBwGHc70MvtGRxsMqNNucZ2pNOBayJUm04=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p",
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:10:43+00:00"
+  },
+  {
+    "connectionName": "mt-mla.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.8989,
+      "longitude": 14.5146
+    },
+    "country": "Malta",
+    "countryCode": "MT",
+    "createdAt": "2021-08-13T17:03:34+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MT.png",
+    "id": "2c97d1d2-8665-4eda-b801-d00df2360659",
+    "info": [
+      {
+        "createdAt": "2026-10-13T08:16:05+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+YNS1SlMCcoVK6kEsvRyLj8itIkKxvEQ8="
+        },
+        "id": "01a13455-4336-73f3-9ea1-abd2ef67345b",
+        "updatedAt": "2026-10-19T06:13:26+00:00"
+      }
+    ],
+    "load": 5,
+    "location": "Valletta",
+    "pubKey": "c9EuAnWYvGUyFrzrV70Fph0onkFv2xe3Bc0gTCFuKRw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:26+00:00"
+  },
+  {
+    "connectionName": "ma-rab.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 34.020882,
+      "longitude": -6.84165
+    },
+    "country": "Marocco",
+    "countryCode": "MA",
+    "createdAt": "2022-04-20T12:46:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MA.png",
+    "id": "5ef6422e-410e-41a0-96d0-8fc1a6cd1c96",
+    "info": [
+      {
+        "createdAt": "2026-07-01T13:32:48+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/JbRG1En8kigSbC/osK3JbTBMMwRaycEA="
+        },
+        "id": "019f1de1-dbd8-7136-a14f-b44c055b75fe",
+        "updatedAt": "2026-10-19T06:12:34+00:00"
+      }
+    ],
+    "load": 5,
+    "location": "Rabat",
+    "pubKey": "Tl7KINtNnar9fVQD8LG2dswOEqSKmUP9ioimCjo6jHc=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:34+00:00"
+  },
+  {
+    "connectionName": "mx-qro.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 20.58,
+      "longitude": -100.39
+    },
+    "country": "Mexico",
+    "countryCode": "MX",
+    "createdAt": "2024-03-05T10:45:09+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MX.png",
+    "id": "6ac8e0c1-1e80-4927-8243-8e81523914c2",
+    "info": [
+      {
+        "createdAt": "2024-09-10T15:01:51+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/u1sDw/JlM6F5qvT7bS5WTXH6HYgfiSJs="
+        },
+        "id": "0191dc74-8bb7-714e-b5da-2000407c4173",
+        "updatedAt": "2026-10-19T06:08:25+00:00"
+      }
+    ],
+    "load": 29,
+    "location": "Queretaro",
+    "pubKey": "6C8O3L/Li0JOO5aWvL6PrciiZOOaRBtWmempOUENLQs=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:07+00:00"
+  },
+  {
+    "connectionName": "md-chi.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 47.005556,
+      "longitude": 28.8575
+    },
+    "country": "Moldova",
+    "countryCode": "MD",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MD.png",
+    "id": "84a569c4-f2b2-488a-a577-c7353747528b",
+    "info": [
+      {
+        "createdAt": "2024-06-26T13:29:07+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/XrkbRgXnYkumCeGQPWVknL2fLhi6gl1o="
+        },
+        "id": "019054bc-5517-71ea-8cb7-6bb3bfdf9672",
+        "updatedAt": "2026-10-19T06:08:12+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Chisinau",
+    "pubKey": "4Exn42t337sxoBzYHxgmDBNq+AhTYz6nvEj98TWY50Y=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:13+00:00"
+  },
+  {
+    "connectionName": "mc-mcm.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 43.7384,
+      "longitude": 7.4246
+    },
+    "country": "Monaco",
+    "countryCode": "MC",
+    "createdAt": "2022-03-30T12:23:58+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MC.png",
+    "id": "bba1e12c-409e-4b25-b3e9-c2d04ee9d660",
+    "info": [
+      {
+        "createdAt": "2024-05-06T10:43:25+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+LJmxwxkTvBpgzinuKCBS7o07S5s86Hpo="
+        },
+        "id": "018f4d80-4db8-72ec-b9c1-91c042cc66ba",
+        "updatedAt": "2026-10-19T06:07:45+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Monte Carlo",
+    "pubKey": "rj9PNit3SCy52Knw0QmHUfN2W59nB4oMOtmOZq1q/Hc=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:45+00:00"
+  },
+  {
+    "connectionName": "mn-uln.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 47.9025,
+      "longitude": 106.8985
+    },
+    "country": "Mongolia",
+    "countryCode": "MN",
+    "createdAt": "2022-04-14T10:49:13+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MN.png",
+    "id": "7e50a9a7-abc8-4065-91e9-dd8cae2d4690",
+    "info": [
+      {
+        "createdAt": "2025-11-05T08:11:46+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/0OENVIS76rjVlEgYIHB+fzt2EFitM+W0="
+        },
+        "id": "019a5312-68b3-70bb-80ab-ee890cc537a5",
+        "updatedAt": "2026-10-19T06:10:16+00:00"
+      }
+    ],
+    "load": 8,
+    "location": "Ulaanbaatar",
+    "pubKey": "3nLHy4uBd2nBUDuAuR6AM58yHLiX2CAXg8kdgEr6tV4=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:10:16+00:00"
+  },
+  {
+    "connectionName": "me-tgd.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 42.4304,
+      "longitude": 19.2594
+    },
+    "country": "Montenegro",
+    "countryCode": "ME",
+    "createdAt": "2022-03-28T12:38:51+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/ME.png",
+    "id": "f9a5dfb7-1740-4088-ab23-806cd616fcbb",
+    "info": [
+      {
+        "createdAt": "2024-05-20T11:04:09+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+O3Rv2nhRpkhFKfV7HrBRVSkON4v15LSs="
+        },
+        "id": "018f95ac-5225-7144-bbea-87210d2f4c8b",
+        "updatedAt": "2026-10-19T06:07:56+00:00"
+      }
+    ],
+    "load": 3,
+    "location": "Podgorica",
+    "pubKey": "Jhiez1pdO7tqUX0OmUubd9SPfvUc/ypSLRzWiyr3SRM=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:56+00:00"
+  },
+  {
+    "connectionName": "mm-nyt.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 19.754,
+      "longitude": 96.1345
+    },
+    "country": "Myanmar",
+    "countryCode": "MM",
+    "createdAt": "2022-04-15T09:23:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MM.png",
+    "id": "44b8876e-a0a2-47b6-8b7f-780990826beb",
+    "info": [
+      {
+        "createdAt": "2026-05-27T16:19:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18PnpO5nAdw2bX5Q+SbIm8hBl9uh8G2vZY="
+        },
+        "id": "019e6a3b-b66b-71f5-9edf-e7e27836d006",
+        "updatedAt": "2026-10-19T06:12:19+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Naypyidaw",
+    "pubKey": "tehGZzcmdK59x99I9dbfuWOHSxBdPsz5lB+uAoT75kE=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:19+00:00"
+  },
+  {
+    "connectionName": "np-ktm.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 27.70832,
+      "longitude": 85.32058
+    },
+    "country": "Nepal",
+    "countryCode": "NP",
+    "createdAt": "2022-04-15T09:30:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/NP.png",
+    "id": "901ec110-43ca-4663-a650-26a9b5a4a56a",
+    "info": [
+      {
+        "createdAt": "2026-05-27T13:25:39+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18VU8f08Z5IaRd32C8GmOFmvh5ElOAAXVA="
+        },
+        "id": "019e699c-bb90-71d6-b12f-221aafffe7fb",
+        "updatedAt": "2026-10-19T06:12:17+00:00"
+      }
+    ],
+    "load": 3,
+    "location": "Kathmandu",
+    "pubKey": "UKMTmY99xrUwchQNucd1SW6CmIFsDH1JpxQStRWA1V4=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:17+00:00"
+  },
+  {
+    "connectionName": "nl-ams.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 52.35,
+      "longitude": 4.916667
+    },
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "createdAt": "2018-10-16T12:09:14+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/NL.png",
+    "id": "2b8c48bf-19af-41e2-8667-8f4fdb740665",
+    "info": [
+      {
+        "createdAt": "2020-10-28T15:21:42+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/SFoZ1XL4jwQ+djrxOpoXnY0Lr8gv7bKA="
+        },
+        "id": "3405ab22-8919-4ba5-b5c7-ffd0aae04fb7",
+        "updatedAt": "2026-10-19T06:11:59+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Amsterdam",
+    "pubKey": "Lxg3jAOKcBA9tGBtB6vEWMFl5LUEB6AwOpuniYn1cig=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:53+00:00"
+  },
+  {
+    "connectionName": "nl-ams-st001.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 52.379189,
+      "longitude": 4.899431
+    },
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "createdAt": "2019-08-02T10:01:31+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/NL.png",
+    "id": "d8a14fa9-0cab-46a0-b27c-94e21535a805",
+    "info": [
+      {
+        "createdAt": "2019-08-02T10:03:28+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18U3642GkZvNfE9Ihz9ngd898kNHn+UY+s="
+        },
+        "id": "6cf628eb-f440-42be-a899-d929049c2c84",
+        "updatedAt": "2026-10-19T06:11:24+00:00"
+      }
+    ],
+    "load": 100,
+    "location": "Amsterdam",
+    "pubKey": "6nnixEne6MUyAmsjhA/1O7evl+STAL00AoLcY5+Hb1Y=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:24+00:00"
+  },
+  {
+    "connectionName": "nz-akl.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -36.866667,
+      "longitude": 174.766667
+    },
+    "country": "New Zealand",
+    "countryCode": "NZ",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/NZ.png",
+    "id": "bb8d95fe-476e-4cfd-8c84-53c9c39e3d4c",
+    "info": [
+      {
+        "createdAt": "2025-11-07T17:41:39+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19cuPEyeTWrUcpXLjmDrHCu/vanP+Z+ClY="
+        },
+        "id": "019a5f68-ddfa-73bf-94f2-b438d05c3edf",
+        "updatedAt": "2026-10-19T06:10:22+00:00"
+      }
+    ],
+    "load": 31,
+    "location": "Auckland",
+    "pubKey": "xv8P19y0m9ojrLelCaPzGtaVv7tlPzLgZxvAD7lpYDg=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:01+00:00"
+  },
+  {
+    "connectionName": "ng-lag.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 6.465422,
+      "longitude": 3.406448
+    },
+    "country": "Nigeria",
+    "countryCode": "NG",
+    "createdAt": "2019-12-09T08:28:47+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/NG.png",
+    "id": "09a43c6f-1e9c-4c80-a11d-b26640b3c8bb",
+    "info": [
+      {
+        "createdAt": "2024-11-19T10:26:24+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/z1Y+oTLdRLVUdPg7MnWLhjOiIiKhYUDA="
+        },
+        "id": "019343f5-8825-7093-a24a-9485e6dbf697",
+        "updatedAt": "2026-10-19T06:08:41+00:00"
+      }
+    ],
+    "load": 16,
+    "location": "Lagos",
+    "pubKey": "mMmsmMyqtASb4V42H5nxyD8BgauWrNhCCZdBHCsbC00=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:50+00:00"
+  },
+  {
+    "connectionName": "mk-skp.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.99646,
+      "longitude": 21.43141
+    },
+    "country": "North Macedonia",
+    "countryCode": "MK",
+    "createdAt": "2019-09-05T13:20:31+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/MK.png",
+    "id": "f4fc0e00-22df-49b1-bd37-76d78d4c2b24",
+    "info": [
+      {
+        "createdAt": "2024-06-26T13:38:39+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19KIL1wXvfs1WGbviSkc5tbrLBILz5O8/M="
+        },
+        "id": "019054c5-0f71-704a-b444-d3bc423e8086",
+        "updatedAt": "2026-10-19T06:08:12+00:00"
+      }
+    ],
+    "load": 7,
+    "location": "Skopje",
+    "pubKey": "dZNq48noPkey9rwSbAU+masbafpDSaAmtAMaP+gzLxA=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:10:54+00:00"
+  },
+  {
+    "connectionName": "no-osl.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 59.916667,
+      "longitude": 10.75
+    },
+    "country": "Norway",
+    "countryCode": "NO",
+    "createdAt": "2018-10-16T12:09:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/NO.png",
+    "id": "196fa1fa-819e-4c73-819b-5e454e52b778",
+    "info": [
+      {
+        "createdAt": "2022-06-29T09:05:42+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/dJK/1rtxEk8S/+UB6p0xaowCEK5dJ+So="
+        },
+        "id": "a6435ece-aba3-4e70-8156-e36794647fb9",
+        "updatedAt": "2026-10-19T06:14:14+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Oslo",
+    "pubKey": "pXfZi2vsdd88qrnqh+bwqHG4IYD42pj3T1wCm3PIGmw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:14+00:00"
+  },
+  {
+    "connectionName": "pk-khi.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 24.8609,
+      "longitude": 66.9905
+    },
+    "country": "Pakistan",
+    "countryCode": "PK",
+    "createdAt": "2022-07-28T09:48:06+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PK.png",
+    "id": "b3d967e0-01d2-48ff-b231-54a1804858b5",
+    "info": [
+      {
+        "createdAt": "2025-11-04T07:07:20+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19od1gEGPac4iUxxJDjxZdIM9qzBr5vX3E="
+        },
+        "id": "019a4db1-0df2-739d-a8a6-5423d2860c23",
+        "updatedAt": "2026-10-19T06:10:15+00:00"
+      }
+    ],
+    "load": 4,
+    "location": "Karachi",
+    "pubKey": "DLb7wUFYkOcx5iiNxbNquP5rH+EJdiQfrdFaQoojskU=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:17+00:00"
+  },
+  {
+    "connectionName": "pa-pac.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 8.559559,
+      "longitude": -81.1308
+    },
+    "country": "Panama",
+    "countryCode": "PA",
+    "createdAt": "2021-06-23T10:42:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PA.png",
+    "id": "161da58e-b07b-43b0-81cf-ef1ebb7b3fcc",
+    "info": [
+      {
+        "createdAt": "2024-05-24T14:19:41+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18GniYY2rCEOTm5EC8Kd/5EgGYN5SeJNNA="
+        },
+        "id": "018faaf8-c68c-7299-8eca-09fd11f9951a",
+        "updatedAt": "2026-10-19T06:07:58+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Panama",
+    "pubKey": "9L1tbh/IHrrtImJnuEsVc1eN7xChlLzS6nCMaVyH/iQ=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:58+00:00"
+  },
+  {
+    "connectionName": "py-asu.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -25.297902,
+      "longitude": -57.603101
+    },
+    "country": "Paraguay",
+    "countryCode": "PY",
+    "createdAt": "2019-09-18T09:50:46+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PY.png",
+    "id": "0dd6fc73-e46b-42ed-9f21-066b76b020aa",
+    "info": [
+      {
+        "createdAt": "2024-07-24T06:42:12+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+ZAqjJDtinlo+0Y1nibyMpZE4bRGTVVAA="
+        },
+        "id": "0190e379-dced-716c-81b2-b35f5f008ac5",
+        "updatedAt": "2026-10-19T06:08:18+00:00"
+      }
+    ],
+    "load": 2,
+    "location": "Asunción",
+    "pubKey": "vY6iX5ivkYIrIADMPQMtzR8onU7UYlB52XH5loAeDn0=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:17+00:00"
+  },
+  {
+    "connectionName": "pe-lim.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -12.046374,
+      "longitude": -77.042793
+    },
+    "country": "Peru",
+    "countryCode": "PE",
+    "createdAt": "2021-03-04T11:50:46+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PE.png",
+    "id": "34d85fe5-e983-4076-8a9b-45f569aee19a",
+    "info": [
+      {
+        "createdAt": "2024-08-01T10:55:36+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/WR3X/dMhByyheJD5wNdhNv8vWUKH8v0c="
+        },
+        "id": "01910d94-bbb8-7005-a592-141166f634df",
+        "updatedAt": "2026-10-19T06:00:56+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Lima",
+    "pubKey": "mR3GelqqkAL6IKKbzcdxJm3f3uyVNxdzCCtTcLT+wUc=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:00:56+00:00"
+  },
+  {
+    "connectionName": "ph-mnl.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 14.599512,
+      "longitude": 120.984222
+    },
+    "country": "Philippines",
+    "countryCode": "PH",
+    "createdAt": "2020-02-07T05:26:00+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PH.png",
+    "id": "e47dbff0-f1b1-4c4c-ab8c-df6a8d107c10",
+    "info": [
+      {
+        "createdAt": "2026-08-06T11:38:22+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18r62KAd0nGClzuLKJnijhbmXRVjh4Dh2s="
+        },
+        "id": "019fd6de-048e-7349-bda1-040162c09351",
+        "updatedAt": "2026-10-19T06:12:42+00:00"
+      }
+    ],
+    "load": 25,
+    "location": "Manila",
+    "pubKey": "utXZy1ELBSQKa6s9/K/W4sV11Jod6sSLoikKqKRPyQs=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:42+00:00"
+  },
+  {
+    "connectionName": "pl-gdn.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 54.36085,
+      "longitude": 18.658291
+    },
+    "country": "Poland",
+    "countryCode": "PL",
+    "createdAt": "2018-10-16T12:09:23+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PL.png",
+    "id": "1a33edb3-017c-456a-bbb4-af7348d71a1b",
+    "info": [
+      {
+        "createdAt": "2024-06-28T08:21:34+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+uJDzsNF5tGSIoBbQt9OJUaEXPxqjltHw="
+        },
+        "id": "01905def-7c5f-73cb-b6ad-3f8e057b5771",
+        "updatedAt": "2026-10-19T06:08:14+00:00"
+      }
+    ],
+    "load": 18,
+    "location": "Gdansk",
+    "pubKey": "4lZhg/fKDCRLjvULGntx21qfebzQv5TJjZ1pc82sUgc=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:31+00:00"
+  },
+  {
+    "connectionName": "pl-waw.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 52.25,
+      "longitude": 21
+    },
+    "country": "Poland",
+    "countryCode": "PL",
+    "createdAt": "2018-10-16T12:09:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PL.png",
+    "id": "2fce6b8a-07bc-4726-8f7f-9b806188e70b",
+    "info": [
+      {
+        "createdAt": "2025-12-08T11:30:29+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+sNtznu4fdLveOC+XKSX4ObGrnw8kgPqI="
+        },
+        "id": "019afdba-3032-7095-9743-28c04587a107",
+        "updatedAt": "2026-10-19T06:11:02+00:00"
+      }
+    ],
+    "load": 21,
+    "location": "Warsaw",
+    "pubKey": "vBa3HK7QXietG64rHRLm085VMS2cAX2paeAaphB/SEU=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:34+00:00"
+  },
+  {
+    "connectionName": "pt-lis.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 38.736946,
+      "longitude": -9.142685
+    },
+    "country": "Portugal",
+    "countryCode": "PT",
+    "createdAt": "2019-08-13T11:02:25+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PT.png",
+    "id": "ec673ed9-ec8c-4ddf-a049-16c2429f6637",
+    "info": [
+      {
+        "createdAt": "2022-11-21T13:09:59+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/hG0GGTy99k9OJoBekl0YaQQBfjdGZ638="
+        },
+        "id": "abec0fab-7107-4e77-863d-81a92a385483",
+        "updatedAt": "2026-10-19T06:15:20+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Lisbon",
+    "pubKey": "JgYlpt7jFh0FV2QO0QQ3yFfsnqikUq977V3cObFGTQ4=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:14+00:00"
+  },
+  {
+    "connectionName": "pt-opo.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.150223,
+      "longitude": -8.629932
+    },
+    "country": "Portugal",
+    "countryCode": "PT",
+    "createdAt": "2019-06-25T07:01:24+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PT.png",
+    "id": "4335da32-c15f-4466-a0cf-1209fcc1176f",
+    "info": [
+      {
+        "createdAt": "2026-01-09T12:34:06+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19p0P68HhTV0kxPAsw420pMwjPpaU+Sbbo="
+        },
+        "id": "019ba2bf-f0fe-70b2-84a6-c9e92d3d834e",
+        "updatedAt": "2026-10-19T06:11:24+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Porto",
+    "pubKey": "F24iHyEt6YSSaUry/nQAfIEOwXncH0RHUtkte0znvkE=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:24+00:00"
+  },
+  {
+    "connectionName": "pr-sju.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 18.4655,
+      "longitude": -66.1057
+    },
+    "country": "Puerto Rico",
+    "countryCode": "PR",
+    "createdAt": "2022-08-11T08:05:08+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/PR.png",
+    "id": "646dade3-7d28-4e49-80d6-4657936691ef",
+    "info": [
+      {
+        "createdAt": "2024-05-13T10:17:44+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+sskdb9nuRp2zhNT0W97GZvL7qZ5ml0Qg="
+        },
+        "id": "018f7175-509b-7107-ae3e-2aee3528ac66",
+        "updatedAt": "2026-10-19T06:07:53+00:00"
+      }
+    ],
+    "load": 6,
+    "location": "San Juan",
+    "pubKey": "aShaCPgmFn4fHK6wY7pVEIirZ3J961+93d3Qicz6swE=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:07:53+00:00"
+  },
+  {
+    "connectionName": "ro-buc.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 44.433333,
+      "longitude": 26.1
+    },
+    "country": "Romania",
+    "countryCode": "RO",
+    "createdAt": "2018-10-16T12:09:18+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/RO.png",
+    "id": "c41f41cd-da8b-45fe-8338-37ef29508830",
+    "info": [
+      {
+        "createdAt": "2022-05-26T13:07:55+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/2QQTqP9O8XcTAWzRdL+HWNI8iHi3xlCg="
+        },
+        "id": "24ee1818-7bff-4c6e-b22e-9eb9498c83cb",
+        "updatedAt": "2026-10-19T06:13:53+00:00"
+      }
+    ],
+    "load": 23,
+    "location": "Bucharest",
+    "pubKey": "uRT3uSAUwvm7Rp+s3n5V9JibsKHKAZ/8+SU3psG8QxI=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:54+00:00"
+  },
+  {
+    "connectionName": "sa-ruh.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 24.7742,
+      "longitude": 46.7385
+    },
+    "country": "Saudi Arabia",
+    "countryCode": "SA",
+    "createdAt": "2022-09-26T13:49:42+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SA.png",
+    "id": "61b6052b-d9ba-4130-bacc-0b327bd07cf0",
+    "info": [
+      {
+        "createdAt": "2025-12-18T16:02:13+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18Dht3kGMEmxFA2g3+7e/utvJAN96sLS7k="
+        },
+        "id": "019b3232-9220-712c-b83c-16418ac0f703",
+        "updatedAt": "2026-10-19T06:11:11+00:00"
+      }
+    ],
+    "load": 7,
+    "location": "Riyadh",
+    "pubKey": "quiGeZeYE8T2FBBfz3mGikY9m7cTTyA0q/ROFakbfwU=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:12+00:00"
+  },
+  {
+    "connectionName": "rs-beg.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 44.787197,
+      "longitude": 20.457273
+    },
+    "country": "Serbia",
+    "countryCode": "RS",
+    "createdAt": "2019-05-09T09:35:59+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/RS.png",
+    "id": "a8ac5e4c-c753-4b9e-9331-ebf08045af4b",
+    "info": [
+      {
+        "createdAt": "2022-05-31T06:10:13+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/ppwLPYk3HYqUVx9TYX7NtHBQKzZSNDTE="
+        },
+        "id": "ad268f07-bf06-4cf9-9d9c-c173e85ac813",
+        "updatedAt": "2026-10-19T06:13:57+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Belgrade",
+    "pubKey": "A3vmr6/umw5sP8anxNyipgi5oEnOnZdqB1K/cbQpMiI=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:12+00:00"
+  },
+  {
+    "connectionName": "sg-sng.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.2930556,
+      "longitude": 103.8558333
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "2971ea9a-35e8-4e7b-a767-c87435ab1543",
+    "info": [
+      {
+        "createdAt": "2024-06-25T15:27:04+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/4LHcY+w9rdKcuvkQ4ONIr8+Z2YNVRvng="
+        },
+        "id": "01905001-f81d-714d-a44c-8a351637d777",
+        "updatedAt": "2026-10-19T06:08:11+00:00"
+      }
+    ],
+    "load": 38,
+    "location": "Singapore",
+    "pubKey": "MGfgkhJsMVMTO33h1wr76+z6gQr/93VcGdClfbaPsnU=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:52+00:00"
+  },
+  {
+    "connectionName": "sg-sng-st009.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.29027,
+      "longitude": 103.851959
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2022-03-11T10:55:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "7af7c326-2831-4c94-892c-02b5bdcc6775",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:08:44+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/elfDaFmaEDu0iz7oCLojNk/0JDuAFsOw="
+        },
+        "id": "1fd403cb-a9d3-4f9f-9a5d-078f6f6a5be4",
+        "updatedAt": "2026-10-19T06:13:11+00:00"
+      }
+    ],
+    "load": 38,
+    "location": "Singapore",
+    "pubKey": "sk0YuJx8nO9hhJnQz5rn1aboekY7Hdl9ZfebCSXBGAY=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:11+00:00"
+  },
+  {
+    "connectionName": "sg-sng-st005.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.29027,
+      "longitude": 103.851959
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2022-03-11T10:53:30+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "65d50a63-7217-4ca1-97b2-dfddeadd7021",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:22:08+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+82K3pnwV3MKEi01TBK49UCnkGzm4r6Ts="
+        },
+        "id": "d19d33d9-6467-45d0-83c9-b2817cbb6476",
+        "updatedAt": "2026-10-19T06:13:12+00:00"
+      }
+    ],
+    "load": 70,
+    "location": "Singapore",
+    "pubKey": "d9+f+QTkJH5vYt5dah62rKQLVIudeMERjEssTg3txnQ=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:12+00:00"
+  },
+  {
+    "connectionName": "sg-sng-st006.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.29027,
+      "longitude": 103.851959
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2022-03-11T10:54:08+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "6640234a-a203-4cfb-82ea-1ed70375ecb4",
+    "info": [
+      {
+        "createdAt": "2022-03-14T21:17:39+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/4O0JO2LQ6vMZ2vSqvLh4yfbDErSKRpBI="
+        },
+        "id": "87bcb376-f1fa-4a07-b6f6-18c73b39520f",
+        "updatedAt": "2026-10-19T06:13:12+00:00"
+      }
+    ],
+    "load": 75,
+    "location": "Singapore",
+    "pubKey": "r5IE8U+/CmPJBQFULLUPwfE4AESkUU7Z4wWBOpHvFyA=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:12+00:00"
+  },
+  {
+    "connectionName": "sg-sng-st008.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.29027,
+      "longitude": 103.851959
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2022-03-11T10:54:54+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "438115f5-7fc3-485b-b2b8-a1e96dcd4eeb",
+    "info": [
+      {
+        "createdAt": "2022-03-14T19:53:07+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/gfBzPtS15SuJAHo88sKMcHzj0hH/O7r8="
+        },
+        "id": "004126cc-128f-41f0-b408-08cff4a5bde6",
+        "updatedAt": "2026-10-19T06:13:09+00:00"
+      }
+    ],
+    "load": 75,
+    "location": "Singapore",
+    "pubKey": "6GvYCh8LaRnbp3OwvNB2BPCaNOjGYKGwfen6eVUP6hc=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:09+00:00"
+  },
+  {
+    "connectionName": "sg-sng-st010.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.29027,
+      "longitude": 103.851959
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2022-03-11T10:55:42+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "ee320b0d-874b-45d2-88bb-95bbd2f7eefe",
+    "info": [
+      {
+        "createdAt": "2022-03-14T20:08:44+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+4WwcwO/239TjDlb+c++pCWDTse8hRg1g="
+        },
+        "id": "62449998-7b63-4df6-aea7-b5c3490cc480",
+        "updatedAt": "2026-10-19T06:13:11+00:00"
+      }
+    ],
+    "load": 80,
+    "location": "Singapore",
+    "pubKey": "eL2WOQ130amedxlJ50x71eZUI3QWg8wuqwgqc9vjSRo=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:11+00:00"
+  },
+  {
+    "connectionName": "sg-sng-st007.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 1.29027,
+      "longitude": 103.851959
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "createdAt": "2022-03-11T10:54:31+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SG.png",
+    "id": "527f01de-f5d2-4dbc-946c-627dababee44",
+    "info": [
+      {
+        "createdAt": "2022-03-14T19:53:06+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/hNz5V26ZC5QgRxQLJSY/pF0e0SYj+Pdw="
+        },
+        "id": "e8cb213e-311e-4a4b-9dc9-fb8e486f0974",
+        "updatedAt": "2026-10-19T06:13:09+00:00"
+      }
+    ],
+    "load": 95,
+    "location": "Singapore",
+    "pubKey": "4geWIYI3+Zn7GmtzJ4D9/QIhRjWGpWwIhqssT3Yl9RE=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:13:09+00:00"
+  },
+  {
+    "connectionName": "sk-bts.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 48.15,
+      "longitude": 17.1166667
+    },
+    "country": "Slovakia",
+    "countryCode": "SK",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SK.png",
+    "id": "e1d49392-204d-4fbf-866c-5f286d5480bb",
+    "info": [
+      {
+        "createdAt": "2025-02-10T09:56:14+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+6lPB+oeFlusqPX7kEXYOF2q7CZoQ5O90="
+        },
+        "id": "0194ef49-bd47-709a-b5fe-e8b193ad1c28",
+        "updatedAt": "2026-10-19T06:08:54+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Bratislava",
+    "pubKey": "T5b7+uwUFqN5r1WsfBXURpSnYCYRLFAVreKkIQHGOlw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:05+00:00"
+  },
+  {
+    "connectionName": "si-lju.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 46.0552778,
+      "longitude": 14.5144444
+    },
+    "country": "Slovenia",
+    "countryCode": "SI",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SI.png",
+    "id": "ad51bc75-778d-49c1-8ec0-5a8fb068f308",
+    "info": [
+      {
+        "createdAt": "2023-12-11T11:54:04+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+sZKIy4awVM5n0fQz2st1/9eQKhjv0ZeQ="
+        },
+        "id": "5202c316-d026-483a-8856-3eb1e84d9806",
+        "updatedAt": "2026-10-19T06:17:22+00:00"
+      }
+    ],
+    "load": 17,
+    "location": "Ljubljana",
+    "pubKey": "yPdmxOfzm06fotkt/dlaAiyxWPaWfCuDPaUljNx+c38=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:22+00:00"
+  },
+  {
+    "connectionName": "za-jnb.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -26.205171,
+      "longitude": 28.049815
+    },
+    "country": "South Africa",
+    "countryCode": "ZA",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/ZA.png",
+    "id": "58d4c231-4f74-4b4b-9e24-59dcaf3a66c9",
+    "info": [
+      {
+        "createdAt": "2022-10-31T15:28:46+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19qdHsC4r8anlt1C1+YsLj0azIbPYgJQIE="
+        },
+        "id": "9fc3bfc9-2071-440d-8e36-fbc6c1706280",
+        "updatedAt": "2026-10-19T06:15:03+00:00"
+      }
+    ],
+    "load": 32,
+    "location": "Johannesburg",
+    "pubKey": "Wj/fSWxNLs1igL1uTRp4zLFNohe4S1wqNTYRHevthUA=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:03+00:00"
+  },
+  {
+    "connectionName": "kr-seo.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 37.5985,
+      "longitude": 126.9783
+    },
+    "country": "South Korea",
+    "countryCode": "KR",
+    "createdAt": "2018-10-16T12:09:21+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/KR.png",
+    "id": "3d88004a-a714-4eda-99e7-8705c1700f61",
+    "info": [
+      {
+        "createdAt": "2025-03-25T16:12:47+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19m1oGAqfGYnEONwySlkDne3FqxHxUAtyY="
+        },
+        "id": "0195ce13-eeb0-706a-ba84-557f176a8968",
+        "updatedAt": "2026-10-19T06:08:59+00:00"
+      }
+    ],
+    "load": 20,
+    "location": "Seoul",
+    "pubKey": "bD/m2mdKxJXG2wTkLsmWpiW8xZwkDdrrrwC44auOhQg=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p",
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:49+00:00"
+  },
+  {
+    "connectionName": "es-bcn.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.390205,
+      "longitude": 2.154007
+    },
+    "country": "Spain",
+    "countryCode": "ES",
+    "createdAt": "2019-05-15T13:16:39+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/ES.png",
+    "id": "a7ee508a-85df-4f8f-b43f-762a5ee86fce",
+    "info": [
+      {
+        "createdAt": "2025-09-16T13:04:00+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/Q4+E6HNjKWx3pKAj+XXTXm7nUeFO8olQ="
+        },
+        "id": "0199529f-fd4b-7048-9110-f79d506f04aa",
+        "updatedAt": "2026-10-19T06:10:06+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Barcelona",
+    "pubKey": "3EC6079YDlzJKcNLdrm/t+JLG8hV3wPpoWE4MypjYnw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:44+00:00"
+  },
+  {
+    "connectionName": "es-mad.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.408566,
+      "longitude": -3.69222
+    },
+    "country": "Spain",
+    "countryCode": "ES",
+    "createdAt": "2018-10-16T12:09:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/ES.png",
+    "id": "92948c7b-265b-4945-af77-3e39e6907ce7",
+    "info": [
+      {
+        "createdAt": "2026-08-31T11:37:17+00:00",
+        "entry": {
+          "value": "U2FsdGVkX184hgjgDxdq77V5iPlbH3lg1hNJkSRfqv0="
+        },
+        "id": "01a0579c-02b7-70ae-a9d7-bf0c902cbae2",
+        "updatedAt": "2026-10-19T06:12:57+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Madrid",
+    "pubKey": "a30vOQfjwPzjRxGNi2dvSAMdaPHEYatR84cUjXKOwls=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:25+00:00"
+  },
+  {
+    "connectionName": "es-vlc.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 39.430962,
+      "longitude": -0.363347
+    },
+    "country": "Spain",
+    "countryCode": "ES",
+    "createdAt": "2019-08-22T16:07:44+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/ES.png",
+    "id": "1e10f1e4-5132-4530-aaf7-c1a4950d2606",
+    "info": [
+      {
+        "createdAt": "2022-07-07T19:45:55+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18nnW/7NFfwm3EqndcC+qPqL4ThFGMB7ww="
+        },
+        "id": "30f12465-f342-46e5-bc3b-ebd11808daa7",
+        "updatedAt": "2026-10-19T06:14:16+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Valencia",
+    "pubKey": "TlYKGW07dqFfedNfAnVIPv2WPfC54h96se+dcIDuNhU=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:17+00:00"
+  },
+  {
+    "connectionName": "lk-cmb.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 6.938747,
+      "longitude": 79.85411
+    },
+    "country": "Sri Lanka",
+    "countryCode": "LK",
+    "createdAt": "2022-04-14T11:57:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/LK.png",
+    "id": "d0b0d5e6-565d-46a1-a223-ba076b542a18",
+    "info": [
+      {
+        "createdAt": "2024-10-01T11:40:07+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+bVNanGKyHrhcmRNlC67ey1D804ef6bk8="
+        },
+        "id": "019247e1-68eb-72f8-b970-326c131ed42a",
+        "updatedAt": "2026-10-19T06:08:37+00:00"
+      }
+    ],
+    "load": 7,
+    "location": "Colombo",
+    "pubKey": "+8TxSpyyEGiZK6d/5V+94Zc7nxOV3F1ag7sM6AN86GY=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:10:56+00:00"
+  },
+  {
+    "connectionName": "se-sto.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 59.333333,
+      "longitude": 18.05
+    },
+    "country": "Sweden",
+    "countryCode": "SE",
+    "createdAt": "2018-10-16T12:09:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/SE.png",
+    "id": "41d3a67e-cb8e-4548-a440-3b617985d4a5",
+    "info": [
+      {
+        "createdAt": "2025-01-24T14:11:15+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/kfK64t2vcJ713V0cgp+hzmxR2f9WTGDs="
+        },
+        "id": "019498a7-1a6b-7301-a424-f55c44f1e359",
+        "updatedAt": "2026-10-19T06:08:51+00:00"
+      }
+    ],
+    "load": 19,
+    "location": "Stockholm",
+    "pubKey": "oUFRc+2emXgogDVWnJF4RAzr72PyafCzMVeQOgG92lY=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:19+00:00"
+  },
+  {
+    "connectionName": "ch-zur.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 47.366667,
+      "longitude": 8.55
+    },
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "createdAt": "2018-10-16T12:09:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/CH.png",
+    "id": "71bffe6c-521b-4ee5-8caf-03741d44a588",
+    "info": [
+      {
+        "createdAt": "2025-11-18T07:23:32+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18KWdVc/srJWejLVuhSZ9vaWdYra+dxSzs="
+        },
+        "id": "019a95d8-ec42-7399-a365-04a77d85cb17",
+        "updatedAt": "2026-10-19T06:10:28+00:00"
+      }
+    ],
+    "load": 14,
+    "location": "Zurich",
+    "pubKey": "qFuwaE8IyDbNBTNar3xAXRGaBdkTtmLh1uIGMJxTxUs=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:40+00:00"
+  },
+  {
+    "connectionName": "tw-tai.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 25.10549,
+      "longitude": 121.59736
+    },
+    "country": "Taiwan",
+    "countryCode": "TW",
+    "createdAt": "2019-04-24T09:55:32+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/TW.png",
+    "id": "5df7f023-b203-4236-adb3-fae4cb665642",
+    "info": [
+      {
+        "createdAt": "2022-10-11T18:15:24+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/Vthhb9CnYaRQsvAKWrIl4dPtZ+zRXK5I="
+        },
+        "id": "88974b78-7c4b-4674-80e7-2a0551d4f1e6",
+        "updatedAt": "2026-10-19T06:14:57+00:00"
+      }
+    ],
+    "load": 28,
+    "location": "Taipei",
+    "pubKey": "P0vaGUOUE7V5bbGOYY2WgQeZnTZEHvIr+dfebU7W4Ao=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:20+00:00"
+  },
+  {
+    "connectionName": "th-bkk.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 13.736717,
+      "longitude": 100.523186
+    },
+    "country": "Thailand",
+    "countryCode": "TH",
+    "createdAt": "2019-04-24T09:50:58+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/TH.png",
+    "id": "115cac30-9be0-4536-b761-c1d341970b78",
+    "info": [
+      {
+        "createdAt": "2026-07-28T15:21:47+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19Nscg3WNeCvlJe0AD27qcRkHqCwv++8gM="
+        },
+        "id": "019fa951-5668-7089-8002-8fd3ecc952a3",
+        "updatedAt": "2026-10-19T06:12:38+00:00"
+      }
+    ],
+    "load": 27,
+    "location": "Bangkok",
+    "pubKey": "OoFY46j/w4uQFyFu/OQ/h3x+ymJ1DJ4UR1fwGNxOxk0=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "p2p",
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:40+00:00"
+  },
+  {
+    "connectionName": "tr-ist.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.015137,
+      "longitude": 28.97953
+    },
+    "country": "Turkey",
+    "countryCode": "TR",
+    "createdAt": "2020-06-01T11:28:33+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/TR.png",
+    "id": "525776c0-d250-4733-9ad0-840b256a0b93",
+    "info": [
+      {
+        "createdAt": "2024-01-12T10:50:06+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+gjDHfVt80Sq2M0g8zG/0nqX70blGOejw="
+        },
+        "id": "45e24d81-d75f-454b-b30d-aa018ead6b8b",
+        "updatedAt": "2026-10-19T06:17:26+00:00"
+      }
+    ],
+    "load": 16,
+    "location": "Istanbul",
+    "pubKey": "sF/TlxU9XaDN3QQBT/lu2Pw9qpD3XpDqLBfInBtff2A=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:26+00:00"
+  },
+  {
+    "connectionName": "ua-iev.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 50.433333,
+      "longitude": 30.516667
+    },
+    "country": "Ukraine",
+    "countryCode": "UA",
+    "createdAt": "2018-10-16T12:09:17+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/UA.png",
+    "id": "942197da-90b6-4656-aa67-7191f5dca1c4",
+    "info": [
+      {
+        "createdAt": "2022-09-14T08:30:44+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+XEsFgrNsev34PhL6OJb7bZY6PAHAvmk8="
+        },
+        "id": "b331506a-208d-4f51-a82f-3726d67eaded",
+        "updatedAt": "2026-10-19T06:14:42+00:00"
+      }
+    ],
+    "load": 21,
+    "location": "Kyiv",
+    "pubKey": "wy+PhWBP715KfBrsQR4P3JUalYc9a77FmZWQinwYLmo=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:43+00:00"
+  },
+  {
+    "connectionName": "ae-dub.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 25.07428,
+      "longitude": 55.18854
+    },
+    "country": "United Arab Emirates",
+    "countryCode": "AE",
+    "createdAt": "2019-07-05T11:21:32+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/AE.png",
+    "id": "0bdec12d-5f39-464a-9579-c0ab76eaaef8",
+    "info": [
+      {
+        "createdAt": "2024-12-24T15:42:35+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+M5Je061PTAsGawvpdwJ4Ay5pbQuYgp5k="
+        },
+        "id": "0193f955-93d5-7379-aca0-02f886f19e5e",
+        "updatedAt": "2026-10-19T06:08:48+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Dubai",
+    "pubKey": "6dZGkg0iAMgQuOCGknAgBAqDEeJeBQ4Of5eblO4aNC8=",
+    "region": "Middle East and Africa",
+    "regionCode": "EA",
+    "tags": [
+      "cost"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:14:00+00:00"
+  },
+  {
+    "connectionName": "uk-edi.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 55.9533,
+      "longitude": -3.1848
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2022-03-22T10:52:55+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "012bb679-9724-49c9-904b-afca6d514ca3",
+    "info": [
+      {
+        "createdAt": "2026-01-23T16:31:48+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19X5dcPn3l6Lum2PEj+8nYj5Qt4CqT3iWY="
+        },
+        "id": "019bebb2-9822-7001-90d2-4945ff350965",
+        "updatedAt": "2026-10-19T06:11:34+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Edinburgh",
+    "pubKey": "f0fMBZNOzoTDfU28EKhtvYy3keiG5Jkh4fLBov1DI0U=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:14+00:00"
+  },
+  {
+    "connectionName": "uk-gla.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 55.859238,
+      "longitude": -4.296141
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2019-06-14T09:49:51+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "44001d21-ebcb-477b-a7fe-e35d4810172a",
+    "info": [
+      {
+        "createdAt": "2026-08-13T13:44:52+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18l5IfViTI7KWmG17E/4HILB4rIbN9MVH8="
+        },
+        "id": "019ffb5e-59c4-7031-a9a0-fdcd352ad583",
+        "updatedAt": "2026-10-19T06:12:49+00:00"
+      }
+    ],
+    "load": 13,
+    "location": "Glasgow",
+    "pubKey": "QiFHJ7wtwhXEztRqBjGrFphsFXtlAFWwMDgruFKq0XE=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:32+00:00"
+  },
+  {
+    "connectionName": "uk-lon.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.514125,
+      "longitude": -0.093689
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2018-10-16T12:09:22+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "a9135fdb-cb7c-4dec-8024-8ff5b697b16f",
+    "info": [
+      {
+        "createdAt": "2025-12-04T12:58:11+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+trP0igpVp+9codINq+TFzEoDe1yrFgdw="
+        },
+        "id": "019ae971-0c5a-7260-ac0e-c23b0e53de89",
+        "updatedAt": "2026-10-19T06:10:51+00:00"
+      }
+    ],
+    "load": 12,
+    "location": "London",
+    "pubKey": "iBJRXLZwXuWWrOZE1ZrAXEKMgV/z0WjG0Tks5rnWLBI=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:17+00:00"
+  },
+  {
+    "connectionName": "uk-lon-st002.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.509865,
+      "longitude": -0.118092
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2020-02-07T14:14:42+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "cfc1b1dd-6be4-4dd9-8b59-ff2fb751b539",
+    "info": [
+      {
+        "createdAt": "2020-02-07T14:16:47+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18TxZJ/BV1nXDI74h2y5YtDYRCxsqDQYj0="
+        },
+        "id": "6175b728-494d-40cc-9ea2-da473bc4e668",
+        "updatedAt": "2026-10-19T06:11:29+00:00"
+      }
+    ],
+    "load": 31,
+    "location": "London",
+    "pubKey": "+zZlWRDv4SAZ1j1DpyZKBzFVM7yV0hgBNKf8/nG2hWo=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:29+00:00"
+  },
+  {
+    "connectionName": "uk-lon-st001.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.509865,
+      "longitude": -0.118092
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2019-08-30T10:07:11+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "509ba389-15be-4456-9c73-7019f264d165",
+    "info": [
+      {
+        "createdAt": "2021-10-06T11:30:58+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/oCIDpvfaW6ETaaD+cY9NHAS2BvzOb05g="
+        },
+        "id": "19d9262b-66dc-4874-85bf-6283d689581d",
+        "updatedAt": "2026-10-19T06:12:56+00:00"
+      }
+    ],
+    "load": 32,
+    "location": "London",
+    "pubKey": "G+Jv9y9nMXdTIe92fXG4cYAKpsyIHmMwYSujCL+1uCo=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:12:56+00:00"
+  },
+  {
+    "connectionName": "uk-lon-st005.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.509865,
+      "longitude": -0.118092
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2020-02-07T14:15:32+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "e3e204f4-f74d-4246-a013-cff3cbe08671",
+    "info": [
+      {
+        "createdAt": "2020-02-07T14:18:56+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/TFE9ZN7eZx4aKYV6Ory8dQR8WliFKHcc="
+        },
+        "id": "f2dea2e4-d4ed-4dd4-bab3-cbde592ad8b6",
+        "updatedAt": "2026-10-19T06:11:30+00:00"
+      }
+    ],
+    "load": 42,
+    "location": "London",
+    "pubKey": "QWhiKTxKWp9wo3blPDcMdA1Y/Vn69u2d8WQKQMTuoWw=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:30+00:00"
+  },
+  {
+    "connectionName": "uk-lon-st003.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.509865,
+      "longitude": -0.118092
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2020-02-07T14:15:06+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "688bc7f2-c77b-43b8-b0d5-429859159a08",
+    "info": [
+      {
+        "createdAt": "2020-02-07T14:17:32+00:00",
+        "entry": {
+          "value": "U2FsdGVkX185ftiExPQPPkGD5hVdfEX8308xJulBto8="
+        },
+        "id": "5ad30585-c0c7-490c-a123-5f3c90923c15",
+        "updatedAt": "2026-10-19T06:11:29+00:00"
+      }
+    ],
+    "load": 48,
+    "location": "London",
+    "pubKey": "/Ae1VALCWv/m+TU80A+1NB7NLffdSGKyCgpgW9NRNEI=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:29+00:00"
+  },
+  {
+    "connectionName": "uk-lon-st004.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 51.509865,
+      "longitude": -0.118092
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2020-02-07T14:15:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "a31b81ee-2e13-46d0-8203-3ac062c3b860",
+    "info": [
+      {
+        "createdAt": "2020-02-07T14:18:13+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/4vTljf5ekuR6J9sg87DG179uyz2J6vA8="
+        },
+        "id": "64c7064e-db6e-4535-a331-5b5b6a5ca2c9",
+        "updatedAt": "2026-10-19T06:11:29+00:00"
+      }
+    ],
+    "load": 78,
+    "location": "London",
+    "pubKey": "G+gdwCKtJUgSce/FwjMSh0xeEhvk55jjbqhBnTYgg3o=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:29+00:00"
+  },
+  {
+    "connectionName": "uk-man.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 53.5,
+      "longitude": -2.216667
+    },
+    "country": "United Kingdom",
+    "countryCode": "GB",
+    "createdAt": "2018-10-16T12:09:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/GB.png",
+    "id": "7c77ed6a-6383-46a4-96f1-0be012618180",
+    "info": [
+      {
+        "createdAt": "2022-03-15T15:22:25+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/TwfvpD4XEezCAUoeenbW3I4shSFjf300="
+        },
+        "id": "7a6d9b5c-0015-4216-97ab-7a15ceac7eb6",
+        "updatedAt": "2026-10-19T06:13:14+00:00"
+      }
+    ],
+    "load": 15,
+    "location": "Manchester",
+    "pubKey": "9R8He1cP8Laf5MT58FcaEYtPW/qnN3M9MQThIXOIvHs=",
+    "region": "Europe",
+    "regionCode": "EU",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:12+00:00"
+  },
+  {
+    "connectionName": "us-ash.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 39.04372,
+      "longitude": -77.48749
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2021-07-14T12:59:03+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "1ba167e0-a964-4742-887e-672d6511605e",
+    "info": [
+      {
+        "createdAt": "2022-11-09T12:43:33+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/2wAgHYqtq6LwSG6ImkR9VLIAQgto1jh8="
+        },
+        "id": "7669796c-fe2f-4d08-9232-04bb7a1fb694",
+        "updatedAt": "2026-10-19T06:15:12+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Ashburn",
+    "pubKey": "9ef2f8mXHnAxx06lx4OxhtzASfJgv6YfEimuVyef6QE=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:05+00:00"
+  },
+  {
+    "connectionName": "us-atl.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 33.7488889,
+      "longitude": -84.3880556
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-12-18T10:58:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "fb3c5eed-ad76-4633-a233-f9f0c55a28c6",
+    "info": [
+      {
+        "createdAt": "2026-05-20T07:55:40+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18lPoE9wfCyw1pD8ikP9KFfC1GRig+dpDw="
+        },
+        "id": "019e4462-1aac-72e3-93e6-26819aaa81e2",
+        "updatedAt": "2026-10-19T06:12:12+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Atlanta",
+    "pubKey": "SgciXll6wGQhcyxPUdp0V0z6WwN9P3fqDoeh3N3xNjc=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:54+00:00"
+  },
+  {
+    "connectionName": "us-bdn.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 44.058174,
+      "longitude": -121.315308
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-08-08T13:09:35+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "9e8e411b-54a2-44b3-a410-ceb3a44f408b",
+    "info": [
+      {
+        "createdAt": "2023-01-03T16:50:18+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+89fDi1uXTwuc8rp3h8GcOJEsp6gvXj1o="
+        },
+        "id": "fe46bd53-a63a-42f2-93ac-4b4949e63f42",
+        "updatedAt": "2026-10-19T06:15:37+00:00"
+      }
+    ],
+    "load": 44,
+    "location": "Bend",
+    "pubKey": "YaxEFQHtwF/EGvf5s/aLlX5Jr0djKTV5oNcAcIwAz0E=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:45+00:00"
+  },
+  {
+    "connectionName": "us-bos.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 42.361145,
+      "longitude": -71.057083
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-08-08T13:06:01+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "b146903e-f0d4-4a87-975c-0c227ed69c24",
+    "info": [
+      {
+        "createdAt": "2023-10-04T09:08:43+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19IU+HK/7QnQvKn5ysFXRg1eXBOLGfZk+c="
+        },
+        "id": "89510106-557e-4f5b-a01c-00f589cd8710",
+        "updatedAt": "2026-10-19T06:17:10+00:00"
+      }
+    ],
+    "load": 31,
+    "location": "Boston",
+    "pubKey": "V0vpMcp0/586Y/q1EzW9PhM45JhypnCYgmrP0rzDEVw=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:11+00:00"
+  },
+  {
+    "connectionName": "us-buf.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 42.8863889,
+      "longitude": -78.8786111
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-19T11:24:12+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "fcc03a18-317e-42e5-b32c-605462d5abb3",
+    "info": [
+      {
+        "createdAt": "2026-09-03T16:37:06+00:00",
+        "entry": {
+          "value": "U2FsdGVkX190FKRVgPkjB1pCQM0TfyVjCkXzqs0Gxss="
+        },
+        "id": "01a06821-94e7-73d0-9d07-3361c36a4888",
+        "updatedAt": "2026-10-19T06:13:05+00:00"
+      }
+    ],
+    "load": 26,
+    "location": "Buffalo",
+    "pubKey": "156ry2sOmv+I9KYTy2jR4/BLTnPT+Qn+DoCNqOon1ys=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:09+00:00"
+  },
+  {
+    "connectionName": "us-clt.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 35.227085,
+      "longitude": -80.843124
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-05-27T09:53:46+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "e7a0250c-2b09-4cc6-a936-e55cd58169ea",
+    "info": [
+      {
+        "createdAt": "2026-09-16T10:27:31+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/JZ/Q9E7aYkZLZ5cXARD1IIbtzRE1Bwpc="
+        },
+        "id": "01a0a9c1-e5d9-739d-8b25-c7de17253918",
+        "updatedAt": "2026-10-19T06:13:17+00:00"
+      }
+    ],
+    "load": 22,
+    "location": "Charlotte",
+    "pubKey": "tLnNDtNUOScxIU6t70ujsx1erSWOj9hWkWJD5iJwPwc=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:35+00:00"
+  },
+  {
+    "connectionName": "us-chi.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.85,
+      "longitude": -87.65
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-11-10T15:02:45+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "c187ef46-5453-4ed3-895f-a1b3df02ae08",
+    "info": [
+      {
+        "createdAt": "2023-04-19T16:45:04+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/zHyFokySC2KZXkbzjPVzns/tW/i+S7FI="
+        },
+        "id": "06c08516-055d-4f48-961d-6cb186eca41e",
+        "updatedAt": "2026-10-19T06:16:25+00:00"
+      }
+    ],
+    "load": 25,
+    "location": "Chicago",
+    "pubKey": "DpMfulanF/MVHmt3AX4dqLqcyE0dpPqYBjDlWMaUI00=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:26+00:00"
+  },
+  {
+    "connectionName": "us-dal.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 32.7833333,
+      "longitude": -96.8
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-16T12:09:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "d5a988fe-33a2-4bc5-afc4-eb22486d7809",
+    "info": [
+      {
+        "createdAt": "2023-02-17T09:06:40+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19E0dROxhxsYruA66D7JR++TZEANTBoDRQ="
+        },
+        "id": "505ee789-46ad-4f68-90ca-cd500c8363d4",
+        "updatedAt": "2026-10-19T06:16:01+00:00"
+      }
+    ],
+    "load": 27,
+    "location": "Dallas",
+    "pubKey": "0iwHQpV+rsOg38ogv4g4XMLJa51YqWY/yKWR9UEUMDk=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:16+00:00"
+  },
+  {
+    "connectionName": "us-den.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 39.742043,
+      "longitude": -104.991531
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-05-09T09:34:07+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "ed58ed6d-48ed-4c2a-b6c8-7a101d4b9df5",
+    "info": [
+      {
+        "createdAt": "2025-08-19T13:41:53+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19kJP/6T08po4U+bcEp2j8DWTMYZb1/KVs="
+        },
+        "id": "0198c290-9a18-7362-a823-f4f46ca35274",
+        "updatedAt": "2026-10-19T06:10:01+00:00"
+      }
+    ],
+    "load": 29,
+    "location": "Denver",
+    "pubKey": "AnRLZKBwCfuGFZfoa3dsdjpcpvgFsQhASmjHXhIJLgM=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:21+00:00"
+  },
+  {
+    "connectionName": "us-dtw.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 42.331429,
+      "longitude": -83.045753
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-05-27T09:55:30+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "1c14f2f0-1156-4695-81da-ded69cf58876",
+    "info": [
+      {
+        "createdAt": "2025-08-08T13:50:40+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1//j1r6MzJnW9243F8iJlmrxQ0wMyukXEY="
+        },
+        "id": "019889f2-b001-70b1-af96-7d966be03933",
+        "updatedAt": "2026-10-19T06:09:56+00:00"
+      }
+    ],
+    "load": 25,
+    "location": "Detroit",
+    "pubKey": "WFhlLK8H1pRzgMggza5NhBMjIcGhmsCqjR8+yFRfXhg=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:13:14+00:00"
+  },
+  {
+    "connectionName": "us-hou.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 29.761993,
+      "longitude": -95.366302
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-05-30T10:52:28+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "2c204c08-91cd-4eb9-8f45-6f0e62b5c73a",
+    "info": [
+      {
+        "createdAt": "2022-11-08T13:09:58+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18mMAVoVz0gHaQi2icFyOFaJWsxnWoHSGw="
+        },
+        "id": "a60c465b-a140-4870-9850-f44ad38084dc",
+        "updatedAt": "2026-10-19T06:15:08+00:00"
+      }
+    ],
+    "load": 30,
+    "location": "Houston",
+    "pubKey": "1g84fGxVJokKXdMYEJKjN6/opyYN/YSHmrMyw0v6VnM=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:22+00:00"
+  },
+  {
+    "connectionName": "us-kan.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 39.015697,
+      "longitude": -94.565559
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-05-15T13:14:29+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "30cb5a75-8937-4e3d-9813-84392ecb1f6b",
+    "info": [
+      {
+        "createdAt": "2022-12-22T11:08:11+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19Pzvs/2qjUTsS5Rmm0DFc3F6Rduvy2pbA="
+        },
+        "id": "bcfcdbd4-ef7e-400d-a6ea-f7dea974fdaf",
+        "updatedAt": "2026-10-19T06:15:31+00:00"
+      }
+    ],
+    "load": 33,
+    "location": "Kansas City",
+    "pubKey": "SWN/jzfK69ucEUqQyPejKb9wWxwUoOgG37YlgeCmvjg=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:15:34+00:00"
+  },
+  {
+    "connectionName": "us-las.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 36.175,
+      "longitude": -115.1363889
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "6fdfb9ae-8c41-4d1e-ab74-f2b46c6f36d8",
+    "info": [
+      {
+        "createdAt": "2025-11-25T14:02:36+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+yWDFgRjUuZilGkWWXFkIpDtO18BRt/uU="
+        },
+        "id": "019abb52-cb51-711b-b9f9-57423b901380",
+        "updatedAt": "2026-10-19T06:10:30+00:00"
+      }
+    ],
+    "load": 37,
+    "location": "Las Vegas",
+    "pubKey": "Nw5CG5BOvqb8GXVEKLOo7v3gGvP7WaUYlJT++c3c31g=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:10:31+00:00"
+  },
+  {
+    "connectionName": "us-ltm.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 39.96865,
+      "longitude": -89.1623
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-08-08T13:08:38+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "4683fe1f-01c0-4fdf-8475-a7abe2faacbe",
+    "info": [
+      {
+        "createdAt": "2023-02-01T15:43:53+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18kzuGPUwF3WO4ZusE57ASJmWjq0B+7RiE="
+        },
+        "id": "271726db-69ad-4bbe-a882-2e8389d074ae",
+        "updatedAt": "2026-10-19T06:15:48+00:00"
+      }
+    ],
+    "load": 32,
+    "location": "Latham",
+    "pubKey": "Smruh1SmMqi7CecjV/+yI4Sy62gpAr+Uddq+9K6iLB0=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:03+00:00"
+  },
+  {
+    "connectionName": "us-lax.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 34.0522222,
+      "longitude": -118.2427778
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-16T12:09:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "9f0ed7c6-b694-4c6c-b01e-a878852df83a",
+    "info": [
+      {
+        "createdAt": "2023-11-23T21:39:49+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+jpYeI8CetYqn/xOQF56PbBhmej0UTew8="
+        },
+        "id": "4052f1d3-d055-44ff-8379-b8e33c776395",
+        "updatedAt": "2026-10-19T06:17:19+00:00"
+      }
+    ],
+    "load": 39,
+    "location": "Los Angeles",
+    "pubKey": "m+L7BVQWDwU2TxjfspMRLkRctvmo7fOkd+eVk6KC5lM=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:17:19+00:00"
+  },
+  {
+    "connectionName": "us-mia.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 25.7738889,
+      "longitude": -80.1938889
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "16faed5a-475a-421e-b3dd-7ee70e3fc9b9",
+    "info": [
+      {
+        "createdAt": "2026-01-06T10:14:31+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19CvqJA4SA/xlJO4tF3tj9xkgPrMyPAsNs="
+        },
+        "id": "019b92cd-1071-7035-9b89-9a4edbc44738",
+        "updatedAt": "2026-10-19T06:11:18+00:00"
+      }
+    ],
+    "load": 23,
+    "location": "Miami",
+    "pubKey": "KvJ/jtWb8BsBI85OcZnOIJu9kfh12mCMR4cejWFpDCc=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:50+00:00"
+  },
+  {
+    "connectionName": "us-bna.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 36.12,
+      "longitude": -86.68
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2025-06-26T12:37:26+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "0197ac3e-3087-73bf-9274-2f461ebd69bf",
+    "info": [
+      {
+        "createdAt": "2025-07-10T16:39:45+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+tBhjV762GRWxe1zOtXbGG+IBgjWw+N3o="
+        },
+        "id": "0197f535-136b-701b-b089-6b6587ca4ade",
+        "updatedAt": "2026-10-19T06:09:27+00:00"
+      }
+    ],
+    "load": 27,
+    "location": "Nashville",
+    "pubKey": "BNaDm2NLUySO0sNiCxaYkE5KS1i6KgshxVZudNli4jI=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:02+00:00"
+  },
+  {
+    "connectionName": "us-nyc-st005.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.73061,
+      "longitude": -73.935242
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2020-02-13T11:35:48+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "d7e7ca2a-d7c3-42a9-b75f-af6806ccee08",
+    "info": [
+      {
+        "createdAt": "2026-01-02T08:42:03+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+wn5yewJxZGQONT0f6cnJWOZbj2V/O3mo="
+        },
+        "id": "48ebd90c-1671-4468-b2fc-818b3a0ce090",
+        "updatedAt": "2026-10-19T06:11:30+00:00"
+      }
+    ],
+    "load": 0,
+    "location": "New York",
+    "pubKey": "5/AGlscGX/hFpNuAq06M+gIP1HUxfbox+0Pi4M9ybjE=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:30+00:00"
+  },
+  {
+    "connectionName": "us-nyc.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.7141667,
+      "longitude": -74.0063889
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-16T12:09:14+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "71d5961f-4b6c-4a9c-98b7-505435e3e466",
+    "info": [
+      {
+        "createdAt": "2022-12-29T20:50:43+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+uBJJNg4nlXwdfgSJP+klIoPXuuDj14qw="
+        },
+        "id": "dc85feb9-ec59-4df7-a7a7-e3044f61867d",
+        "updatedAt": "2026-10-19T06:15:36+00:00"
+      }
+    ],
+    "load": 30,
+    "location": "New York",
+    "pubKey": "rhuoCmHdyYrh0zW3J0YXZK4aN3It7DD26TXlACuWnwU=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:54+00:00"
+  },
+  {
+    "connectionName": "us-nyc-st002.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.73061,
+      "longitude": -73.935242
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-08-30T10:04:56+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "23dca51e-7f68-4385-8976-7c8c65619ad7",
+    "info": [
+      {
+        "createdAt": "2022-08-09T14:09:25+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/9Qv0sBNsJHDNAuVKlAqUNCs4Bco/3F3Q="
+        },
+        "id": "92151174-64af-4ff3-9497-167f5de11112",
+        "updatedAt": "2026-10-19T06:14:23+00:00"
+      }
+    ],
+    "load": 65,
+    "location": "New York",
+    "pubKey": "PWjVpuAt3zKbKrxc30uiq2jOzKAVEZU402isK6Bunwc=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:14:23+00:00"
+  },
+  {
+    "connectionName": "us-nyc-st003.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.73061,
+      "longitude": -73.935242
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-08-30T10:05:25+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "4560b64a-b37f-43e8-a4e2-8fcb2ce56683",
+    "info": [
+      {
+        "createdAt": "2019-08-30T10:05:49+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19ztxkmwtg6IHCXlQJ/u8QTSHZtIreARUI="
+        },
+        "id": "70050208-d4cf-48b2-ad9f-7eabf7a6562b",
+        "updatedAt": "2026-10-19T06:11:25+00:00"
+      }
+    ],
+    "load": 65,
+    "location": "New York",
+    "pubKey": "nuqSzswFHh7PK/NdEmfXIe/UYgZlc+L7shI5e6OMUH4=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T05:42:41+00:00"
+  },
+  {
+    "connectionName": "us-nyc-st004.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.73061,
+      "longitude": -73.935242
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2020-02-13T11:35:31+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "953acc25-652a-45c5-a94d-b7576e0cf669",
+    "info": [
+      {
+        "createdAt": "2020-02-13T11:41:39+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18+7m9hm/rgPTfPAzYd4eCQm8YWvglx/3E="
+        },
+        "id": "e876ea15-de86-4bde-a602-730243a7e1eb",
+        "updatedAt": "2026-10-19T06:11:30+00:00"
+      }
+    ],
+    "load": 80,
+    "location": "New York",
+    "pubKey": "RQ3ZRcXYnTl5lRjTuEolYsTfBRFtIeiZirFkBdcKw14=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:30+00:00"
+  },
+  {
+    "connectionName": "us-nyc-st001.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.73061,
+      "longitude": -73.935242
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-08-30T10:04:06+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "e9ad22d5-ef85-4464-894c-481e1d8e0311",
+    "info": [
+      {
+        "createdAt": "2019-08-30T10:04:51+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/pXgp+e9ddXYbbvc4k610v0vrwBto1CfA="
+        },
+        "id": "b430595f-6d00-413c-bcfc-9ee400d39233",
+        "updatedAt": "2026-10-19T06:11:25+00:00"
+      }
+    ],
+    "load": 88,
+    "location": "New York",
+    "pubKey": "7UmSjyjD6Sf4AnjYpBQGQYx9IGYa/sM8mZOQ+yJ5REo=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "physical"
+    ],
+    "transitCluster": null,
+    "type": "static",
+    "updatedAt": "2026-10-19T06:11:25+00:00"
+  },
+  {
+    "connectionName": "us-oma.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.3,
+      "longitude": -95.89
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2025-06-26T11:57:40+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "0197ac19-c8fa-7165-a5f0-91076fb604e2",
+    "info": [
+      {
+        "createdAt": "2025-07-03T13:49:48+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+T6NjjKdO72wbFGd+H3NoiWWQhWgOSz3E="
+        },
+        "id": "0197d08c-f734-7307-a21b-d946c080f535",
+        "updatedAt": "2026-10-19T06:09:25+00:00"
+      }
+    ],
+    "load": 36,
+    "location": "Omaha",
+    "pubKey": "7Z8FJEl+BtQuAyNuUWIZxHGrQP7rumhFlIq4azHvCgs=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:09:26+00:00"
+  },
+  {
+    "connectionName": "us-phx.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 33.4483333,
+      "longitude": -112.0733333
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-10-16T12:09:20+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "4e5279a4-9962-4adc-be8a-72ba668ea670",
+    "info": [
+      {
+        "createdAt": "2026-02-09T19:47:34+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18536LqLQIGgC+dMAyjfCZSqimS6rA8Ml4="
+        },
+        "id": "019c43f1-eedf-7137-ba7f-e515c3b1ae8d",
+        "updatedAt": "2026-10-19T06:11:40+00:00"
+      }
+    ],
+    "load": 31,
+    "location": "Phoenix",
+    "pubKey": "HDCyeD2+lw6KHVMu7Opkt4V4ikYZHzQNWmwklBMb4Ac=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p",
+      "onboarding"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:06+00:00"
+  },
+  {
+    "connectionName": "us-slc.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 40.758701,
+      "longitude": -111.876183
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2019-06-25T06:59:24+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "aadc5167-ee87-4190-8917-6d7028f0aefe",
+    "info": [
+      {
+        "createdAt": "2026-04-20T17:07:12+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19+oz6Nz7O/5SzwYWG2ka1+RXlcGO9cMUw="
+        },
+        "id": "019dabdc-446d-72ed-ae56-72f61e5fdbfc",
+        "updatedAt": "2026-10-19T06:11:51+00:00"
+      }
+    ],
+    "load": 32,
+    "location": "Salt Lake City",
+    "pubKey": "jxotWPy1jNzKzjqSqg6KkWnoOsp/FbrTK4+j9gluSFA=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:53+00:00"
+  },
+  {
+    "connectionName": "us-sfo.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 37.7698135,
+      "longitude": -122.4660005
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-12-18T10:58:15+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "acfbb50d-520b-47aa-8c68-56327fa513fc",
+    "info": [
+      {
+        "createdAt": "2026-06-23T10:35:33+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1/60sod3SJPDxanjBCNe94BrRsSg4eTNSA="
+        },
+        "id": "019ef40c-b210-728d-b855-1a91f06aa665",
+        "updatedAt": "2026-10-19T06:12:30+00:00"
+      }
+    ],
+    "load": 41,
+    "location": "San Francisco",
+    "pubKey": "7SpGSSI78hf8jy689ec5Ql0/Gsq0LLHDmjEFsGUWl1k=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:12:57+00:00"
+  },
+  {
+    "connectionName": "us-sjc.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 37.363949,
+      "longitude": -121.92894
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2021-10-04T08:29:41+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "f3848fad-6836-4bf7-bda1-08cd1ad91e9a",
+    "info": [
+      {
+        "createdAt": "2025-04-28T11:14:52+00:00",
+        "entry": {
+          "value": "U2FsdGVkX18wUvLyW8L8tt76KvTXF0OkPRM1fEk7y04="
+        },
+        "id": "01967c1b-6492-7177-824b-25058a831b77",
+        "updatedAt": "2026-10-19T06:09:06+00:00"
+      }
+    ],
+    "load": 40,
+    "location": "San Jose",
+    "pubKey": "sDDS1f/+IqVljMN7GzMFeAbNescQUTLIt0xio0W61Q0=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:20+00:00"
+  },
+  {
+    "connectionName": "us-sea.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 47.6063889,
+      "longitude": -122.3308333
+    },
+    "country": "United States",
+    "countryCode": "US",
+    "createdAt": "2018-12-18T10:58:16+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/US.png",
+    "id": "dbe53459-2fe7-4679-b318-f65b4d704902",
+    "info": [
+      {
+        "createdAt": "2020-12-18T10:08:00+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19vSkamSaWG/JmWQ1fb8Yr4Xe1q9NrXrQA="
+        },
+        "id": "38642881-f7cb-48b4-b6df-4fe19074046f",
+        "updatedAt": "2026-10-19T06:12:19+00:00"
+      }
+    ],
+    "load": 43,
+    "location": "Seattle",
+    "pubKey": "SpMH/p90bg9ZAG6V2DWJQ9csWPVnKcDVppIp9Xul5G8=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:16:31+00:00"
+  },
+  {
+    "connectionName": "uy-mvd.prod.surfshark.com",
+    "coordinates": {
+      "latitude": -34.901112,
+      "longitude": -56.164532
+    },
+    "country": "Uruguay",
+    "countryCode": "UY",
+    "createdAt": "2022-04-20T12:21:59+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/UY.png",
+    "id": "b0317084-87a2-4e8d-b250-b7924e92e99f",
+    "info": [
+      {
+        "createdAt": "2024-07-24T07:03:34+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+Sqdv8TRk6Efar0Fpmd32lxZ4jTPEIp4w="
+        },
+        "id": "0190e38d-6a60-7356-9a96-8015fc19bb03",
+        "updatedAt": "2026-10-19T06:08:18+00:00"
+      }
+    ],
+    "load": 3,
+    "location": "Montevideo",
+    "pubKey": "N4HQsZ7deamq3itB5Pmj9MhtjjDNYKY4YfiUFkfWlBo=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:18+00:00"
+  },
+  {
+    "connectionName": "uz-tas.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 41.2995,
+      "longitude": 69.2401
+    },
+    "country": "Uzbekistan",
+    "countryCode": "UZ",
+    "createdAt": "2022-03-28T12:38:28+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/UZ.png",
+    "id": "6f448ed3-fe55-4a5f-bd69-0a727916db23",
+    "info": [
+      {
+        "createdAt": "2024-06-06T16:35:26+00:00",
+        "entry": {
+          "value": "U2FsdGVkX19KfiD061mOrEzuTSzypK98nirxqOYDz/E="
+        },
+        "id": "018fee67-b8ea-7316-8721-5dde7b4c0eb3",
+        "updatedAt": "2026-10-19T06:07:59+00:00"
+      }
+    ],
+    "load": 6,
+    "location": "Tashkent",
+    "pubKey": "CX6N+j5AfK2LVl3tfAop6/oXFb15tCnuDbPy7CbrKXw=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:00+00:00"
+  },
+  {
+    "connectionName": "ve-car.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 10.5,
+      "longitude": -66.916664
+    },
+    "country": "Venezuela",
+    "countryCode": "VE",
+    "createdAt": "2021-03-04T11:55:32+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/VE.png",
+    "id": "ff352a9e-36d7-47a6-b75e-78a424bded55",
+    "info": [
+      {
+        "createdAt": "2024-06-12T13:41:31+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1+pgm9q+5HC2wIgi0/lYWIzuqBlgbBIARk="
+        },
+        "id": "01900cae-a820-7320-a702-ca8cc7658a4c",
+        "updatedAt": "2026-10-19T06:08:00+00:00"
+      }
+    ],
+    "load": 6,
+    "location": "Caracas",
+    "pubKey": "fK7yvbWdPrpginzYzhQu7IT6J+Mf18/K+VNrwyXqriU=",
+    "region": "The Americas",
+    "regionCode": "AM",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:08:01+00:00"
+  },
+  {
+    "connectionName": "vn-hcm.prod.surfshark.com",
+    "coordinates": {
+      "latitude": 10.75,
+      "longitude": 106.6667
+    },
+    "country": "Vietnam",
+    "countryCode": "VN",
+    "createdAt": "2018-10-16T12:09:19+00:00",
+    "flagUrl": "https://cdn.ss-cdn.com/assets/flags/VN.png",
+    "id": "91c4f924-6149-45e1-847f-5920341f8a26",
+    "info": [
+      {
+        "createdAt": "2024-07-29T10:15:24+00:00",
+        "entry": {
+          "value": "U2FsdGVkX1++p5UtIPaQSVFJGe2ESoaSdek8J+4jmi4="
+        },
+        "id": "0190fdfc-da43-71f6-96fa-079a78bc9d00",
+        "updatedAt": "2026-10-19T06:00:54+00:00"
+      }
+    ],
+    "load": 18,
+    "location": "Ho Chi Minh City",
+    "pubKey": "Mioou38fh5H+3LWMpitLOWT3JaDGg2gXxqjl2eXkPFU=",
+    "region": "Asia Pacific",
+    "regionCode": "AP",
+    "tags": [
+      "virtual",
+      "p2p"
+    ],
+    "transitCluster": null,
+    "type": "generic",
+    "updatedAt": "2026-10-19T06:11:50+00:00"
+  }
+]
