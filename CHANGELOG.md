@@ -5,6 +5,7 @@
 - **Surfshark Provider Integration**: Added first-class `Surfshark` provider to Route Sweeper (`ProviderKind.surfshark`) reading all 178+ datacenter clusters from bundled `surfshark_clusters.json`, with native WireGuard and OpenVPN protocols and `scutil` tunnel management.
 - **Client Selector in Simple Mode**: Added a prominent 1-tap "Which VPN client?" segmented selector directly in Simple Mode alongside Advanced Mode so users can switch seamlessly between Windscribe, Surfshark, and ExpressVPN.
 - **Unified List Refresh**: Made "Update List" available across providers with automated simple-mode country chip refresh.
+- **Permissions Doctor Audit & Stability**: Capped recursive file enumeration over large repositories in `PermissionsDoctorEngine` (skipping `.git`, `node_modules`, `venv`, `.build`) to prevent UI freezes, and corrected dead bundle ID comparison in running VPN app detection using `NSWorkspace.shared.runningApplications`.
 - Version 0.29.1 (60).
 
 ## 0.29.0 — Unified Studios, Permissions Doctor, Route Export & Senior Ergonomics

@@ -1,7 +1,7 @@
-## 2026-11-13 — Housekeeper 0.29.1 (60) SHIPPED: Route Sweeper Tri-Provider (Windscribe, Surfshark & ExpressVPN) Overhaul
+## 2026-11-13 — Housekeeper 0.29.1 (60) SHIPPED: Route Sweeper Tri-Provider (Windscribe, Surfshark & ExpressVPN) & Permissions Doctor Audit
 
 Universal bundle packaged (x86_64 and arm64, 52 universal Mach-O binaries, codesign verified).
-Installed and verified running at `/Applications/Housekeeper.app` (0.0% CPU parked; PID 17630).
+Installed and verified running at `/Applications/Housekeeper.app` (0.0% CPU parked; PID 19713).
 Old `/Applications/Housekeeper.app` moved to `~/.Trash`.
 Noob's guide delivered to `~/Desktop/Housekeeper — a noob's guide.md`.
 
@@ -22,6 +22,9 @@ What went into it:
    - Updated step badges (Step 1: Client, Step 2: Locations, Step 3: Depth, Step 4: Run).
 5. **Unified List Update**:
    - Generalised the "Update List" button across providers so datacenter lists and country chips can be refreshed on demand.
+6. **Forensic Codebase Audit & Stability Fixes**:
+   - `PermissionsDoctorEngine.swift`: Capped recursive file enumeration over large repositories like `~/C3PO` (skipping `.git`, `node_modules`, `venv`, `.build`) to prevent UI freezes.
+   - `PermissionsDoctorEngine.swift`: Fixed dead `vpnAppsRunning` check that previously passed an empty bundle ID `""` to `runningApplications(withBundleIdentifier:)` (always false), restoring live process inspection via `NSWorkspace.shared.runningApplications`.
 
 ## 2026-11-13 — Housekeeper 0.29.0 (59) SHIPPED: Unified Studios, Permissions Doctor, Route Export & Senior Ergonomics
 

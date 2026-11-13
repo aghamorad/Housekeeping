@@ -109,7 +109,14 @@ public final class PermissionsDoctorEngine: ObservableObject {
                 if let enumerator = fm.enumerator(atPath: path) {
                     var rootFilesCount = 0
                     var lockedFilesCount = 0
+                    var inspected = 0
                     while let subPath = enumerator.nextObject() as? String {
+                        inspected += 1
+                        if inspected > 500 { break }
+                        if subPath.contains("/.git") || subPath.contains("/node_modules") || subPath.contains("/venv") || subPath.contains("/.build") {
+                            enumerator.skipDescendants()
+                            continue
+                        }
                         let fullPath = (path as NSString).appendingPathComponent(subPath)
                         if let subAttrs = try? fm.attributesOfItem(atPath: fullPath) {
                             if let subOwner = subAttrs[.ownerAccountID] as? UInt32, subOwner == 0 {
@@ -183,8 +190,12 @@ public final class PermissionsDoctorEngine: ObservableObject {
                 let lines = ifconfig.stdout.components(separatedBy: "\n")
                 let utunLines = lines.filter { $0.hasPrefix("utun") && $0.contains("POINTOPOINT") }
                 // Check if any VPN app is running
-                let vpnAppsRunning = ["Windscribe", "ExpressVPN", "Surfshark", "AmneziaVPN", "Outline"].contains { appName in
-                    !NSRunningApplication.runningApplications(withBundleIdentifier: "").isEmpty
+                let runningApps = NSWorkspace.shared.runningApplications
+                let vpnAppsRunning = ["windscribe", "expressvpn", "surfshark", "amnezia", "outline"].contains { vpnKey in
+                    runningApps.contains { app in
+                        (app.localizedName?.lowercased().contains(vpnKey) ?? false) ||
+                        (app.bundleIdentifier?.lowercased().contains(vpnKey) ?? false)
+                    }
                 }
                 if utunLines.count > 4 && !vpnAppsRunning {
                     found.append(DoctorIssue(
