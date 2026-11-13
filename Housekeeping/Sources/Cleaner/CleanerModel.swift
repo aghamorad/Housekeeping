@@ -428,8 +428,8 @@ final class CleanerModel: ObservableObject {
     func confirmPending() {
         guard let action = pendingAction else { return }
         let typed = confirmationText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard typed == action.word else {
-            confirmationHint = "Type \(action.word) to continue."
+        guard typed == "ok" || typed == action.word else {
+            confirmationHint = "Type “ok” to continue."
             return
         }
         pendingAction = nil

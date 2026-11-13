@@ -62,7 +62,7 @@ final class AppState: ObservableObject {
         case cleanupConfirmation, guidedCleanup, cleanupPreview, quarantine
         case protectionList, diskBrowser, reconcile, updateList, setupCheck
         case housekeeper, routes, phone, mediaDock, bookbind, selfUpdate
-        case clean, localModels, fanControl, uninstaller, appRepair, batteryHealth, vpnTunnels, dnsSwitcher, backgroundActivity
+        case clean, localModels, fanControl, uninstaller, appRepair, batteryHealth, vpnTunnels, dnsSwitcher, backgroundActivity, permissionsDoctor
 
         var id: String { rawValue }
 
@@ -70,7 +70,7 @@ final class AppState: ObservableObject {
             switch self {
             case .clean, .diskBrowser, .reconcile, .updateList, .setupCheck, .routes,
                  .phone, .mediaDock, .bookbind, .quarantine, .protectionList,
-                 .localModels, .fanControl, .uninstaller, .appRepair, .batteryHealth, .vpnTunnels, .dnsSwitcher, .backgroundActivity: return true
+                 .localModels, .fanControl, .uninstaller, .appRepair, .batteryHealth, .vpnTunnels, .dnsSwitcher, .backgroundActivity, .permissionsDoctor: return true
             default: return false
             }
         }
@@ -206,6 +206,10 @@ final class AppState: ObservableObject {
     var showDNSSwitcher: Bool {
         get { screen == .dnsSwitcher }
         set { show(.dnsSwitcher, newValue) }
+    }
+    var showPermissionsDoctor: Bool {
+        get { screen == .permissionsDoctor }
+        set { show(.permissionsDoctor, newValue) }
     }
     /// Whether the two-folder comparison is open. Only the flag lives here, for
     /// the same reason as the disk browser: which pair is on screen and what the
@@ -483,6 +487,38 @@ final class AppState: ObservableObject {
         guard var results = scanResults,
               let index = results.foundItems.firstIndex(where: { $0.id == item.id }) else { return }
         results.foundItems[index].isSelected = false
+        scanResults = results
+    }
+
+    func selectAllSafe() {
+        guard var results = scanResults else { return }
+        for i in results.foundItems.indices {
+            let item = results.foundItems[i]
+            if cleanupSafetyPolicy.isRecommendedForGuidedCleanup(item) && cleanupAssessment(for: item).canBeSelected {
+                results.foundItems[i].isSelected = true
+            }
+        }
+        scanResults = results
+    }
+
+    func selectAll(items: [FoundItem]) {
+        guard var results = scanResults else { return }
+        let targetIDs = Set(items.map(\.id))
+        for i in results.foundItems.indices {
+            if targetIDs.contains(results.foundItems[i].id) {
+                if cleanupAssessment(for: results.foundItems[i]).canBeSelected {
+                    results.foundItems[i].isSelected = true
+                }
+            }
+        }
+        scanResults = results
+    }
+
+    func deselectAll() {
+        guard var results = scanResults else { return }
+        for i in results.foundItems.indices {
+            results.foundItems[i].isSelected = false
+        }
         scanResults = results
     }
 

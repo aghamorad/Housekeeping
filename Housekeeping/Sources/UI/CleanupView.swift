@@ -22,7 +22,8 @@ struct CleanupView: View {
     }
 
     var protectedConfirmationMatches: Bool {
-        protectedConfirmation.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "QUARANTINE"
+        let text = protectedConfirmation.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return text == "OK" || text == "QUARANTINE"
     }
 
     var canProceed: Bool {
@@ -104,13 +105,19 @@ struct CleanupView: View {
 
             if !protectedItems.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("The selection includes projects or personal files. Moving them makes their original paths disappear until restored. Type QUARANTINE to authorize this reversible move.")
+                    Text("The selection includes projects or personal files. Moving them makes their original paths disappear until restored. Type OK to authorize this reversible move.")
                         .font(style.smallFont)
                         .foregroundColor(style.negative)
-                    HStack {
-                        TextField("Type QUARANTINE", text: $protectedConfirmation)
+                    HStack(spacing: 8) {
+                        TextField("Type OK", text: $protectedConfirmation)
                             .textFieldStyle(.roundedBorder)
+                            .frame(width: 140)
                             .onSubmit { if canProceed { runCleanup() } }
+                        Button("Fill OK") {
+                            protectedConfirmation = "OK"
+                        }
+                        .font(style.smallFont)
+                        .buttonStyle(.bordered)
                         if protectedConfirmationMatches {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(style.positive)

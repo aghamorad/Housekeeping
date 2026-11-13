@@ -65,12 +65,31 @@ struct BackgroundActivityView: View {
                             .font(.system(size: 15)).foregroundStyle(.secondary)
                     }
                 }
-                HStack {
+                HStack(spacing: 10) {
+                    Button {
+                        section = .recommendations
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                            Text("What does Housekeeper Recommend?")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
                     Button(busy ? "Reading your Mac…" : "Refresh reading") { refresh() }.disabled(busy)
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
                     Button("Open Login Items") { openLoginItems() }
-                    Button("Review Uninstalled App Leftovers") { appState.cleaner.category = .orphans; appState.showClean = true }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                    Button("Leftovers") { appState.cleaner.category = .orphans; appState.showClean = true }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
                     Button("Uninstall Apps") { appState.showUninstaller = true }
-                }.buttonStyle(.bordered).controlSize(.large)
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                }
                 if busy {
                     HStack { ProgressView().controlSize(.small); Text("Reading processes, background permissions and disk footprints…") }
                 }

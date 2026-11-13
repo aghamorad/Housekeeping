@@ -47,6 +47,7 @@ struct ContentView: View {
             case .vpnTunnels: VPNTunnelsView()
             case .backgroundActivity: BackgroundActivityView()
             case .dnsSwitcher: DNSConfigView()
+            case .permissionsDoctor: PermissionsDoctorView()
             }
         }
         .environment(\.uiStyle, style)
@@ -62,8 +63,7 @@ struct ContentView: View {
     private var mediaDockBody: some View {
         RootView(onBack: { appState.showMediaDock = false })
             .environmentObject(appState.mediaDock)
-            .frame(minWidth: 1040, idealWidth: 1200, maxWidth: 1360,
-                   minHeight: 640, idealHeight: 800, maxHeight: 980)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     var body: some View {
@@ -147,6 +147,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenDNSSwitcher)) { _ in
                 appState.showDNSSwitcher = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .housekeepingOpenPermissionsDoctor)) { _ in
+                appState.showPermissionsDoctor = true
             }
     }
 }
@@ -393,7 +396,7 @@ private struct JobBar: View {
             bar
         } else {
             modernSidebar
-                .frame(width: 224)
+                .frame(width: 236)
         }
     }
 
@@ -481,9 +484,9 @@ private struct JobBar: View {
             .padding(.horizontal, 18).padding(.top, 24).padding(.bottom, 20)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Core 5 Rooms for Dad-Simple Navigation
-                    VStack(spacing: 3) {
+                VStack(alignment: .leading, spacing: 14) {
+                    // Category 1: System Care
+                    sidebarCategory("System Care") {
                         SidebarNavigationRow(title: "Dashboard", icon: "square.grid.2x2",
                                              selected: appState.workspace == nil && appState.showOverview) {
                             appState.workspace = nil
@@ -493,77 +496,91 @@ private struct JobBar: View {
                         if let job = allJobs.first(where: { $0.id == "clean" }) {
                             sidebarJob(job, customTitle: "Clean Up", customIcon: "sparkles")
                         }
-                        if let job = allJobs.first(where: { $0.id == "background-activity" }) {
-                            sidebarJob(job, customTitle: "Background Activity", customIcon: "list.bullet.rectangle")
-                        }
-                        if let job = allJobs.first(where: { $0.id == "update-apps" }) {
-                            sidebarJob(job, customTitle: "Update Apps", customIcon: "arrow.triangle.2.circlepath")
+                        if let job = allJobs.first(where: { $0.id == "fix-permissions" }) {
+                            sidebarJob(job, customTitle: "Fix Permissions (Doctor)", customIcon: "cross.case.fill")
                         }
                         if let job = allJobs.first(where: { $0.id == "uninstaller" }) {
                             sidebarJob(job, customTitle: "Uninstall Apps", customIcon: "xmark.app")
                         }
+                        if let job = allJobs.first(where: { $0.id == "quarantine" }) {
+                            sidebarJob(job, customTitle: "Quarantine", customIcon: "archivebox")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "left-alone" }) {
+                            sidebarJob(job, customTitle: "Protected Items", customIcon: "lock.shield")
+                        }
+                    }
+
+                    Divider().padding(.horizontal, 4)
+
+                    // Category 2: Hardware & Vitals
+                    sidebarCategory("Hardware & Vitals") {
                         if let job = allJobs.first(where: { $0.id == "fans-thermals" }) {
                             sidebarJob(job, customTitle: "Cooling & Fans", customIcon: "fan.fill")
                         }
                         if let job = allJobs.first(where: { $0.id == "battery-health" }) {
                             sidebarJob(job, customTitle: "Battery Health", customIcon: "battery.100.bolt")
                         }
+                        if let job = allJobs.first(where: { $0.id == "background-activity" }) {
+                            sidebarJob(job, customTitle: "Background Activity", customIcon: "list.bullet.rectangle")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "browse-the-disk" }) {
+                            sidebarJob(job, customTitle: "Browse the Disk", customIcon: "internaldrive")
+                        }
                     }
 
                     Divider().padding(.horizontal, 4)
 
-                    // First-Class Kitchen-Sink Studios & Network
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Studios & Network").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
-                            .padding(.horizontal, 10).padding(.bottom, 2)
+                    // Category 3: Creative Studios
+                    sidebarCategory("Creative Studios") {
                         if let job = allJobs.first(where: { $0.id == "mediadock" }) {
-                            sidebarJob(job, customTitle: "MediaDock 9", customIcon: "play.rectangle.fill")
+                            sidebarJob(job, customTitle: "Media Studio", customIcon: "play.rectangle.fill")
                         }
                         if let job = allJobs.first(where: { $0.id == "bookbind" }) {
-                            sidebarJob(job, customTitle: "Bookbind", customIcon: "book.closed.fill")
+                            sidebarJob(job, customTitle: "Bookbind Studio", customIcon: "book.closed.fill")
                         }
-                        if let job = allJobs.first(where: { $0.id == "dns-switcher" }) {
-                            sidebarJob(job, customTitle: "DNS Easy Switcher", customIcon: "globe.badge.chevron.backward")
+                        if let job = allJobs.first(where: { $0.id == "two-folders" }) {
+                            sidebarJob(job, customTitle: "Two Folders Diff", customIcon: "arrow.left.arrow.right")
+                        }
+                    }
+
+                    Divider().padding(.horizontal, 4)
+
+                    // Category 4: Network & Routes
+                    sidebarCategory("Network & Routes") {
+                        if let job = allJobs.first(where: { $0.id == "test-routes" }) {
+                            sidebarJob(job, customTitle: "Route Sweep", customIcon: "network")
                         }
                         if let job = allJobs.first(where: { $0.id == "vpn-tunnels" }) {
                             sidebarJob(job, customTitle: "VPN Tunnels", customIcon: "lock.shield")
                         }
+                        if let job = allJobs.first(where: { $0.id == "dns-switcher" }) {
+                            sidebarJob(job, customTitle: "DNS Switcher", customIcon: "globe.badge.chevron.backward")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "spoof-location" }) {
+                            sidebarJob(job, customTitle: "Spoof Location", customIcon: "location.slash")
+                        }
                     }
 
                     Divider().padding(.horizontal, 4)
 
-                    // Advanced Power Tools in a neat disclosure section
-                    DisclosureGroup(isExpanded: $showAdvancedTools) {
-                        VStack(spacing: 4) {
-                            sidebarSection("Power Tools", ids: [
-                                "dns-switcher",
-                                "vpn-tunnels",
-                                "repair-damaged-app",
-                                "browse-the-disk",
-                                "local-models",
-                                "check-my-setup",
-                                "two-folders",
-                                "bookbind",
-                                "mediadock",
-                                "test-routes",
-                                "quarantine",
-                                "left-alone"
-                            ])
+                    // Category 5: Maintenance & AI
+                    sidebarCategory("Maintenance & AI") {
+                        if let job = allJobs.first(where: { $0.id == "update-apps" }) {
+                            sidebarJob(job, customTitle: "Update Apps", customIcon: "arrow.triangle.2.circlepath")
                         }
-                        .padding(.top, 4)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "wrench.and.screwdriver")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                            Text("Advanced Tools")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                        if let job = allJobs.first(where: { $0.id == "repair-damaged-app" }) {
+                            sidebarJob(job, customTitle: "Repair Damaged Apps", customIcon: "bandage.fill")
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
+                        if let job = allJobs.first(where: { $0.id == "check-my-setup" }) {
+                            sidebarJob(job, customTitle: "Terminal Health", customIcon: "wrench.and.screwdriver")
+                        }
+                        if let job = allJobs.first(where: { $0.id == "local-models" }) {
+                            sidebarJob(job, customTitle: "Local AI Models", customIcon: "cpu")
+                        }
                     }
-                }.padding(.horizontal, 12)
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
             }
             Divider().padding(.horizontal, 16).padding(.top, 12)
             VStack(spacing: 3) {
@@ -615,6 +632,17 @@ private struct JobBar: View {
                 action: { appState.showBatteryHealth = true }
             )
         ]
+    }
+
+    private func sidebarCategory<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.secondary.opacity(0.8))
+                .padding(.horizontal, 10)
+                .padding(.bottom, 2)
+            content()
+        }
     }
 
     private func sidebarSection(_ title: String, ids: [String]) -> some View {
@@ -675,6 +703,7 @@ private struct JobBar: View {
         case .vpnTunnels: return "vpn-tunnels"
         case .backgroundActivity: return "background-activity"
         case .dnsSwitcher: return "dns-switcher"
+        case .permissionsDoctor: return "fix-permissions"
         default: return nil
         }
     }
@@ -882,6 +911,15 @@ private struct JobBar: View {
                 zone: .app,
                 help: "Fixes 'App is damaged and can't be opened', unidentified developer, or Gatekeeper quarantine blocks on any Mac application with one click.",
                 action: { appState.showAppRepair = true }
+            ),
+
+            Job(
+                id: "fix-permissions",
+                title: "Fix Permissions (Doctor)",
+                systemImage: "cross.case.fill",
+                zone: .app,
+                help: "Doctor diagnostics for file permissions, root-owned config folders, broken network proxies, Gatekeeper quarantine, and startup daemons.",
+                action: { appState.showPermissionsDoctor = true }
             ),
 
             Job(
@@ -2178,6 +2216,76 @@ private struct ResultsScreen: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
+
+            Rectangle().fill(style.border.opacity(0.5)).frame(height: 1)
+
+            // Fast, senior-friendly selection bar
+            HStack(spacing: 8) {
+                Button {
+                    appState.selectAllSafe()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 11))
+                        Text("Select Safe")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(style.positive.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                    .foregroundStyle(style.positive)
+                }
+                .buttonStyle(.plain)
+                .help("Select all safe, replaceable caches and logs with 1 click.")
+
+                Button {
+                    appState.selectAll(items: visibleItems)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 11))
+                        Text("Select Shown (\(visibleItems.count))")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(style.border, lineWidth: 1))
+                    .foregroundStyle(style.text)
+                }
+                .buttonStyle(.plain)
+                .help("Select all items currently visible in the list.")
+
+                Button {
+                    appState.deselectAll()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle")
+                            .font(.system(size: 11))
+                        Text("Untick All")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(style.rowBackground, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(style.border, lineWidth: 1))
+                    .foregroundStyle(style.secondaryText)
+                }
+                .buttonStyle(.plain)
+                .help("Untick all selected items.")
+
+                Spacer()
+
+                let tickedCount = allItems.filter(\.isSelected).count
+                if tickedCount > 0 {
+                    Text("\(tickedCount) ticked")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(style.accent)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(style.rowBackground.opacity(0.3))
 
             Rectangle().fill(style.border.opacity(0.5)).frame(height: 1)
 

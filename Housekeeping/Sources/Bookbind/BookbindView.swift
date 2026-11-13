@@ -33,8 +33,7 @@ struct BookbindView: View {
             Divider()
             footer
         }
-        .frame(minWidth: 1040, idealWidth: 1200, maxWidth: 1360,
-               minHeight: 640, idealHeight: 780, maxHeight: 980)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { HousekeepingBackdrop(style: style) }
         .preferredColorScheme(style.isRetro ? .light : nil)
         .onAppear {
@@ -45,32 +44,32 @@ struct BookbindView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
-            ThemeButton(title: "Back", systemImage: "chevron.left",
-                        help: "Close Bookbind and go back to Housekeeping.") {
-                appState.showBookbind = false
-            }
-
             Image(systemName: "book.closed.fill")
                 .font(.system(size: 20, weight: .medium))
                 .foregroundColor(style.accentLifted)
-                .frame(width: 40, height: 40)
+                .frame(width: 38, height: 38)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(style.accent.opacity(0.18))
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Bookbind")
+                Text("Bookbind Studio")
                     .font(style.titleFont)
                     .foregroundColor(style.text)
-                Text("Turn a folder of loose audio into one chaptered audiobook.")
+                Text("Turn a folder of loose audio into one chaptered M4B audiobook with tags and cover art.")
                     .font(style.smallFont)
                     .foregroundColor(style.secondaryText)
             }
             Spacer()
-            Text(engine.phase == .ready ? "ready" : stateWord)
-                .font(style.labelFont)
-                .foregroundColor(engine.phase == .ready ? style.positive : style.secondaryText)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+                Text(engine.phase == .ready ? "Engine Ready" : stateWord)
+                    .font(style.labelFont)
+                    .foregroundColor(engine.phase == .ready ? style.positive : style.secondaryText)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -81,6 +80,14 @@ struct BookbindView: View {
         case .idle, .starting: return "starting"
         case .ready: return "ready"
         case .failed: return "needs attention"
+        }
+    }
+
+    private var statusColor: Color {
+        switch engine.phase {
+        case .ready: return style.positive
+        case .failed: return style.caution
+        case .idle, .starting: return style.secondaryText.opacity(0.6)
         }
     }
 

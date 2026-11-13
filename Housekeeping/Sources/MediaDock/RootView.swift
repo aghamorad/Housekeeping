@@ -11,25 +11,11 @@ struct RootView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        HStack(spacing: 0) {
-            Sidebar()
-                .frame(width: 178)
-            Rectangle().fill(skin.darkEdge).frame(width: 1)
-            VStack(spacing: 0) {
-                TitleBar(onBack: onBack)
-                Rectangle().fill(skin.darkEdge).frame(height: 1)
-                Group {
-                    switch model.section {
-                    case .download: DownloadView()
-                    case .setup: SetupView()
-                    case .cookies: CookiesView()
-                    case .troubleshooting: TroubleshootingView()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                Rectangle().fill(skin.darkEdge).frame(height: 1)
-                ActivityConsole()
-                    .frame(height: 224)
+        Group {
+            if skin.isRetro {
+                retroLayout
+            } else {
+                modernLayout
             }
         }
         .background(skin.desktop)
@@ -38,7 +24,7 @@ struct RootView: View {
             CommandReviewSheet()
                 .environmentObject(model)
         }
-        .alert("MediaDock 9", isPresented: Binding(
+        .alert("Media Studio", isPresented: Binding(
             get: { model.alertMessage != nil },
             set: { if !$0 { model.alertMessage = nil } }
         )) {
@@ -47,6 +33,90 @@ struct RootView: View {
             Text(model.alertMessage ?? "")
         }
         .task { model.refreshDependencies() }
+    }
+
+    private var retroLayout: some View {
+        HStack(spacing: 0) {
+            Sidebar()
+                .frame(width: 178)
+            Rectangle().fill(skin.darkEdge).frame(width: 1)
+            VStack(spacing: 0) {
+                TitleBar(onBack: onBack)
+                Rectangle().fill(skin.darkEdge).frame(height: 1)
+                sectionContent
+                Rectangle().fill(skin.darkEdge).frame(height: 1)
+                ActivityConsole()
+                    .frame(height: 224)
+            }
+        }
+    }
+
+    private var modernLayout: some View {
+        VStack(spacing: 0) {
+            modernHeader
+            Divider()
+            sectionContent
+            Divider()
+            ActivityConsole()
+                .frame(height: 200)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var sectionContent: some View {
+        Group {
+            switch model.section {
+            case .download: DownloadView()
+            case .setup: SetupView()
+            case .cookies: CookiesView()
+            case .troubleshooting: TroubleshootingView()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var modernHeader: some View {
+        HStack(alignment: .center, spacing: 14) {
+            Image(systemName: "play.rectangle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(HousekeepingInk.redLifted)
+                .frame(width: 38, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(HousekeepingInk.red.opacity(0.18))
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Media Studio")
+                    .font(.system(size: 18, weight: .bold))
+                Text("Download videos, music, and streams with inspectable commands.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Picker("", selection: $model.section) {
+                ForEach(AppSection.allCases) { sec in
+                    Text(sec.rawValue).tag(sec)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 360)
+
+            HStack(spacing: 6) {
+                StatusLight(color: model.runner.isRunning ? skin.cyan : skin.green)
+                Text(model.runner.isRunning ? "WORKING" : "READY")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(model.runner.isRunning ? skin.cyan : skin.green)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

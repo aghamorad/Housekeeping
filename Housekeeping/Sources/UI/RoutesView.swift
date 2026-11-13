@@ -48,7 +48,7 @@ struct RoutesView: View {
             Divider()
             footer
         }
-        .frame(minWidth: 1040, maxWidth: 1040, minHeight: 680)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { HousekeepingBackdrop(style: style) }
         .preferredColorScheme(style.isRetro ? .light : nil)
         // A run that is allowed to disappear closes nothing: the engine finishes
@@ -114,6 +114,62 @@ struct RoutesView: View {
             ) {
                 model.engine.clearResults()
                 selectedResultID = nil
+            }
+
+            if !model.engine.results.isEmpty {
+                Menu {
+                    Button {
+                        let text = RouteExporter.generateMarkdown(results: model.engine.results, provider: model.providerKind, baseline: model.engine.baseline)
+                        RouteExporter.saveFile(content: text, defaultName: "RouteSweep_\(model.providerKind.displayName.lowercased())_\(RouteExporter.dateStamp()).md", extensionType: "md")
+                    } label: {
+                        Label("Save as Markdown (.md)", systemImage: "doc.text")
+                    }
+
+                    Button {
+                        let text = RouteExporter.generateCSV(results: model.engine.results, provider: model.providerKind)
+                        RouteExporter.saveFile(content: text, defaultName: "RouteSweep_\(model.providerKind.displayName.lowercased())_\(RouteExporter.dateStamp()).csv", extensionType: "csv")
+                    } label: {
+                        Label("Save as CSV (.csv)", systemImage: "tablecells")
+                    }
+
+                    Button {
+                        let text = RouteExporter.generateText(results: model.engine.results, provider: model.providerKind)
+                        RouteExporter.saveFile(content: text, defaultName: "RouteSweep_\(model.providerKind.displayName.lowercased())_\(RouteExporter.dateStamp()).txt", extensionType: "txt")
+                    } label: {
+                        Label("Save as Text (.txt)", systemImage: "doc.plaintext")
+                    }
+
+                    Divider()
+
+                    Button {
+                        let text = RouteExporter.generateMarkdown(results: model.engine.results, provider: model.providerKind, baseline: model.engine.baseline)
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(text, forType: .string)
+                    } label: {
+                        Label("Copy Markdown to Clipboard", systemImage: "doc.on.doc")
+                    }
+
+                    Button {
+                        let text = RouteExporter.generateText(results: model.engine.results, provider: model.providerKind)
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(text, forType: .string)
+                    } label: {
+                        Label("Copy Text to Clipboard", systemImage: "doc.on.clipboard")
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("Save As…")
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(style.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+                    .foregroundStyle(style.accent)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("Save checked routes to Markdown, CSV, or Text file, or copy to clipboard.")
             }
         }
         .padding(.horizontal, 16)
@@ -906,6 +962,34 @@ struct RoutesView: View {
                 .font(style.smallFont)
                 .foregroundColor(style.secondaryText)
             Spacer()
+            if !model.engine.results.isEmpty {
+                Menu {
+                    Button("Save as Markdown (.md)") {
+                        let text = RouteExporter.generateMarkdown(results: model.engine.results, provider: model.providerKind, baseline: model.engine.baseline)
+                        RouteExporter.saveFile(content: text, defaultName: "RouteSweep_\(model.providerKind.displayName.lowercased())_\(RouteExporter.dateStamp()).md", extensionType: "md")
+                    }
+                    Button("Save as CSV (.csv)") {
+                        let text = RouteExporter.generateCSV(results: model.engine.results, provider: model.providerKind)
+                        RouteExporter.saveFile(content: text, defaultName: "RouteSweep_\(model.providerKind.displayName.lowercased())_\(RouteExporter.dateStamp()).csv", extensionType: "csv")
+                    }
+                    Button("Save as Text (.txt)") {
+                        let text = RouteExporter.generateText(results: model.engine.results, provider: model.providerKind)
+                        RouteExporter.saveFile(content: text, defaultName: "RouteSweep_\(model.providerKind.displayName.lowercased())_\(RouteExporter.dateStamp()).txt", extensionType: "txt")
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("Export Results")
+                    }
+                    .font(style.smallFont)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(style.rowBackground)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(style.border, lineWidth: 1))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
             AskHousekeeperButton(topic: model.housekeeperTopic, closing: { appState.showRoutes = false })
             ThemeButton(title: "Done", isPrimary: true, help: "Close this screen.") {
                 appState.showRoutes = false

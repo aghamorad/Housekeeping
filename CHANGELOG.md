@@ -1,3 +1,14 @@
+## 0.29.0 — Unified Studios, Permissions Doctor, Route Export & Senior Ergonomics
+
+- **Coalesced & Unified Experience**: Eliminated nested window containers and inner sub-sidebars. RouteSweep, Bookbind, and MediaDock now integrate seamlessly as native primary workspace screens without restrictive boundaries.
+- **MediaDock Modern Layout**: Introduced a clean, single-window layout for Liquid Glass mode with an integrated segmented header (`Download | Setup | Cookies | Troubleshooting`), eliminating the redundant 178 pt second sidebar and back button while preserving retro skin mode.
+- **RouteSweep Multi-Format Export**: Added instant 1-click export to Markdown (`.md`), CSV (`.csv`), and Plain Text (`.txt`), plus clipboard copying for verified network routing and VPN latency diagnostics.
+- **Permissions Doctor**: Built an in-depth diagnostic engine and doctor interface that checks user folder ownership (e.g. root-owned `~/.gemini`, `~/.config`), lingering network proxies, stale VPN tunnel interfaces (`utun*`), Gatekeeper quarantine flags, zombie TCC grants, and broken LaunchAgents with 1-click automatic repair.
+- **"What does Housekeeper Recommend?" Advisory**: Added plain-language guidance cards explaining permissions, background tasks, and login items with zero intimidating technical jargon.
+- **75-Year-Old Rule Ergonomics**: Replaced typed confirmation requirements (e.g. "clean", "uninstall", "QUARANTINE") across all destructive and quarantine views with a simple, forgiving "ok" (or 1-click auto-fill button).
+- **Flexible Batch Selection**: Added "Select Safe", "Select Shown", and "Untick All" toolbar buttons across results and cleanup screens.
+- Version 0.29.0 (59).
+
 ## 0.28.3 — Mini-animated menu bar octopus, scanning mascot banner & smart select
 
 - Mini-animated menu bar octopus: 24-frame vector rendered sequence with lively 14-28° arm swings and curling tentacles; maintains 0.0% zero-idle-drain when idle.

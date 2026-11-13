@@ -1,3 +1,33 @@
+## 2026-11-13 — Housekeeper 0.29.0 (59) SHIPPED: Unified Studios, Permissions Doctor, Route Export & Senior Ergonomics
+
+Universal bundle packaged (x86_64 and arm64, 52 universal Mach-O binaries, codesign verified).
+Installed and verified running at `/Applications/Housekeeper.app` (0.0% CPU parked; PID 84670).
+Old `/Applications/Housekeeper.app` moved to `~/.Trash`.
+Noob's guide delivered to `~/Desktop/Housekeeper — a noob's guide.md`.
+
+What went into it:
+1. **Unified Application Architecture ("Coalesced & Unified")**:
+   - Dismantled the "windows inside windows inside windows" nested feel. RouteSweep, Bookbind, and MediaDock are now integrated seamlessly as native primary workspace screens.
+   - Removed artificial frame caps (`minWidth: 1040, maxWidth: 1040`) and redundant back buttons that trapped tools in modal boxes.
+   - Modernized MediaDock: when in modern skin mode, replaced the second 178 pt inner sidebar and back button with a clean segmented header (`Download | Setup | Cookies | Troubleshooting`), providing full single-window continuity while preserving retro mode.
+2. **Permissions Doctor ("Fix Permissions")**:
+   - Created `PermissionsDoctorEngine` auditing 5 vital system health vectors:
+     - User directory file permissions (checks for root-owned files/folders in `~/.gemini`, `~/.config`, `~/.codex`, etc.).
+     - Network proxy settings (detects lingering/dead HTTP/HTTPS/SOCKS proxies).
+     - Lingering VPN tunnel interfaces (`utun*` without active processes).
+     - Gatekeeper quarantine attributes (`com.apple.quarantine` on developer binaries in `~/C3PO` and `~/Tools`).
+     - Broken launch agents (plist files pointing to non-existent binaries).
+   - Created `PermissionsDoctorView` with 1-click automatic repair for safe issues, category filters, and friendly status feedback.
+3. **RouteSweep Multi-Format Export**:
+   - Added `RouteExporter` supporting instant 1-click export of verified route probe diagnostics to Markdown (`.md`), CSV (`.csv`), Plain Text (`.txt`), and clipboard copy.
+   - Accessible from both the header bar and the bottom summary bar after running route checks.
+4. **"What does Housekeeper Recommend?" Advisory**:
+   - Built senior-friendly advisory cards for Permissions Doctor and Background Activity explaining why items matter and what action to take in plain human terms.
+5. **75-Year-Old Rule Ergonomics (Universal Senior Ergonomics)**:
+   - Eliminated the requirement to type "clean", "uninstall", or "QUARANTINE" in confirmation dialogs. Replaced with simple "ok" acceptance or 1-tap auto-fill buttons.
+   - Added "Select Safe", "Select Shown", and "Untick All" bulk selection toolbar buttons across finding screens.
+   - Elevated all tools out of the collapsed "Advanced Tools" disclosure group into 5 clear, un-minimized sidebar sections: System Care, Hardware & Vitals, Creative Studios, Network & Routes, Maintenance & AI.
+
 ## 2026-11-11 — Housekeeper: Official App & GitHub Rename, MLX & Hermes Live Load/Unload Overhaul
 
 Repository and Application renamed to **Housekeeper** across GitHub, bundle metadata, and interface.

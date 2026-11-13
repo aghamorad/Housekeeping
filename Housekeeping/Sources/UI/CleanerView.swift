@@ -875,12 +875,20 @@ struct CleanerView: View {
                             .font(style.smallFont).foregroundColor(style.caution)
                     }
                     HStack(spacing: 8) {
-                        Text("Type “\(action.word)” to confirm:")
+                        Text("Type “ok” to confirm:")
                             .font(style.smallFont)
-                        TextField("", text: $model.confirmationText)
+                        TextField("ok", text: $model.confirmationText)
                             .textFieldStyle(.roundedBorder)
-                            .frame(width: 150)
+                            .frame(width: 90)
                             .onSubmit { if matches(action) { model.confirmPending() } }
+
+                        Button("Fill “ok”") {
+                            model.confirmationText = "ok"
+                            model.confirmPending()
+                        }
+                        .font(style.smallFont)
+                        .buttonStyle(.bordered)
+                        .help("Autofill 'ok' for 1-tap confirmation.")
                     }
 
                     if let hint = model.confirmationHint {
@@ -909,7 +917,8 @@ struct CleanerView: View {
     }
 
     private func matches(_ action: CleanerModel.PendingAction) -> Bool {
-        model.confirmationText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == action.word
+        let typed = model.confirmationText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return typed == "ok" || typed == action.word
     }
 
     // MARK: - Housekeeper
